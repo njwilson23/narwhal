@@ -28,6 +28,9 @@ class Cast(object):
 
         return
 
+    def __repr__(self):
+        return "CTD cast <{0}> at {1}".format(self._fields, self.coords)
+
     def __getitem__(self, key):
         if isinstance(key, int):
             if key < self._len:
