@@ -1,3 +1,4 @@
+import numpy as np
 
 class Cast(object):
     """ A Cast is a set of pressure, salinity, temperature (et al)
@@ -36,7 +37,8 @@ class Cast(object):
             if key < self._len:
                 return tuple(self.data[a][key] for a in self._fields)
             else:
-                raise IndexError("Index ({0}) is greater than cast length ({1})".format(key, self._len))
+                raise IndexError("Index ({0}) is greater than cast length "
+                                 "({1})".format(key, self._len))
         elif key in self.data:
             return self.data[key]
         else:
@@ -44,6 +46,8 @@ class Cast(object):
 
 class CastCollection(object):
     """ A CastCollection is an indexable collection of Cast instances """
+    _type = "ctd_collection"
+
     def __init__(self, *args):
         if isinstance(args[0], Cast):
             self.casts = args
@@ -53,3 +57,33 @@ class CastCollection(object):
             raise TypeError("Arguments must be either Cast types or an "
                             "iterable collection of Cast types")
         return
+
+    def __len__(self):
+        return len(self.casts)
+
+    def __add__(self, other):
+        if hasattr(other, "_type") and (other._type == "ctd_collection"):
+            return CastCollection(list(a for a in itertools.chain(self.casts, other.casts)))
+        else:
+            raise TypeError("Addition requires both arguments to fulfill the "
+                            "ctd_collection interface")
+
+    def __iter__(self):
+        return (a for a in self.casts)
+
+    def asarray(self, key):
+        """ Naively return values as an array, assuming that all casts are indexed
+        with the same pressure levels """
+        nrows = max(cast._len for cast in self.casts)
+        arr = np.nan * np.empty((nrows, len(self.casts)), dtype=np.float64)
+        for i, cast in enumerate(self.casts):
+            arr[:cast._len, i] = cast[key]
+        return arr
+
+    def versus(self, key1, key2):
+        """ Return arrays containing bulk values from all casts. The values are
+        determined by `key1` and `key2`. """
+        v1 = np.hstack([a[key1] for a in self.casts])
+        v2 = np.hstack([a[key2] for a in self.casts])
+        return v1, v2
+
