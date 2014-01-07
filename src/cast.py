@@ -1,10 +1,11 @@
+import itertools
 import numpy as np
 
 class Cast(object):
     """ A Cast is a set of pressure, salinity, temperature (et al)
     measurements associated with a single coordinate. """
 
-    _type = "ctdcast"
+    _type = "ctd_cast"
 
     def __init__(self, p, S=None, T=None, coords=None, **kwargs):
 
@@ -61,6 +62,14 @@ class CastCollection(object):
     def __len__(self):
         return len(self.casts)
 
+    def __getitem__(self, key):
+        if isinstance(key, int):
+            return self.casts[key]
+        elif False not in (key in cast.data for cast in self.casts):
+            return np.hstack([a[key] for a in self.casts])
+        else:
+            raise KeyError("Key {0} not found in all casts".format(key))
+
     def __add__(self, other):
         if hasattr(other, "_type") and (other._type == "ctd_collection"):
             return CastCollection(list(a for a in itertools.chain(self.casts, other.casts)))
@@ -83,7 +92,7 @@ class CastCollection(object):
     def versus(self, key1, key2):
         """ Return arrays containing bulk values from all casts. The values are
         determined by `key1` and `key2`. """
-        v1 = np.hstack([a[key1] for a in self.casts])
-        v2 = np.hstack([a[key2] for a in self.casts])
+        v1 = self[key1]
+        v2 = self[key2]
         return v1, v2
 
