@@ -1,4 +1,5 @@
 import itertools
+import collections
 import numpy as np
 
 class Cast(object):
@@ -45,7 +46,7 @@ class Cast(object):
         else:
             raise KeyError("No item {0}".format(key))
 
-class CastCollection(object):
+class CastCollection(collections.Sequence):
     """ A CastCollection is an indexable collection of Cast instances """
     _type = "ctd_collection"
 
@@ -63,19 +64,15 @@ class CastCollection(object):
         return len(self.casts)
 
     def __getitem__(self, key):
-        if isinstance(key, int):
-            return self.casts[key]
+        if isinstance(key, int) or isinstance(key, slice):
+            return self.casts.__getitem__(key)
         elif False not in (key in cast.data for cast in self.casts):
             return np.hstack([a[key] for a in self.casts])
         else:
             raise KeyError("Key {0} not found in all casts".format(key))
 
-    def __add__(self, other):
-        if hasattr(other, "_type") and (other._type == "ctd_collection"):
-            return CastCollection(list(a for a in itertools.chain(self.casts, other.casts)))
-        else:
-            raise TypeError("Addition requires both arguments to fulfill the "
-                            "ctd_collection interface")
+    def __contains__(self, cast):
+        return True if (cast in self.casts) else False
 
     def __iter__(self):
         return (a for a in self.casts)
