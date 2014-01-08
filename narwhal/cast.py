@@ -65,7 +65,7 @@ class CastCollection(collections.Sequence):
 
     def __getitem__(self, key):
         if isinstance(key, int) or isinstance(key, slice):
-            return self.casts.__getitem__(key)
+            return type(self)(self.casts.__getitem__(key))
         elif False not in (key in cast.data for cast in self.casts):
             return np.hstack([a[key] for a in self.casts])
         else:
@@ -76,6 +76,13 @@ class CastCollection(collections.Sequence):
 
     def __iter__(self):
         return (a for a in self.casts)
+
+    def __add__(self, other):
+        if hasattr(other, "_type") and (other._type == "ctd_collection"):
+            return CastCollection(list(a for a in itertools.chain(self.casts, other.casts)))
+        else:
+            raise TypeError("Addition requires both arguments to fulfill the "
+                            "ctd_collection interface")
 
     def asarray(self, key):
         """ Naively return values as an array, assuming that all casts are indexed
