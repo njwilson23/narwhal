@@ -4,7 +4,7 @@ setup(
     name = "narwhal",
     version = "0.1a",
     author = "Nat Wilson",
-    package_dir = {"narwhal": "src"},
+    #package_dir = {"narwhal": "src"},
     packages = ["narwhal"]
 )
 
