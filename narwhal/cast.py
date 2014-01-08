@@ -46,6 +46,15 @@ class Cast(object):
         else:
             raise KeyError("No item {0}".format(key))
 
+    def __add__(self, other):
+        if hasattr(other, "_type") and (other._type == "ctd_cast"):
+            return CastCollection(self, other)
+        elif hasattr(other, "_type") and (other._type == "ctd_collection"):
+            return CastCollection(self, *[a for a in other])
+        else:
+            raise TypeError("No rule to add {0} to {1}".format(type(self), type(other)))
+
+
 class CastCollection(collections.Sequence):
     """ A CastCollection is an indexable collection of Cast instances """
     _type = "ctd_collection"
@@ -64,7 +73,9 @@ class CastCollection(collections.Sequence):
         return len(self.casts)
 
     def __getitem__(self, key):
-        if isinstance(key, int) or isinstance(key, slice):
+        if isinstance(key, int):
+            return self.casts.__getitem__(key)
+        elif isinstance(key, slice):
             return type(self)(self.casts.__getitem__(key))
         elif False not in (key in cast.data for cast in self.casts):
             return np.hstack([a[key] for a in self.casts])
@@ -80,6 +91,8 @@ class CastCollection(collections.Sequence):
     def __add__(self, other):
         if hasattr(other, "_type") and (other._type == "ctd_collection"):
             return CastCollection(list(a for a in itertools.chain(self.casts, other.casts)))
+        elif hasattr(other, "_type") and (other._type == "ctd_cast"):
+            return CastCollection([self.casts] + [other])
         else:
             raise TypeError("Addition requires both arguments to fulfill the "
                             "ctd_collection interface")
