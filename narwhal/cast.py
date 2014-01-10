@@ -72,7 +72,7 @@ class CastCollection(collections.Sequence):
 
     def __init__(self, *args):
         if isinstance(args[0], Cast):
-            self.casts = args
+            self.casts = list(args)
         elif (len(args) == 1) and (False not in (isinstance(a, Cast) for a in args[0])):
             self.casts = args[0]
         else:
@@ -103,7 +103,7 @@ class CastCollection(collections.Sequence):
         if hasattr(other, "_type") and (other._type == "ctd_collection"):
             return CastCollection(list(a for a in itertools.chain(self.casts, other.casts)))
         elif hasattr(other, "_type") and (other._type == "ctd_cast"):
-            return CastCollection([self.casts] + [other])
+            return CastCollection(self.casts + [other])
         else:
             raise TypeError("Addition requires both arguments to fulfill the "
                             "ctd_collection interface")
