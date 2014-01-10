@@ -54,6 +54,17 @@ class Cast(object):
         else:
             raise TypeError("No rule to add {0} to {1}".format(type(self), type(other)))
 
+    def interpolate(self, y, x, v):
+        """ Interpolate y as a function of x at x=v.. """
+        if y not in self.data:
+            raise KeyError("Cast has no property '{0}'".format(y))
+        elif x not in self.data:
+            raise KeyError("Cast has no property '{0}'".format(x))
+        if not np.all(np.diff(self[x]) > 0.0):
+            raise NotImplementedError("does not yet handle interpolation of "
+                                      "f(x) where x is non-monotonic")
+        return np.interp(v, self[x], self[y])
+
 
 class CastCollection(collections.Sequence):
     """ A CastCollection is an indexable collection of Cast instances """

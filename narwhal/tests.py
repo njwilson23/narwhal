@@ -40,6 +40,18 @@ class CastTests(unittest.TestCase):
         self.assertEqual(len(cc), 2)
         return
 
+    def test_interpolate(self):
+        self.assertEqual(np.round(self.cast1.interpolate("temp", "pres", 4.0), 8),
+                         2.76745605)
+        self.assertEqual(np.round(self.cast1.interpolate("temp", "sal", 33.0), 8),
+                         0.77935861)
+        #self.assertEqual(np.round(self.cast1.interpolate("pres", "temp", 1.5), 8),
+        #                 2.7674560521632685)
+        return
+
+    def test_projectother(self):
+        pass
+
     def test_calculate_sigma(self):
         pass
 
