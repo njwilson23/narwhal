@@ -1,3 +1,4 @@
+import sys
 import itertools
 import collections
 import numpy as np
@@ -8,9 +9,11 @@ class Cast(object):
 
     _type = "ctd_cast"
 
-    def __init__(self, p, S=None, T=None, coords=None, **kwargs):
+    def __init__(self, p, S=None, T=None, coords=None, bathymetry=None,
+        **kwargs):
 
         self.coords = coords
+        self.bath = bathymetry
 
         def _fieldmaker(n, arg):
             if arg is not None:
@@ -45,6 +48,17 @@ class Cast(object):
             return self.data[key]
         else:
             raise KeyError("No item {0}".format(key))
+        return
+
+    def __setitem__(self, key, val):
+        if isinstance(key, str):
+            self.data[key] = val
+        elif isinstance(key, int):
+            raise KeyError("Cast object profiles are not intended to be "
+                           "mutable")
+        else:
+            raise KeyError("Cannot use {0} as a hash".format(key))
+        return
 
     def __add__(self, other):
         if hasattr(other, "_type") and (other._type == "ctd_cast"):
@@ -107,6 +121,21 @@ class CastCollection(collections.Sequence):
         else:
             raise TypeError("Addition requires both arguments to fulfill the "
                             "ctd_collection interface")
+
+    def add_bathymetry(self, bathymetry):
+        """ Reference Bathymetry instance `bathymetry` to CastCollection.
+        """
+        for cast in self.casts:
+            if hasattr(cast, "coords"):
+                cast["botdepth"] = bathymetry.at(self.coords)
+            else:
+                cast["botdepth"] = np.nan
+                sys.stderr.write("Warning: cast has no coordinates")
+        self.bath = bathymetry
+        return
+
+    def mean(self):
+        raise NotImplementedError()
 
     def asarray(self, key):
         """ Naively return values as an array, assuming that all casts are indexed
