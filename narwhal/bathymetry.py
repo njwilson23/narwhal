@@ -6,9 +6,11 @@ plotted.
 from karta import Point, Line
 from karta.vector.guppy import LONLAT
 
-class Bathymetry(object):
+class Bathymetry2d(object):
 
     def __init__(self, x, y, z):
+        if len(x) != len(y) != len(z):
+            raise ValueError("x, y, z must all have the same length")
         self.line = Line(zip(x,y), data={"depth":z}, crs=LONLAT)
         self.depth = z
         return
@@ -33,4 +35,5 @@ class Bathymetry(object):
             cumulative.append(cumulative[-1] + val)
         return cumulative
 
+Bathymetry = Bathymetry2d
 
