@@ -1,4 +1,5 @@
 
 from cast import Cast, CastCollection
-__all__ = ["cast"]
+from bathymetry import Bathymetry
+__all__ = ["cast", "bathymetry"]
 
