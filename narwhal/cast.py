@@ -2,6 +2,8 @@ import sys
 import itertools
 import collections
 import numpy as np
+from karta import Point
+from karta.vector.guppy import LONLAT
 
 class Cast(object):
     """ A Cast is a set of pressure, salinity, temperature (et al)
@@ -152,4 +154,14 @@ class CastCollection(collections.Sequence):
         v1 = self[key1]
         v2 = self[key2]
         return v1, v2
+
+    def projdist(self):
+        cumulative = [0]
+        a = Point(self.casts[0].coords, crs=LONLAT)
+        for cast in self.casts[1:]:
+            b = Point(cast.coords, crs=LONLAT)
+            cumulative.append(cumulative[-1] + a.greatcircle(b))
+            a = b
+        return cumulative
+
 

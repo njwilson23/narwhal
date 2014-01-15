@@ -10,6 +10,7 @@ class Bathymetry(object):
 
     def __init__(self, x, y, z):
         self.line = Line(zip(x,y), data={"depth":z}, crs=LONLAT)
+        self.depth = z
         return
 
     def atxy(self, x, y):
@@ -25,6 +26,11 @@ class Bathymetry(object):
                 * (a.greatcircle(ptonseg) / a.greatcircle(b)) \
                 + a.data["depth"]
 
-
+    def projdist(self):
+        distances = [seg[0].greatcircle(seg[1]) for seg in self.line.segments()]
+        cumulative = [0]
+        for val in distances:
+            cumulative.append(cumulative[-1] + val)
+        return cumulative
 
 
