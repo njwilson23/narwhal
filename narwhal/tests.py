@@ -2,6 +2,7 @@
 import unittest
 import numpy as np
 from cast import Cast, CastCollection
+from bathymetry import Bathymetry
 
 class CastTests(unittest.TestCase):
 
@@ -61,6 +62,32 @@ class CastTests(unittest.TestCase):
 class CastCollectionTests(unittest.TestCase):
     pass
 
+
+class BathymetryTests(unittest.TestCase):
+
+    def setUp(self):
+        x = [-17.41933333, -17.42628333, -17.42573333, -17.4254,
+             -17.42581667, -17.42583333, -17.4269    , -17.4437,
+             -17.44126667, -17.44416667, -17.44673333, -17.46633333, -17.48418333]
+        y = [80.07101667,  80.0878    ,  80.09245   ,  80.10168333,
+             80.10895   ,  80.11108333,  80.11398333,  80.12305   ,
+             80.12928333,  80.1431    ,  80.1534    ,  80.16636667,  80.16741667]
+        depth = [102,  95,  90, 100, 110, 120, 130, 140, 150, 170, 160, 140, 130]
+        self.bathymetry = Bathymetry(x, y, depth)
+        return
+
+    def test_add_to_castcollection(self):
+        cc = CastCollection(
+                Cast(np.arange(100), T=np.random.rand(100), S=np.random.rand(100),
+                     coords=(-17.42, 80.09)),
+                Cast(np.arange(100), T=np.random.rand(100), S=np.random.rand(100),
+                     coords=(-17.426, 80.112)),
+                Cast(np.arange(100), T=np.random.rand(100), S=np.random.rand(100),
+                     coords=(-17.45, 80.16)))
+        cc.add_bathymetry(self.bathymetry)
+        correctresult = np.array([91.87894384, 122.9704543, 154.58219622])
+        self.assertTrue(np.allclose(cc["botdepth"], correctresult))
+        return
 
 if __name__ == "__main__":
     unittest.main()

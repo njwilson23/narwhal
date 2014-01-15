@@ -127,7 +127,7 @@ class CastCollection(collections.Sequence):
         """
         for cast in self.casts:
             if hasattr(cast, "coords"):
-                cast["botdepth"] = bathymetry.at(self.coords)
+                cast["botdepth"] = bathymetry.atxy(*cast.coords)
             else:
                 cast["botdepth"] = np.nan
                 sys.stderr.write("Warning: cast has no coordinates")
