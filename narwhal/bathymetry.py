@@ -3,8 +3,7 @@ Bathymetry class that can be referenced to a CastCollection and automatically
 plotted.
 """
 
-from karta import Point, Line
-from karta.vector.guppy import LONLAT
+from karta import Point, Line, LONLAT
 
 class Bathymetry2d(object):
 
