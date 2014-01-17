@@ -1,9 +1,12 @@
+"""
+Cast and CastCollection classes for managing CTD observations
+"""
+
 import sys
 import itertools
 import collections
 import numpy as np
-from karta import Point
-from karta.vector.guppy import LONLAT
+from karta import Point, LONLAT
 
 class Cast(object):
     """ A Cast is a set of pressure, salinity, temperature (et al)
@@ -56,8 +59,7 @@ class Cast(object):
         if isinstance(key, str):
             self.data[key] = val
         elif isinstance(key, int):
-            raise KeyError("Cast object profiles are not intended to be "
-                           "mutable")
+            raise KeyError("Cast object profiles are not mutable")
         else:
             raise KeyError("Cannot use {0} as a hash".format(key))
         return
@@ -77,7 +79,7 @@ class Cast(object):
         elif x not in self.data:
             raise KeyError("Cast has no property '{0}'".format(x))
         if not np.all(np.diff(self[x]) > 0.0):
-            raise NotImplementedError("does not yet handle interpolation of "
+            raise NotImplementedError("does not handle interpolation of "
                                       "f(x) where x is non-monotonic")
         return np.interp(v, self[x], self[y])
 
