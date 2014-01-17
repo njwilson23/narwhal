@@ -1,9 +1,11 @@
 import itertools
+import operator
 import matplotlib.pyplot as plt
 import numpy as np
+from scipy.interpolate import griddata
 import gsw
-from cast import Cast, CastCollection
 from karta import Point, Line, LONLAT
+from cast import Cast, CastCollection
 
 def ccmean(cc):
     if False in (all(cc[0]["pres"] == c["pres"]) for c in cc[1:]):
@@ -84,22 +86,60 @@ def add_freezing_line(ax=None, p=0.0, air_sat_fraction=0.1):
 ###### Section plots #######
 
 def plot_section_properties(cc, **kw):
+    """ Add water properties from a CastCollection to a section plot. """
     ax = kw.pop("ax", gca())
+    prop = kw.pop("prop", "sigma")
 
     ccline = Line([c.coords for c in cc], crs=LONLAT)
     cx = np.array(ccline.cumlength())
     x = r_[cx[0], 0.5*(cx[1:] + cx[:-1]), cx[-1]]
+    x = cx #!!!! delete this line if using pcolormesh !!!
     y = cc[0]["pres"]
-    ax.pcolormesh(x, y, cc.asarray("sigma"),
-                  vmin=20, vmax=28)
+
+    # interpolate over NaNs
+    rawdata = cc.asarray(prop)
+    obsx, obspres = np.meshgrid(cx, y)
+    obspres = obspres[~np.isnan(rawdata)]
+    obsx = obsx[~np.isnan(rawdata)]
+    rawdata = rawdata[~np.isnan(rawdata)]
+
+    intpres, intx = np.meshgrid(y, linspace(x[0], x[-1], 30))
+
+    data_interp = griddata(c_[obsx.flatten(), obspres.flatten()],
+                           rawdata.flatten(),
+                           c_[intx.flatten(), intpres.flatten()],
+                           method="linear")
+
+    #ax.pcolormesh(intx, intpres, data_interp.reshape(intx.shape),
+    #              vmin=20, vmax=28, cmap=cm.gist_ncar)
+    ax.contourf(intx, intpres, data_interp.reshape(intx.shape),
+                levels=r_[arange(20, 26, 0.5), arange(26, 28, 0.25)],
+                cmap=cm.gist_ncar, extend="both")
+    cl = ax.contour(intx, intpres, data_interp.reshape(intx.shape),
+                    levels=r_[arange(20, 24), arange(24, 27, 0.5), arange(27, 28, 0.2)],
+                    colors="k")
+    ax.clabel(cl, fmt="%.1f")
 
     ymax = max(c["pres"][~np.isnan(c["sigma"])][-1] for c in cc)
+
+    for x_ in cx:
+        plot((x_, x_), (ymax, 0), "--k")
+
     ax.set_ylim((ymax, 0))
     ax.set_xlim((x[0], x[-1]))
     return
 
 def plot_section_bathymetry(bathymetry, **kw):
+    """ Add bathymetry from a Bathymetry object to a section plot.
+
+    Keyword arguments:
+    ------------------
+    vertices            a list of points defining a cruise path
+    maxdistance         the maximum distance a bathymetric observation
+                        may be from a point in `vertices` to be plotted
+    """
     ax = kw.pop("ax", gca())
+    maxdistance = kw.pop("maxdistance", 0.01)
 
     # The bathymetry x should be plotted with respect to CTD line
     if "vertices" in kw:
@@ -110,12 +150,10 @@ def plot_section_bathymetry(bathymetry, **kw):
         vertices = kw["vertices"]
         vline = Line(vertices, crs=LONLAT)
         for a,b in zip(vertices[:-1], vertices[1:]):
-            # find all bathymetry within bbox defined by seg
+            # find all bathymetry within a threshold
             seg = Line((a,b), crs=LONLAT)
-            x0, x1 = sorted((a[0], b[0]))
-            y0, y1 = sorted((a[1], b[1]))
-            bcoords = filter(lambda v: (x0<=v[0][0]<=x1) and (y0<=v[0][1]<=y1),
-                             zip(bathymetry.line.vertices, bathymetry.depth))
+            bcoords = [v for v in zip(bathymetry.line.vertices, bathymetry.depth)
+                       if seg.within_distance(Point(v[0], crs=LONLAT), 0.01)]
 
             # project each point in bbox onto the segment, and record
             # the distance from the origin as bx
@@ -127,13 +165,16 @@ def plot_section_bathymetry(bathymetry, **kw):
 
             segdist.append(seg.length() + segdist[-1])
 
+        depth = sorted(depth, key=lambda i: operator.getitem(bx, depth.index(i)))
+        bx.sort()
+
     else:
         bx = np.array(bathymetry.line.cumlength())
         depth = bathymetry.depth
 
     ymax = bathymetry.depth.max()
     ax.fill_between(bx, depth, ymax*np.ones_like(depth),
-                    color="0.3")
+                    color="0.0")
     return
 
 def plot_section(cc, bathymetry):
@@ -141,3 +182,4 @@ def plot_section(cc, bathymetry):
     plot_section_properties(cc)
     plot_section_bathymetry(bathymetry, vertices=vertices)
     return
+
