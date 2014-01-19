@@ -60,6 +60,36 @@ class CastTests(unittest.TestCase):
         pass
 
 class CastCollectionTests(unittest.TestCase):
+
+    def setUp(self):
+        p = np.linspace(1, 999, 500)
+        casts = []
+        for i in range(10):
+            cast = Cast(p, temp=2*np.ones_like(p), sal=30*np.ones_like(p))
+            casts.append(cast)
+        self.cc = CastCollection(casts)
+        return
+
+    def test_iteration1(self):
+        for cast in self.cc:
+            self.assertTrue(isinstance(cast, Cast))
+        return
+
+    def test_iteration2(self):
+        for i, cast in enumerate(self.cc):
+            pass
+        self.assertEqual(i, 9)
+        return
+
+    def test_len(self):
+        self.assertEqual(len(self.cc), 10)
+        return
+
+    def test_slicing(self):
+        subcc = self.cc[2:7]
+        self.assertTrue(isinstance(subcc, CastCollection))
+        return
+
     pass
 
 
