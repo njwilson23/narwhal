@@ -5,10 +5,10 @@ import numpy as np
 from scipy.interpolate import griddata
 import gsw
 from karta import Point, Line, LONLAT
-from cast import Cast, CastCollection
+from narwhal.cast import Cast, CastCollection
 
 def ccmean(cc):
-    if False in (all(cc[0]["pres"] == c["pres"]) for c in cc[1:]):
+    if False in (np.all(cc[0]["pres"] == c["pres"]) for c in cc[1:]):
         raise ValueError("casts must share pressure levels")
     p = cc[0]["pres"]
     data = dict()
@@ -18,21 +18,39 @@ def ccmean(cc):
                     set(("pres", "botdepth")))
     for key in sharedkeys:
         valarray = np.vstack([c.data[key] for c in cc])
-        data[key] = nanmean(valarray, axis=0)
+        data[key] = np.nanmean(valarray, axis=0)
     return Cast(p, **data)
 
 ###### T-S plots #######
 
 def plot_ts(*casts, **kwargs):
+
     labels = kwargs.pop("labels", ["cast "+str(i+1) for i in range(len(casts))])
     contourint = kwargs.pop("contourint", 0.5)
-    styles = kwargs.pop("styles", itertools.cycle(("ok", "sr", "db", "hg")))
+    styles = kwargs.pop("styles", itertools.cycle(("ok", "sr", "db", "^g")))
     drawlegend = kwargs.pop("drawlegend", True)
+    average_collections = kwargs.pop("average_collections", True)
+    if "ms" not in kwargs:
+        kwargs["ms"] = 6
 
-    for i, cast in enumerate(casts):
-        if isinstance(cast, CastCollection):
-            cast = ccmean(cast)
-        plt.plot(cast["sal"], cast["theta"], styles.next(), ms=6, label=labels[i], **kwargs)
+
+    if average_collections:
+        for i, cast in enumerate(casts):
+            if isinstance(cast, CastCollection):
+                cast = ccmean(cast)
+            plt.plot(cast["sal"], cast["theta"], styles.next(), label=labels[i],
+                 **kwargs)
+
+    else:
+        for i, cast in enumerate(casts):
+            sty = styles.next()
+            if isinstance(cast, CastCollection):
+                for subcast in cast:
+                    plt.plot(subcast["sal"], subcast["theta"], sty, **kwargs)
+                plt.gca().lines[-1].set_label(labels[i])
+            else:
+                plt.plot(cast["sal"], cast["theta"], sty, label=labels[i],
+                         **kwargs)
 
     if len(casts) > 1 and drawlegend:
         plt.legend(loc="best", frameon=False)
@@ -51,8 +69,8 @@ def add_sigma_contours(contourint, ax=None):
     SIGMA = np.reshape([gsw.gsw_rho(sa, ct, 0)-1000 for ct in CT
                                                     for sa in SA],
                     (50, 50))
-    cc = ax.contour(SA, CT, SIGMA,
-                    np.arange(np.floor(SIGMA.min()), np.ceil(SIGMA.max()), contourint),
+    cc = ax.contour(SA, CT, SIGMA, np.arange(np.floor(SIGMA.min()),
+                                             np.ceil(SIGMA.max()), contourint),
                     colors="0.4")
     prec = max(0, int(-np.floor(np.log10(contourint))))
     plt.clabel(cc, fmt="%.{0}f".format(prec))
@@ -87,12 +105,12 @@ def add_freezing_line(ax=None, p=0.0, air_sat_fraction=0.1):
 
 def plot_section_properties(cc, **kw):
     """ Add water properties from a CastCollection to a section plot. """
-    ax = kw.pop("ax", gca())
+    ax = kw.pop("ax", plt.gca())
     prop = kw.pop("prop", "sigma")
 
     ccline = Line([c.coords for c in cc], crs=LONLAT)
     cx = np.array(ccline.cumlength())
-    x = r_[cx[0], 0.5*(cx[1:] + cx[:-1]), cx[-1]]
+    x = np.r_[cx[0], 0.5*(cx[1:] + cx[:-1]), cx[-1]]
     x = cx #!!!! delete this line if using pcolormesh !!!
     y = cc[0]["pres"]
 
@@ -113,17 +131,17 @@ def plot_section_properties(cc, **kw):
     #ax.pcolormesh(intx, intpres, data_interp.reshape(intx.shape),
     #              vmin=20, vmax=28, cmap=cm.gist_ncar)
     ax.contourf(intx, intpres, data_interp.reshape(intx.shape),
-                levels=r_[arange(20, 26, 0.5), arange(26, 28, 0.25)],
-                cmap=cm.gist_ncar, extend="both")
+                levels=np.r_[arange(20, 26, 0.5), arange(26, 28, 0.25)],
+                cmap=plt.cm.gist_ncar, extend="both")
     cl = ax.contour(intx, intpres, data_interp.reshape(intx.shape),
-                    levels=r_[arange(20, 24), arange(24, 27, 0.5), arange(27, 28, 0.2)],
+                    levels=np.r_[arange(20, 24), arange(24, 27, 0.5), arange(27, 28, 0.2)],
                     colors="k")
     ax.clabel(cl, fmt="%.1f")
 
     ymax = max(c["pres"][~np.isnan(c["sigma"])][-1] for c in cc)
 
     for x_ in cx:
-        plot((x_, x_), (ymax, 0), "--k")
+        plt.plot((x_, x_), (ymax, 0), "--k")
 
     ax.set_ylim((ymax, 0))
     ax.set_xlim((x[0], x[-1]))
@@ -138,7 +156,7 @@ def plot_section_bathymetry(bathymetry, **kw):
     maxdistance         the maximum distance a bathymetric observation
                         may be from a point in `vertices` to be plotted
     """
-    ax = kw.pop("ax", gca())
+    ax = kw.pop("ax", plt.gca())
     maxdistance = kw.pop("maxdistance", 0.01)
 
     # The bathymetry x should be plotted with respect to CTD line
@@ -151,7 +169,7 @@ def plot_section_bathymetry(bathymetry, **kw):
         vline = Line(vertices, crs=LONLAT)
         for a,b in zip(vertices[:-1], vertices[1:]):
             # find all bathymetry within a threshold
-            seg = Line((a,b), crs=LONLAT)
+            seg = Line((a, b), crs=LONLAT)
             bcoords = [v for v in zip(bathymetry.line.vertices, bathymetry.depth)
                        if seg.within_distance(Point(v[0], crs=LONLAT), 0.01)]
 
