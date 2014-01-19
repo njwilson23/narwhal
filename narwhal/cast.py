@@ -45,7 +45,8 @@ class Cast(object):
     def __getitem__(self, key):
         if isinstance(key, int):
             if key < self._len:
-                return tuple(self.data[a][key] for a in self._fields)
+                return tuple(self.data[a][key] for a in self._fields
+                             if hasattr(self.data[a], "__iter__"))
             else:
                 raise IndexError("Index ({0}) is greater than cast length "
                                  "({1})".format(key, self._len))
@@ -89,7 +90,9 @@ class CastCollection(collections.Sequence):
     _type = "ctd_collection"
 
     def __init__(self, *args):
-        if isinstance(args[0], Cast):
+        if len(args) == 0:
+            self.casts = []
+        elif isinstance(args[0], Cast):
             self.casts = list(args)
         elif (len(args) == 1) and (False not in (isinstance(a, Cast) for a in args[0])):
             self.casts = args[0]
@@ -107,7 +110,7 @@ class CastCollection(collections.Sequence):
         elif isinstance(key, slice):
             return type(self)(self.casts.__getitem__(key))
         elif False not in (key in cast.data for cast in self.casts):
-            return np.hstack([a[key] for a in self.casts])
+            return np.vstack([a[key] for a in self.casts]).T
         else:
             raise KeyError("Key {0} not found in all casts".format(key))
 
