@@ -200,5 +200,5 @@ def force_monotonic(u):
     # more efficient implementation
     v = [u1 if u1 > u0 else u0 + 1e-16
             for u0, u1 in zip(u[:-1], u[1:])]
-    return np.hstack([np.array([0]), np.array(v)])
+    return np.hstack([u[0], v])
 

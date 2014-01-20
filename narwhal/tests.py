@@ -2,6 +2,7 @@
 import unittest
 import numpy as np
 from cast import Cast, CastCollection
+from cast import force_monotonic
 from bathymetry import Bathymetry
 
 class CastTests(unittest.TestCase):
@@ -92,7 +93,6 @@ class CastCollectionTests(unittest.TestCase):
 
     pass
 
-
 class BathymetryTests(unittest.TestCase):
 
     def setUp(self):
@@ -117,6 +117,19 @@ class BathymetryTests(unittest.TestCase):
         cc.add_bathymetry(self.bathymetry)
         correctresult = np.array([91.87894384, 122.9704543, 154.58219622])
         self.assertTrue(np.allclose(cc["botdepth"], correctresult))
+        return
+
+class MiscTests(unittest.TestCase):
+
+    def test_force_monotonic(self):
+        s = np.array([1, 3, 5, 6, 7, 9, 13, 14, 15])
+        sm = force_monotonic(s)
+        self.assertTrue(np.all(sm == s))
+
+        s = np.array([1, 3, 5, 4, 7, 9, 13, 11, 15])
+        sm = force_monotonic(s)
+        self.assertTrue(np.all(sm == np.array([1, 3, 5, 5+1e-16, 7,
+                                               9, 13, 13+1e-16, 15])))
         return
 
 if __name__ == "__main__":
