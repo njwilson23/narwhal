@@ -146,6 +146,8 @@ class CastCollection(collections.Sequence):
 
     def add_bathymetry(self, bathymetry):
         """ Reference Bathymetry instance `bathymetry` to CastCollection.
+
+        bathymetry::Bathymetry2d        bathymetry instance
         """
         for cast in self.casts:
             if hasattr(cast, "coords"):
