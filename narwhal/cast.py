@@ -36,7 +36,6 @@ class Cast(object):
 
         self._len = len(p)
         self._fields = tuple(["pres", "sal", "temp"] + [a for a in kwargs])
-
         return
 
     def __repr__(self):
@@ -73,16 +72,32 @@ class Cast(object):
         else:
             raise TypeError("No rule to add {0} to {1}".format(type(self), type(other)))
 
-    def interpolate(self, y, x, v):
-        """ Interpolate y as a function of x at x=v.. """
+    def interpolate(self, y, x, v, force=False):
+        """ Interpolate property y as a function of property x at values given by vector x=v.
+
+        y::string       name of property to interpolate
+        x::string       name of reference property
+        v::iterable     vector of values for x
+
+        force::bool     whether to coerce x to be monotonic (defualt False)
+
+        Note: it's difficult to interpolate when x is not monotic, because this
+        makes y not a true function. However, it's resonable to want to
+        interpolate using rho or sigma as x. These should be essentially
+        monotonic, but might not be due to measurement noise. The keyword
+        argument `force` can be provided as True, which causes nonmonotonic x
+        to be coerced into a monotonic form (see `force_monotonic`).
+        """
         if y not in self.data:
             raise KeyError("Cast has no property '{0}'".format(y))
         elif x not in self.data:
             raise KeyError("Cast has no property '{0}'".format(x))
-        if not np.all(np.diff(self[x]) > 0.0):
-            raise NotImplementedError("does not handle interpolation of "
-                                      "f(x) where x is non-monotonic")
-        return np.interp(v, self[x], self[y])
+        if np.all(np.diff(self[x]) > 0.0):
+            return np.interp(v, self[x], self[y])
+        elif force:
+            return np.interp(v, force_monotonic(self[x]), self[y])
+        else:
+            raise ValueError("x is not monotonic")
 
 
 class CastCollection(collections.Sequence):
@@ -146,27 +161,42 @@ class CastCollection(collections.Sequence):
 
     def asarray(self, key):
         """ Naively return values as an array, assuming that all casts are indexed
-        with the same pressure levels """
+        with the same pressure levels.
+
+        key::string         property to return
+        """
         nrows = max(cast._len for cast in self.casts)
         arr = np.nan * np.empty((nrows, len(self.casts)), dtype=np.float64)
         for i, cast in enumerate(self.casts):
             arr[:cast._len, i] = cast[key]
         return arr
 
-    def versus(self, key1, key2):
-        """ Return arrays containing bulk values from all casts. The values are
-        determined by `key1` and `key2`. """
-        v1 = self[key1]
-        v2 = self[key2]
-        return v1, v2
-
     def projdist(self):
+        """ Return the cumulative distances from the cast to cast.
+        """
         cumulative = [0]
         a = Point(self.casts[0].coords, crs=LONLAT)
         for cast in self.casts[1:]:
             b = Point(cast.coords, crs=LONLAT)
-            cumulative.append(cumulative[-1] + a.greatcircle(b))
+            cumulative.append(cumulative[-1] + a.distance(b))
             a = b
         return cumulative
 
+def force_monotonic(u):
+    """ Given a nearly monotonically-increasing vector u, return a vector u'
+    that is monotonic by incrementing each value u_i that is less than u_(i-1).
+
+    u::iterable         vector to adjust
+    """
+    # naive implementation
+    #v = u.copy()
+    #for i in xrange(1, len(v)):
+    #    if v[i] <= v[i-1]:
+    #        v[i] = v[i-1] + 1e-16
+    #return v
+
+    # more efficient implementation
+    v = [u1 if u1 > u0 else u0 + 1e-16
+            for u0, u1 in zip(u[:-1], u[1:])]
+    return np.hstack([np.array([0]), np.array(v)])
 
