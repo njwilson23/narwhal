@@ -5,7 +5,9 @@ Cast and CastCollection classes for managing CTD observations
 import sys
 import itertools
 import collections
+import json
 import numpy as np
+from . import fileio
 from karta import Point, LONLAT
 
 class Cast(object):
@@ -14,7 +16,7 @@ class Cast(object):
 
     _type = "ctd_cast"
 
-    def __init__(self, p, S=None, T=None, coords=None, bathymetry=None,
+    def __init__(self, p, sal=None, temp=None, coords=None, bathymetry=None,
         **kwargs):
 
         self.coords = coords
@@ -28,10 +30,10 @@ class Cast(object):
 
         self.data = {}
         self.data["pres"] = p
-        self.data["sal"] = _fieldmaker(len(p), S)
-        self.data["temp"] = _fieldmaker(len(p), T)
+        self.data["sal"] = _fieldmaker(len(p), sal)
+        self.data["temp"] = _fieldmaker(len(p), temp)
 
-        for kw,val in kwargs.iteritems():
+        for kw, val in kwargs.iteritems():
             self.data[kw] = _fieldmaker(len(p), val)
 
         self._len = len(p)
@@ -99,6 +101,14 @@ class Cast(object):
         else:
             raise ValueError("x is not monotonic")
 
+    def save(self, fnm):
+        """ Save a JSON-formatted representation to a file.
+
+        fnm::string     File name to save to
+        """
+        with open(fnm, "w") as f:
+            fileio.writecast(f, self)
+        return
 
 class CastCollection(collections.Sequence):
     """ A CastCollection is an indexable collection of Cast instances """
@@ -184,6 +194,14 @@ class CastCollection(collections.Sequence):
             a = b
         return cumulative
 
+    def save(self, fnm):
+        """ Save a JSON-formatted representation to a file.
+
+        fnm::string     File name to save to
+        """
+        with open(fnm, "w") as f:
+            fileio.writecastcollection(f, self)
+
 def force_monotonic(u):
     """ Given a nearly monotonically-increasing vector u, return a vector u'
     that is monotonic by incrementing each value u_i that is less than u_(i-1).
@@ -201,4 +219,15 @@ def force_monotonic(u):
     v = [u1 if u1 > u0 else u0 + 1e-16
             for u0, u1 in zip(u[:-1], u[1:])]
     return np.hstack([u[0], v])
+
+def read(fnm):
+    """ Convenience function for reading JSON-formatted measurement data. """
+    with open(fnm, "r") as f:
+        d = json.load(f)
+    if d.get("type", None) == "ctd_cast":
+        return fileio.dictascast(d, Cast)
+    elif d.get("type", None) == "ctd_collection":
+        return CastCollection(fileio.dictascastcollection(d, Cast))
+    else:
+        raise IOError("Invalid input file")
 
