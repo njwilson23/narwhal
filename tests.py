@@ -1,9 +1,9 @@
 
 import unittest
 import numpy as np
-from cast import Cast, CastCollection
-from cast import force_monotonic
-from bathymetry import Bathymetry
+from narwhal.cast import Cast, CastCollection
+from narwhal.cast import force_monotonic
+from narwhal.bathymetry import Bathymetry
 
 class CastTests(unittest.TestCase):
 
@@ -14,7 +14,7 @@ class CastTests(unittest.TestCase):
         self.p = p
         self.temp = temp
         self.sal = sal
-        self.cast1 = Cast(self.p, T=self.temp, S=self.sal)
+        self.cast1 = Cast(self.p, temp=self.temp, sal=self.sal)
         return
 
     def test_numerical_indexing(self):
