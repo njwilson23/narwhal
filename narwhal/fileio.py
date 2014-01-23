@@ -20,8 +20,25 @@ def castasdict(cast):
             dvector[key] = cast[key].tolist()
         else:
             dvector[key] = list(cast[key])
-    d = dict(type="ctd_cast", scalars=dscalar, vectors=dvector)
+    d = dict(type="ctd_cast", scalars=dscalar, vectors=dvector, coords=cast.coords)
     return d
+
+def dictascast(d, obj):
+    """ Read a file-like stream and construct an object with a Cast-like
+    interface. """
+    d_ = copy.copy(d)
+    _ = d_.pop("type")
+    coords = d_.pop("coords")
+    p = d_["vectors"].pop("pres")
+    d_["vectors"].update(d_["scalars"])
+    cast = obj(p, coords=coords, **d_["vectors"])
+    return cast
+
+def dictascastcollection(d, castobj):
+    """ Read a file-like stream and return a list of Cast-like objects.
+    """
+    casts = [dictascast(cast, castobj) for cast in d["casts"]]
+    return casts
 
 def writecast(f, cast):
     """ Write Cast data to a file-like stream. """
@@ -35,20 +52,4 @@ def writecastcollection(f, cc):
     d = dict(type="ctd_collection", casts=casts)
     json.dump(d, f)
     return
-
-def dictascast(d, obj):
-    """ Read a file-like stream and construct an object with a Cast-like
-    interface. """
-    d_ = copy.copy(d)
-    _ = d_.pop("type")
-    p = d_["vectors"].pop("pres")
-    d_["vectors"].update(d_["scalars"])
-    cast = obj(p, **d_["vectors"])
-    return cast
-
-def dictascastcollection(d, castobj):
-    """ Read a file-like stream and return a list of Cast-like objects.
-    """
-    casts = [dictascast(cast, castobj) for cast in d["casts"]]
-    return casts
 
