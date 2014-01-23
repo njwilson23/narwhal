@@ -11,9 +11,7 @@ from narwhal.cast import Cast, CastCollection
 def ccmeans(cc):
     """ Calculate a mean Cast along isopycnals from a CastCollection. """
     c0 = cc[0]
-    #c0 = cc[np.argmax(
     s0 = c0["sigma"]
-    
     sharedkeys = set(c0.data.keys()).intersection(
                     *[set(c.data.keys()) for c in cc[1:]]).difference(
                     set(("pres", "botdepth", "time")))
@@ -30,7 +28,9 @@ def ccmeans(cc):
     return Cast(copy.copy(c0["pres"]), **data)
 
 def ccmeanp(cc):
-    if False in (all(cc[0]["pres"] == c["pres"]) for c in cc[1:]):
+    print cc
+    print len(cc)
+    if False in (np.all(cc[0]["pres"] == c["pres"]) for c in cc):
         raise ValueError("casts must share pressure levels")
     p = cc[0]["pres"]
     data = dict()
@@ -45,34 +45,38 @@ def ccmeanp(cc):
 
 ###### T-S plots #######
 
-def plot_ts(*casts, **kwargs):
+def plot_ts_average(*casts, **kwargs):
+    if False not in map(lambda c: c._type == "ctd_cast", casts):
+        avgcasts = [ccmeanp(casts)]
+    else:
+        avgcasts = []
+        for cast in casts:
+            if cast._type == "ctd_cast":
+                avgcasts.append(cast)
+            elif cast._type == "ctd_collection":
+                avgcasts.append(ccmeanp(cast))
+            else:
+                raise TypeError("argument is neither a cast nor a castcollection")
+    plot_ts(*avgcasts, **kwargs)
+    return
 
-    labels = kwargs.pop("labels", ["cast "+str(i+1) for i in range(len(casts))])
-    contourint = kwargs.pop("contourint", 0.5)
-    styles = kwargs.pop("styles", itertools.cycle(("ok", "sr", "db", "^g")))
+def plot_ts(*casts, **kwargs):
     drawlegend = kwargs.pop("drawlegend", True)
-    average_collections = kwargs.pop("average_collections", True)
+    contourint = kwargs.pop("contourint", 0.5)
+    labels = kwargs.pop("labels", ["cast "+str(i+1) for i in range(len(casts))])
+    styles = kwargs.pop("styles", itertools.cycle(("ok", "sr", "db", "^g")))
     if "ms" not in kwargs:
         kwargs["ms"] = 6
 
-
-    if average_collections:
-        for i, cast in enumerate(casts):
-            if isinstance(cast, CastCollection):
-                cast = ccmeanp(cast)
-            plt.plot(cast["sal"], cast["theta"], styles.next(), label=labels[i],
-                 **kwargs)
-
-    else:
-        for i, cast in enumerate(casts):
-            sty = styles.next()
-            if isinstance(cast, CastCollection):
-                for subcast in cast:
-                    plt.plot(subcast["sal"], subcast["theta"], sty, **kwargs)
-                plt.gca().lines[-1].set_label(labels[i])
-            else:
-                plt.plot(cast["sal"], cast["theta"], sty, label=labels[i],
-                         **kwargs)
+    for i, cast in enumerate(casts):
+        sty = styles.next()
+        if isinstance(cast, CastCollection):
+            for subcast in cast:
+                plt.plot(subcast["sal"], subcast["theta"], sty, **kwargs)
+            plt.gca().lines[-1].set_label(labels[i])
+        else:
+            plt.plot(cast["sal"], cast["theta"], sty, label=labels[i],
+                     **kwargs)
 
     if len(casts) > 1 and drawlegend:
         plt.legend(loc="best", frameon=False)
