@@ -41,7 +41,8 @@ class Cast(object):
         return
 
     def __repr__(self):
-        return "CTD cast <{0}> at {1}".format(self._fields, self.coords)
+        coords = tuple(round(c, 3) for c in self.coords)
+        return "CTD cast <{0}> at {1}".format(self._fields, coords)
 
     def __getitem__(self, key):
         if isinstance(key, int):
