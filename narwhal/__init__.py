@@ -1,6 +1,8 @@
 
-import plotting
 from cast import Cast, CastCollection, read
 from bathymetry import Bathymetry
-__all__ = ["cast", "bathymetry"]
+import plotting
+import util
+
+__all__ = ["cast", "bathymetry", "util"]
 
