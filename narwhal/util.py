@@ -2,7 +2,7 @@ import copy
 import numpy as np
 from narwhal.cast import Cast
 
-def nanmean_(arr, axis=0):
+def _nanmean(arr, axis=0):
     """ Re-implement nanmean in a way that doesn't fire off warning when there
     are NaN-filled rows. 
     
@@ -38,7 +38,7 @@ def ccmeans(cc):
         for j, c in enumerate(cc[1:]):
             s = np.convolve(c["sigma"], np.ones(3)/3.0, mode="same")
             arr[:,j+1] = np.interp(s0, s, c[key])
-        data[key] = nanmean_(arr, axis=0)
+        data[key] = _nanmean(arr, axis=0)
         data[key][nanmask] = np.nan
     
     return Cast(copy.copy(c0["pres"]), **data)
@@ -54,7 +54,7 @@ def ccmeanp(cc):
     data = dict()
     for key in sharedkeys:
         arr = np.vstack([c.data[key] for c in cc])
-        data[key] = nanmean_(arr, axis=1)
+        data[key] = _nanmean(arr, axis=1)
 
     return Cast(p, **data)
 
