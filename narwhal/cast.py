@@ -75,6 +75,17 @@ class Cast(object):
         else:
             raise TypeError("No rule to add {0} to {1}".format(type(self), type(other)))
 
+    def nanmask(self):
+        """ Return a mask for observations containing at least one NaN. """
+        vectors = [a for a in self.data.values() if hasattr(a, "__iter__")]
+        return np.isnan(np.vstack(vectors).sum(axis=0))
+
+    def nvalid(self):
+        """ Return the number of complete (non-NaN) observations. """
+        vectors = [a for a in self.data.values() if hasattr(a, "__iter__")]
+        nv = sum(reduce(lambda a,b: (~np.isnan(a))&(~np.isnan(b)), vectors))
+        return nv
+
     def interpolate(self, y, x, v, force=False):
         """ Interpolate property y as a function of property x at values given by vector x=v.
 
