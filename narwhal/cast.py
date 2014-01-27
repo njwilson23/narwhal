@@ -42,7 +42,12 @@ class Cast(object):
 
     def __repr__(self):
         coords = tuple(round(c, 3) for c in self.coords)
-        return "CTD cast <{0}> at {1}".format(self._fields, coords)
+        s = "CTD cast ("
+        for key in self._fields:
+            s += str(key) + ", "
+        s = s[:-2]
+        s += ") at {0}".format(coords)
+        return s
 
     def __getitem__(self, key):
         if isinstance(key, int):
