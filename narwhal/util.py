@@ -33,14 +33,14 @@ def ccmeans(cc):
     nanmask = reduce(lambda a,b: a*b, [c.nanmask() for c in cc])
     data = dict()
     for key in sharedkeys:
-        arr = np.empty((len(c0["pres"]), len(cc)))
-        arr[:,0] = c0[key]
+        arr = np.nan * np.empty((len(cc), len(c0["pres"])))
+        arr[0,:] = c0[key]
         for j, c in enumerate(cc[1:]):
             s = np.convolve(c["sigma"], np.ones(3)/3.0, mode="same")
-            arr[:,j+1] = np.interp(s0, s, c[key])
-        data[key] = _nanmean(arr, axis=0)
+            arr[j+1,:] = np.interp(s0, s, c[key])
+        data[key] = _nanmean(arr, axis=1)
         data[key][nanmask] = np.nan
-    
+
     return Cast(copy.copy(c0["pres"]), **data)
 
 def ccmeanp(cc):
