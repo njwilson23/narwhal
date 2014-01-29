@@ -87,6 +87,18 @@ def add_mixing_line(origin, ax=None, icetheta=0):
     ax.set_ylim(yl)
     return
 
+def add_melt_line(origin, ax=None, icetheta=-10):
+    add_mixing_line(origin, ax, icetheta)
+    return
+
+def add_runoff_line(origin, ax=None):
+    ax = ax if ax is not None else plt.gca()
+    xl, yl = ax.get_xlim(), ax.get_ylim()
+    ax.plot((origin[0], 0.0), (origin[1], 0.0), "--k", linewidth=1.5)
+    ax.set_xlim(xl)
+    ax.set_ylim(yl)
+    return
+
 def add_freezing_line(ax=None, p=0.0, air_sat_fraction=0.1):
     ax = ax if ax is not None else plt.gca()
     SA = np.linspace(*ax.get_xlim())
