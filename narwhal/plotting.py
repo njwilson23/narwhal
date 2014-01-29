@@ -127,25 +127,28 @@ def plot_section_properties(cc, **kw):
     obsx = obsx[~np.isnan(rawdata)]
     rawdata = rawdata[~np.isnan(rawdata)]
 
-    intpres, intx = np.meshgrid(y, linspace(x[0], x[-1], 30))
+    intpres, intx = np.meshgrid(y, np.linspace(x[0], x[-1], 30))
 
-    data_interp = griddata(c_[obsx.flatten(), obspres.flatten()],
+    data_interp = griddata(np.c_[obsx.flatten(), obspres.flatten()],
                            rawdata.flatten(),
-                           c_[intx.flatten(), intpres.flatten()],
+                           np.c_[intx.flatten(), intpres.flatten()],
                            method="linear")
 
     #ax.pcolormesh(intx, intpres, data_interp.reshape(intx.shape),
     #              vmin=20, vmax=28, cmap=cm.gist_ncar)
     ax.contourf(intx, intpres, data_interp.reshape(intx.shape),
-                levels=np.r_[arange(20, 26, 0.5), arange(26, 28, 0.25)],
+                levels=np.r_[np.arange(20, 26, 0.5), np.arange(26, 28, 0.25)],
                 cmap=plt.cm.gist_ncar, extend="both")
     cl = ax.contour(intx, intpres, data_interp.reshape(intx.shape),
-                    levels=np.r_[arange(20, 24), arange(24, 27, 0.5), arange(27, 28, 0.2)],
+                    levels=np.r_[np.arange(20, 24),
+                                 np.arange(24, 27, 0.5),
+                                 np.arange(27, 28, 0.2)],
                     colors="k")
     ax.clabel(cl, fmt="%.1f")
 
-    ymax = max(c["pres"][~np.isnan(c["sigma"])][-1] for c in cc)
-
+    presgen = (np.array(c["pres"]) for c in cc)
+    validgen = (~np.isnan(c["sigma"]) for c in cc)
+    ymax = max(p[msk][-1] for p,msk in zip(presgen, validgen))
     for x_ in cx:
         plt.plot((x_, x_), (ymax, 0), "--k")
 
@@ -155,7 +158,7 @@ def plot_section_properties(cc, **kw):
 
 def plot_section_bathymetry(bathymetry, **kw):
     """ Add bathymetry from a Bathymetry object to a section plot.
-
+    
     Keyword arguments:
     ------------------
     vertices            a list of points defining a cruise path
@@ -164,7 +167,7 @@ def plot_section_bathymetry(bathymetry, **kw):
     """
     ax = kw.pop("ax", plt.gca())
     maxdistance = kw.pop("maxdistance", 0.01)
-
+    
     # The bathymetry x should be plotted with respect to CTD line
     if "vertices" in kw:
         bx = []
@@ -175,7 +178,7 @@ def plot_section_bathymetry(bathymetry, **kw):
         vline = Line(vertices, crs=LONLAT)
         for a,b in zip(vertices[:-1], vertices[1:]):
             # find all bathymetry within a threshold
-            seg = Line((a, b), crs=LONLAT)
+            seg = Line((a,b), crs=LONLAT)
             bcoords = [v for v in zip(bathymetry.line.vertices, bathymetry.depth)
                        if seg.within_distance(Point(v[0], crs=LONLAT), 0.01)]
 
@@ -188,14 +191,14 @@ def plot_section_bathymetry(bathymetry, **kw):
                 depth.append(z)
 
             segdist.append(seg.length() + segdist[-1])
-
+        
         depth = sorted(depth, key=lambda i: operator.getitem(bx, depth.index(i)))
         bx.sort()
-
+        
     else:
         bx = np.array(bathymetry.line.cumlength())
         depth = bathymetry.depth
-
+    
     ymax = bathymetry.depth.max()
     ax.fill_between(bx, depth, ymax*np.ones_like(depth),
                     color="0.0")
