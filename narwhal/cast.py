@@ -40,13 +40,14 @@ class Cast(object):
         self._fields = tuple(["pres", "sal", "temp"] + [a for a in kwargs])
         return
 
-    def __repr__(self):
-        coords = tuple(round(c, 3) for c in self.coords)
-        s = "CTD cast ("
-        for key in self._fields:
-            s += str(key) + ", "
-        s = s[:-2]
-        s += ") at {0}".format(coords)
+    def __str__(self):
+        if self.coords is not None:
+            coords = tuple(round(c, 3) for c in self.coords)
+        else:
+            coords = (None, None)
+        s = "CTD cast (" + "".join([str(k)+", " for k in self._fields])
+        # cut off the final comma
+        s = s[:-2] + ") at {0}".format(coords)
         return s
 
     def __getitem__(self, key):
