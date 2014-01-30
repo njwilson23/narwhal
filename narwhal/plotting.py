@@ -156,7 +156,7 @@ def plot_section_properties(cc, ax=None, prop="sigma", cntrrc=None, cntrfrc=None
     validgen = (~np.isnan(c["sigma"]) for c in cc)
     ymax = max(p[msk][-1] for p,msk in zip(presgen, validgen))
     for x_ in cx:
-        plt.plot((x_, x_), (ymax, 0), "--k")
+        ax.plot((x_, x_), (ymax, 0), "--k")
     ax.set_ylim((ymax, 0))
     ax.set_xlim((cx[0], cx[-1]))
     return
