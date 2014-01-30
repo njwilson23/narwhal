@@ -113,6 +113,11 @@ def plot_section_properties(cc, **kw):
     """ Add water properties from a CastCollection to a section plot. """
     ax = kw.pop("ax", plt.gca())
     prop = kw.pop("prop", "sigma")
+    levels = kw.pop("levels", np.r_[np.arange(20, 24),
+                              np.arange(24, 27, 0.5),
+                              np.arange(27, 28, 0.2)])
+    clevels = kw.pop("clevels", np.r_[np.arange(20, 26, 0.5),
+                                np.arange(26, 28, 0.25)])
 
     ccline = Line([c.coords for c in cc], crs=LONLAT)
     cx = np.array(ccline.cumlength())
@@ -137,13 +142,9 @@ def plot_section_properties(cc, **kw):
     #ax.pcolormesh(intx, intpres, data_interp.reshape(intx.shape),
     #              vmin=20, vmax=28, cmap=cm.gist_ncar)
     ax.contourf(intx, intpres, data_interp.reshape(intx.shape),
-                levels=np.r_[np.arange(20, 26, 0.5), np.arange(26, 28, 0.25)],
-                cmap=plt.cm.gist_ncar, extend="both")
+                levels=clevels, cmap=plt.cm.gist_ncar, extend="both")
     cl = ax.contour(intx, intpres, data_interp.reshape(intx.shape),
-                    levels=np.r_[np.arange(20, 24),
-                                 np.arange(24, 27, 0.5),
-                                 np.arange(27, 28, 0.2)],
-                    colors="k")
+                    levels=levels, colors="k")
     ax.clabel(cl, fmt="%.1f")
 
     presgen = (np.array(c["pres"]) for c in cc)
@@ -204,9 +205,9 @@ def plot_section_bathymetry(bathymetry, **kw):
                     color="0.0")
     return
 
-def plot_section(cc, bathymetry):
+def plot_section(cc, bathymetry, **kw):
     vertices = [c.coords for c in cc]
-    plot_section_properties(cc)
+    plot_section_properties(cc, **kw)
     plot_section_bathymetry(bathymetry, vertices=vertices)
     return
 
