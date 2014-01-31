@@ -29,29 +29,35 @@ def plot_ts_average(*casts, **kwargs):
     return
 
 def plot_ts(*casts, **kwargs):
-    drawlegend = kwargs.pop("drawlegend", True)
-    contourint = kwargs.pop("contourint", 0.5)
-    labels = kwargs.pop("labels", ["cast "+str(i+1) for i in range(len(casts))])
-    styles = kwargs.pop("styles", itertools.cycle(("ok", "sr", "db", "^g")))
-    if "ms" not in kwargs:
-        kwargs["ms"] = 6
+    """ Plot a T-S diagram from Casts or CastCollections """
+    ax = kwargs.get("ax", plt.gca())
+    drawlegend = kwargs.get("drawlegend", True)
+    contourint = kwargs.get("contourint", 0.5)
+    labels = kwargs.get("labels", ["cast "+str(i+1) for i in range(len(casts))])
+    styles = kwargs.get("styles", itertools.cycle(("ok", "sr", "db", "^g")))
+    tkey = kwargs.get("temperature", "theta")
+    skey = kwargs.get("salinity", "sal")
+    plotkw = {}
+    for key in kwargs:
+        if key not in ("drawlegend", "contourint", "labels", "styles"):
+            plotkw[key] = kwargs[key]
+    plotkw.setdefault("ms", 6)
 
     for i, cast in enumerate(casts):
         sty = styles.next()
         if isinstance(cast, CastCollection):
             for subcast in cast:
-                plt.plot(subcast["sal"], subcast["theta"], sty, **kwargs)
-            plt.gca().lines[-1].set_label(labels[i])
+                ax.plot(subcast[skey], subcast[tkey], sty, **plotkw)
+            ax.lines[-1].set_label(labels[i])
         else:
-            plt.plot(cast["sal"], cast["theta"], sty, label=labels[i],
-                     **kwargs)
+            ax.plot(cast[skey], cast[tkey], sty, label=labels[i], **plotkw)
 
     if len(casts) > 1 and drawlegend:
-        plt.legend(loc="best", frameon=False)
+        ax.legend(loc="best", frameon=False)
 
-    add_sigma_contours(contourint, plt.gca())
-    plt.xlabel("Salinity")
-    plt.ylabel(u"Potential temperature (\u00b0C)")
+    add_sigma_contours(contourint, ax)
+    ax.set_xlabel("Salinity")
+    ax.set_ylabel(u"Potential temperature (\u00b0C)")
     return
 
 def add_sigma_contours(contourint, ax=None):
