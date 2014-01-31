@@ -76,11 +76,15 @@ def add_sigma_contours(contourint, ax=None):
     plt.clabel(cc, fmt="%.{0}f".format(prec))
     return
 
-def add_mixing_line(origin, ax=None, icetheta=0):
+def add_mixing_line(origin, ax=None, icetheta=0, **kw):
     """ Draw a mixing line from `origin::(sal0, theta0)` to the
     effective potential temperature of ice at potential temperature
     `icetheta`, as given by *Jenkins, 1999*.
     """
+    kw.setdefault("linestyle", "--")
+    kw.setdefault("color", "black")
+    kw.setdefault("linewidth", 1.5)
+
     L = 335e3
     cp = 4.18e3
     ci = 2.11e3
@@ -88,19 +92,21 @@ def add_mixing_line(origin, ax=None, icetheta=0):
 
     ax = ax if ax is not None else plt.gca()
     xl, yl = ax.get_xlim(), ax.get_ylim()
-    ax.plot((origin[0], 0.0), (origin[1], ice_eff_theta), "--k", linewidth=1.5)
-    ax.set_xlim(xl)
+    ax.plot((origin[0], 0.0), (origin[1], ice_eff_theta), **kw)
     ax.set_ylim(yl)
     return
 
-def add_melt_line(origin, ax=None, icetheta=-10):
-    add_mixing_line(origin, ax, icetheta)
+def add_melt_line(origin, ax=None, icetheta=-10, **kw):
+    add_mixing_line(origin, ax, icetheta, **kw)
     return
 
-def add_runoff_line(origin, ax=None):
+def add_runoff_line(origin, ax=None, **kw):
     ax = ax if ax is not None else plt.gca()
     xl, yl = ax.get_xlim(), ax.get_ylim()
-    ax.plot((origin[0], 0.0), (origin[1], 0.0), "--k", linewidth=1.5)
+    kw.setdefault("linestyle", "--")
+    kw.setdefault("color", "black")
+    kw.setdefault("linewidth", 1.5)
+    ax.plot((origin[0], 0.0), (origin[1], 0.0), **kw)
     ax.set_xlim(xl)
     ax.set_ylim(yl)
     return
