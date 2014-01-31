@@ -28,11 +28,13 @@ def plot_ts_average(*casts, **kwargs):
     plot_ts(*avgcasts, **kwargs)
     return
 
-def plot_ts(*casts, **kwargs):
-    drawlegend = kwargs.pop("drawlegend", True)
-    contourint = kwargs.pop("contourint", 0.5)
-    labels = kwargs.pop("labels", ["cast "+str(i+1) for i in range(len(casts))])
-    styles = kwargs.pop("styles", itertools.cycle(("ok", "sr", "db", "^g")))
+def plot_ts(*casts, labels=None, styles=None, contourint=0.5, drawlegend=True,
+        salinity="sal", temperature="theta", **plotkwargs):
+    """ Plot a T-S diagram from a Cast or CastCollection. """
+    if labels is None:
+        labels = ["cast "+str(i+1) for i in range(len(casts))]
+    if styles is None:
+        styles = itertools.cycle(("ok", "sr", "db", "^g"))
     if "ms" not in kwargs:
         kwargs["ms"] = 6
 
@@ -40,11 +42,11 @@ def plot_ts(*casts, **kwargs):
         sty = styles.next()
         if isinstance(cast, CastCollection):
             for subcast in cast:
-                plt.plot(subcast["sal"], subcast["theta"], sty, **kwargs)
+                plt.plot(subcast[salinity], subcast[temperature], sty, **plotkwargs)
             plt.gca().lines[-1].set_label(labels[i])
         else:
-            plt.plot(cast["sal"], cast["theta"], sty, label=labels[i],
-                     **kwargs)
+            plt.plot(cast[salinity], cast[temperature], sty, label=labels[i],
+                     **plotkwargs)
 
     if len(casts) > 1 and drawlegend:
         plt.legend(loc="best", frameon=False)
