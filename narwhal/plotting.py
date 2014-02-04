@@ -14,12 +14,12 @@ ccmeans = util.ccmeans
 ###### T-S plots #######
 
 def plot_ts_average(*casts, **kwargs):
-    if False not in map(lambda c: c._type == "ctd_cast", casts):
+    if False not in map(lambda c: c._type == "cast", casts):
         avgcasts = [ccmeanp(casts)]
     else:
         avgcasts = []
         for cast in casts:
-            if cast._type == "ctd_cast":
+            if cast._type == "cast":
                 avgcasts.append(cast)
             elif cast._type == "ctd_collection":
                 avgcasts.append(ccmeanp(cast))

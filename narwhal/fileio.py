@@ -20,7 +20,7 @@ def castasdict(cast):
             dvector[key] = cast[key].tolist()
         else:
             dvector[key] = list(cast[key])
-    d = dict(type="ctd_cast", scalars=dscalar, vectors=dvector, coords=cast.coords)
+    d = dict(type="cast", scalars=dscalar, vectors=dvector, coords=cast.coords)
     return d
 
 def dictascast(d, obj):

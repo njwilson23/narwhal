@@ -14,7 +14,7 @@ class Cast(object):
     """ A Cast is a set of pressure, salinity, temperature (et al)
     measurements associated with a single coordinate. """
 
-    _type = "ctd_cast"
+    _type = "cast"
 
     def __init__(self, p, sal=None, temp=None, coords=None, bathymetry=None,
         **kwargs):
@@ -74,7 +74,7 @@ class Cast(object):
         return
 
     def __add__(self, other):
-        if hasattr(other, "_type") and (other._type == "ctd_cast"):
+        if hasattr(other, "_type") and (other._type == "cast"):
             return CastCollection(self, other)
         elif hasattr(other, "_type") and (other._type == "ctd_collection"):
             return CastCollection(self, *[a for a in other])
@@ -166,7 +166,7 @@ class CastCollection(collections.Sequence):
     def __add__(self, other):
         if hasattr(other, "_type") and (other._type == "ctd_collection"):
             return CastCollection(list(a for a in itertools.chain(self.casts, other.casts)))
-        elif hasattr(other, "_type") and (other._type == "ctd_cast"):
+        elif hasattr(other, "_type") and (other._type == "cast"):
             return CastCollection(self.casts + [other])
         else:
             raise TypeError("Addition requires both arguments to fulfill the "
@@ -242,7 +242,7 @@ def read(fnm):
     """ Convenience function for reading JSON-formatted measurement data. """
     with open(fnm, "r") as f:
         d = json.load(f)
-    if d.get("type", None) == "ctd_cast":
+    if d.get("type", None) == "cast":
         return fileio.dictascast(d, Cast)
     elif d.get("type", None) == "ctd_collection":
         return CastCollection(fileio.dictascastcollection(d, Cast))
