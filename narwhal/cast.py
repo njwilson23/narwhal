@@ -11,16 +11,18 @@ from . import fileio
 from karta import Point, LONLAT
 
 class Cast(object):
-    """ A Cast is a set of pressure, salinity, temperature (et al)
-    measurements associated with a single coordinate. """
+    """ A Cast is a set of pressure-referenced measurements associated with a
+    single coordinate. """
 
     _type = "cast"
 
-    def __init__(self, p, sal=None, temp=None, coords=None, bathymetry=None,
-        **kwargs):
+    def __init__(self, p, coords=None, bathymetry=None, **kwargs):
 
         self.coords = coords
         self.bath = bathymetry
+
+        self.data = {}
+        self.data["pres"] = p
 
         def _fieldmaker(n, arg):
             if arg is not None:
@@ -28,16 +30,11 @@ class Cast(object):
             else:
                 return [None for _ in xrange(n)]
 
-        self.data = {}
-        self.data["pres"] = p
-        self.data["sal"] = _fieldmaker(len(p), sal)
-        self.data["temp"] = _fieldmaker(len(p), temp)
-
         for kw, val in kwargs.iteritems():
             self.data[kw] = _fieldmaker(len(p), val)
 
         self._len = len(p)
-        self._fields = tuple(["pres", "sal", "temp"] + [a for a in kwargs])
+        self._fields = tuple([a for a in kwargs])
         return
 
     def __str__(self):
@@ -127,6 +124,26 @@ class Cast(object):
         with open(fnm, "w") as f:
             fileio.writecast(f, self)
         return
+
+
+class CTDCast(Cast):
+    """ Specialization of Cast guaranteed to have salinity and temperature fields. """
+
+    def __init__(self, p, sal=None, temp=None, coords=None, bathymetry=None,
+                 **kwargs):
+        super(CTDCast, self).__init__(p, temp=temp, sal=sal, coords=coords,
+                                      bathymetry=bathymetry, **kwargs)
+        return
+
+
+class XBTCast(Cast):
+    """ Specialization of Cast with temperature field. """
+
+    def __init__(self, p, temp=None, coords=None, bathymetry=None, **kwargs):
+        super(XBTCast, self).__init__(p, temp=temp, coords=coords,
+                                      bathymetry=bathymetry, **kwargs)
+        return
+
 
 class CastCollection(collections.Sequence):
     """ A CastCollection is an indexable collection of Cast instances """
@@ -219,6 +236,8 @@ class CastCollection(collections.Sequence):
         """
         with open(fnm, "w") as f:
             fileio.writecastcollection(f, self)
+
+
 
 def force_monotonic(u):
     """ Given a nearly monotonically-increasing vector u, return a vector u'
