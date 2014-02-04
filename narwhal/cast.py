@@ -34,7 +34,7 @@ class Cast(object):
             self.data[kw] = _fieldmaker(len(p), val)
 
         self._len = len(p)
-        self._fields = tuple([a for a in kwargs])
+        self._fields = tuple(["pres"] + [a for a in kwargs])
         return
 
     def __str__(self):

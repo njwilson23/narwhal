@@ -19,11 +19,11 @@ class CastTests(unittest.TestCase):
 
     def test_numerical_indexing(self):
         self.assertEqual(self.cast1[40],
-                         (81, 27.771987072878822, 1.1627808544797258))
+                         (81, 1.1627808544797258, 27.771987072878822))
         self.assertEqual(self.cast1[100],
-                         (201, 32.124158554636729, 0.67261848597249019))
+                         (201, 0.67261848597249019, 32.124158554636729))
         self.assertEqual(self.cast1[400],
-                         (801, 33.995350253934227, 1.8506793256302907))
+                         (801, 1.8506793256302907, 33.995350253934227))
         return
 
     def test_kw_indexing(self):
