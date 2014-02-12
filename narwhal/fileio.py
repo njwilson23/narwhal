@@ -5,6 +5,7 @@ import json
 import copy
 import datetime
 import numpy
+from karta import Point, geojson
 
 def castasdict(cast):
     scalars = [key for key in cast.data if not hasattr(cast[key], "__iter__")]
@@ -52,4 +53,10 @@ def writecastcollection(f, cc):
     d = dict(type="ctd_collection", casts=casts)
     json.dump(d, f)
     return
+
+def castcollection_as_geojson(cc):
+    castpoints = (Point(c.coords, properties={"id":i})
+                  for i, c in enumerate(cc))
+    geojsonstring = geojson.printFeatureCollection(castpoints)
+    return geojsonstring
 
