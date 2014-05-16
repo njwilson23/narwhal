@@ -1,0 +1,5 @@
+narwhal
+karta>=0.1
+numpy>=1.5
+scipy>=012
+requests>=2.2.1
