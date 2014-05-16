@@ -18,12 +18,18 @@ class CastTests(unittest.TestCase):
         return
 
     def test_numerical_indexing(self):
-        self.assertEqual(self.cast1[40],
-                         (81, 1.1627808544797258, 27.771987072878822))
-        self.assertEqual(self.cast1[100],
-                         (201, 0.67261848597249019, 32.124158554636729))
-        self.assertEqual(self.cast1[400],
-                         (801, 1.8506793256302907, 33.995350253934227))
+        def _has_all(tup1, tup2):
+            """ Check whether tup2 contains all items of tup1 """
+            for item in tup1:
+                if item not in tup2:
+                    return False
+            return True
+        self.assertTrue(_has_all(self.cast1[40], (("pres", 81),
+            ("temp", 1.1627808544797258), ("sal", 27.771987072878822))))
+        self.assertTrue(_has_all(self.cast1[100], (("pres", 201),
+            ("temp", 0.67261848597249019), ("sal", 32.124158554636729))))
+        self.assertTrue(_has_all(self.cast1[400], (("pres", 801),
+            ("temp", 1.8506793256302907), ("sal", 33.995350253934227))))
         return
 
     def test_kw_indexing(self):

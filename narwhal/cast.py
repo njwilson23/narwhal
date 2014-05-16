@@ -21,7 +21,7 @@ class Cast(object):
         self.coords = coords
         self.bath = bathymetry
 
-        self.data = {}
+        self.data = collections.OrderedDict()
         self.data["pres"] = p
 
         def _fieldmaker(n, arg):
@@ -56,7 +56,7 @@ class Cast(object):
     def __getitem__(self, key):
         if isinstance(key, int):
             if key < self._len:
-                return tuple(self.data[a][key] for a in self._fields
+                return tuple((a, self.data[a][key]) for a in self._fields
                              if hasattr(self.data[a], "__iter__"))
             else:
                 raise IndexError("Index ({0}) is greater than cast length "
@@ -137,7 +137,7 @@ class CTDCast(Cast):
 
     def __init__(self, p, sal=None, temp=None, coords=None, bathymetry=None,
                  **kwargs):
-        super(CTDCast, self).__init__(p, temp=temp, sal=sal, coords=coords,
+        super(CTDCast, self).__init__(p, sal=sal, temp=temp, coords=coords,
                                       bathymetry=bathymetry, **kwargs)
         return
 
