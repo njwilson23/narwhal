@@ -30,7 +30,13 @@ class Cast(object):
             else:
                 return [None for _ in xrange(n)]
 
-        for kw, val in kwargs.iteritems():
+        # Python 3 workaround
+        try:
+            items = kwargs.iteritems()
+        except AttributeError:
+            items = kwargs.items()
+
+        for kw, val in items:
             self.data[kw] = _fieldmaker(len(p), val)
 
         self._len = len(p)
