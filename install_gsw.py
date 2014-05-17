@@ -15,7 +15,8 @@ Gibbs Seawater (GSW) Oceanographic Toolbox, 28pp., SCOR/IAPSO WG127, ISBN
 import os
 import requests
 import zipfile
-import numpy.f2py
+import hashlib
+#import numpy.f2py
 
 def download_zip(url, fnm):
     """ Attempt to download source from TEOS-10 and save it to a zip file. """
@@ -52,12 +53,29 @@ def build_ext(fnm):
     os.remove("tmp.f90")
     return
 
-#download_zip("http://www.teos-10.org/software/gsw_c_v3.02.zip",
-#             fnm="temp_gsw_c.zip")
-#download_zip("http://www.teos-10.org/software/gsw_fortran_v3_02.zip",
-#             fnm="temp_gsw.zip")
-#unzip("temp_gsw.zip", "deps/")
-#unzip("temp_gsw_c.zip", "deps/")
-#os.remove("temp_gsw.zip")
-build_ext("deps/gsw_oceanographic_toolbox.f90")
+def compare_md5(fnm, against):
+    md5 = hashlib.md5()
+    with open(fnm, "rb") as f:
+        md5.update(f.read())
+        md5hash = md5.hexdigest()
+    if md5hash != against:
+        return False
+    else:
+        return True
+
+if __name__ == "__main__":
+    #download_zip("http://www.teos-10.org/software/gsw_fortran_v3_02.zip",
+    #             fnm="temp_gsw.zip")
+    #unzip("temp_gsw.zip", "deps/")
+    #os.remove("temp_gsw.zip")
+    #build_ext("deps/gsw_oceanographic_toolbox.f90")
+
+    download_zip("http://www.teos-10.org/software/gsw_c_v3.02.zip",
+                 fnm="temp_gsw_c.zip")
+
+    if not compare_md5("temp_gsw_c.zip", "6360ec9cff432f7bc01032fbecf48422"):
+        raise Exception("MD5 doesn't match expected digest - aborting!")
+
+    unzip("temp_gsw_c.zip", "deps/")
+    os.remove("temp_gsw_c.zip")
 
