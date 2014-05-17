@@ -9,7 +9,8 @@ try:
     install_gsw.download_zip("http://www.teos-10.org/software/gsw_c_v3.02.zip",
                              fnm="temp_gsw_c.zip")
 
-    if compare_md5("temp_gsw_c.zip", "6360ec9cff432f7bc01032fbecf48422"):
+    if install_gsw.compare_md5("temp_gsw_c.zip", 
+                               "6360ec9cff432f7bc01032fbecf48422"):
         install_gsw.unzip("temp_gsw_c.zip", "deps/")
         ext = [Extension("narwhal.cgsw",
                          sources=["deps/gsw_c_v3.02/gsw_oceanographic_toolbox.c",
@@ -20,7 +21,6 @@ try:
         raise Exception("MD5 for downloaded GSW source doesn't match "
                         "expected digest. GSW will not be installed.")
     os.remove("temp_gsw_c.zip")
-    shutil.rmtree("deps/")
     print("...done")
 
 except Exception as e:
