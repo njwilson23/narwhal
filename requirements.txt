@@ -1,5 +1,5 @@
 narwhal
 karta>=0.1
 numpy>=1.5
-scipy>=012
+scipy>=0.12
 requests>=2.2.1
