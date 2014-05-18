@@ -1,6 +1,8 @@
 # Narwhal
 
-Narwhal is a library for organizing and manipulating hydrographic data.
+[![Build Status](https://travis-ci.org/njwilson23/narwhal.svg?branch=master)](https://travis-ci.org/njwilson23/narwhal)
+
+Narwhal is a Python (2/3) library for organizing and manipulating hydrographic data.
 
 |   Data type           |   Narwhal class             |
 |-----------------------|-----------------------------|

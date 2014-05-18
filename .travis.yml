@@ -1,31 +1,19 @@
 language: python
 python:
   - "2.7"
-  - "3.3"
-  - "3.4"
+    #- "3.3"    # travis doesn't have apt packages for Python 3
+    #- "3.4"
 
 branches:
   only:
     - master
     - travis
 
-# based on gist at https://gist.github.com/dan-blanchard/7045057
 before_install:
-  - wget http://repo.continuum.io/miniconda/Miniconda-latest-Linux-x86_64.sh -O miniconda.sh
-  - chmod +x miniconda.sh
-  - ./miniconda.sh -b -p miniconda
-  - export PATH=miniconda/bin:$PATH
-  - conda update --yes conda
-  - git clone git://github.com/njwilson23/karta.git
-  # The next couple lines fix a crash with multiprocessing on Travis and are
-  # not specific to using Miniconda
-  - sudo rm -rf /dev/shm
-  - sudo ln -s /run/shm /dev/shm
+  - sudo apt-get install python-numpy python-scipy python-matplotlib python-pyproj
+    #- git clone git://github.com/njwilson23/karta.git
 
 install:
-  - conda install --yes python=$TRAVIS_PYTHON_VERSION atlas numpy scipy matplotlib
-  - python -c "import numpy; print(numpy.get_include())"
-  - python -c "import numpy; print(numpy.get_include())" | xargs ls
   - pip install karta
   - pip install requests
     #- pip install -r requirements.txt
