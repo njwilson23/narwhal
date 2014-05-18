@@ -1,3 +1,4 @@
+from __future__ import print_function
 import os, shutil
 from distutils.core import setup
 from distutils.extension import Extension
