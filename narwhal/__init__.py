@@ -1,14 +1,9 @@
 
 from .cast import Cast, CastCollection, read
 from .bathymetry import Bathymetry
-#from . import plotting
+from . import gsw
 from . import util
+#from . import plotting
 
 __all__ = ["cast", "bathymetry", "gsw", "util"]
-
-try:
-    from . import gsw
-    __all__ += ["gsw"]
-except OSError:
-    gsw = None
 
