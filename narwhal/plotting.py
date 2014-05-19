@@ -153,21 +153,46 @@ def plot_section_properties(cc, ax=None, prop="temp",
     ccline = Line([c.coords for c in cc], crs=LONLAT)
     cx = np.array(ccline.cumlength())
     y = cc[0]["pres"]
+    obsx, obspres = np.meshgrid(cx, y)
+    intpres, intx = np.meshgrid(y, np.linspace(cx[0], cx[-1], 30))
 
     # interpolate over NaNs
+    #rawdata = cc.asarray(prop)
+    #obspres = obspres[~np.isnan(rawdata)]
+    #obsx = obsx[~np.isnan(rawdata)]
+    #rawdata = rawdata[~np.isnan(rawdata)]
+
+    # interpolate over NaNs in a way that assumes horizontal correlation
     rawdata = cc.asarray(prop)
-    obsx, obspres = np.meshgrid(cx, y)
-    obspres = obspres[~np.isnan(rawdata)]
-    obsx = obsx[~np.isnan(rawdata)]
-    rawdata = rawdata[~np.isnan(rawdata)]
-    intpres, intx = np.meshgrid(y, np.linspace(cx[0], cx[-1], 30))
-    data_interp = griddata(np.c_[obsx.flatten(), obspres.flatten()],
+    for (i, row) in enumerate(rawdata):
+        if np.any(np.isnan(row)):
+            if np.any(~np.isnan(row)):
+                # find groups of NaNs
+                start = -1
+                for (idx, val) in enumerate(row):
+                    if start == -1 and np.isnan(val):
+                        start = idx
+                    elif start != -1 and not np.isnan(val):
+                        if start == 0:
+                            meanval = val
+                        else:
+                            meanval = 0.5 * (val + row[start-1])
+                        row[start:idx] = meanval
+                        start = -1
+                if start != -1:
+                    rawdata[i,start:] = row[start-1]
+            else:
+                if i != 0:
+                    row = rawdata[i-1]
+
+    intdata = griddata(np.c_[obsx.flatten(), obspres.flatten()],
                            rawdata.flatten(),
                            np.c_[intx.flatten(), intpres.flatten()],
                            method=interp_method)
+    intdata = intdata.reshape(intx.shape)
 
-    ax.contourf(intx, intpres, data_interp.reshape(intx.shape), **cntrfrc)
-    cl = ax.contour(intx, intpres, data_interp.reshape(intx.shape), **cntrrc)
+    ax.contourf(intx, intpres, intdata, **cntrfrc)
+    cl = ax.contour(intx, intpres, intdata, **cntrrc)
     ax.clabel(cl, fmt="%.1f")
 
     # Set plot bounds
