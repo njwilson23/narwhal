@@ -4,7 +4,12 @@ import os
 import ctypes
 
 install_dir = os.path.split(__file__)[0]
-cgsw = ctypes.cdll.LoadLibrary(os.path.join(install_dir, "cgsw.cpython-34m.so"))
+
+def find_gsw(s):
+    return os.path.splitext(s)[1] == ".so" and \
+           s.startswith("cgsw")
+name = list(filter(find_gsw, os.listdir(install_dir)))[0]
+cgsw = ctypes.cdll.LoadLibrary(os.path.join(install_dir, name))
 
 header = \
 """
