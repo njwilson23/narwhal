@@ -55,7 +55,8 @@ def plot_ts(*casts, **kwargs):
     if len(casts) > 1 and drawlegend:
         ax.legend(loc="best", frameon=False)
 
-    add_sigma_contours(contourint, ax)
+    if contourint is not None:
+        add_sigma_contours(contourint, ax)
     ax.set_xlabel("Salinity")
     ax.set_ylabel(u"Potential temperature (\u00b0C)")
     return
@@ -111,12 +112,14 @@ def add_runoff_line(origin, ax=None, **kw):
     ax.set_ylim(yl)
     return
 
-def add_freezing_line(ax=None, p=0.0, air_sat_fraction=0.1):
+def add_freezing_line(ax=None, p=0.0, air_sat_fraction=0.1, **kw):
     ax = ax if ax is not None else plt.gca()
+    kw.setdefault("linestyle", "--")
+    kw.setdefault("color", "k")
     SA = np.linspace(*ax.get_xlim())
-    ctfreeze = lambda sa: gsw.gsw_ct_freezing(sa, p, air_sat_fraction)
-    ptfreeze = np.array([gsw.gsw_pt_from_ct(sa, ctfreeze(sa)) for sa in SA])
-    ax.plot(SA, ptfreeze, "-.", color="k", label="Freezing line ({0} dbar)".format(p))
+    ctfreeze = lambda sa: gsw.ct_freezing(sa, p, air_sat_fraction)
+    ptfreeze = np.array([gsw.pt_from_ct(sa, ctfreeze(sa)) for sa in SA])
+    ax.plot(SA, ptfreeze, label="Freezing line ({0} dbar)".format(p), **kw)
     return
 
 ###### Section plots #######
