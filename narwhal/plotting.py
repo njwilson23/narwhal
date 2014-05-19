@@ -129,7 +129,10 @@ DEFAULT_CONTOUR = {"colors":    "black"}
 DEFAULT_CONTOURF = {"cmap":     plt.cm.gist_ncar,
                     "extend":   "both"}
 
-def plot_section_properties(cc, ax=None, prop="sigma", cntrrc=None, cntrfrc=None):
+def plot_section_properties(cc, ax=None, prop="temp",
+                            cntrrc=None,
+                            cntrfrc=None,
+                            interp_method="linear"):
     """ Add water properties from a CastCollection to a section plot.
     
     Keyword arguments:
@@ -138,6 +141,7 @@ def plot_section_properties(cc, ax=None, prop="sigma", cntrrc=None, cntrfrc=None
     prop                Cast property to show
     cntrrc              dictionary of pyplot.contour keyword arguments
     cntrfrc             dictionary of pyplot.contourf keyword argument
+    interp_method       method used by scipy.griddata
     """
     if ax is None:
         ax = plt.gca()
@@ -160,7 +164,7 @@ def plot_section_properties(cc, ax=None, prop="sigma", cntrrc=None, cntrfrc=None
     data_interp = griddata(np.c_[obsx.flatten(), obspres.flatten()],
                            rawdata.flatten(),
                            np.c_[intx.flatten(), intpres.flatten()],
-                           method="linear")
+                           method=interp_method)
 
     ax.contourf(intx, intpres, data_interp.reshape(intx.shape), **cntrfrc)
     cl = ax.contour(intx, intpres, data_interp.reshape(intx.shape), **cntrrc)
@@ -168,7 +172,7 @@ def plot_section_properties(cc, ax=None, prop="sigma", cntrrc=None, cntrfrc=None
 
     # Set plot bounds
     presgen = (np.array(c["pres"]) for c in cc)
-    validgen = (~np.isnan(c["sigma"]) for c in cc)
+    validgen = (~np.isnan(c[prop]) for c in cc)
     ymax = max(p[msk][-1] for p,msk in zip(presgen, validgen))
     for x_ in cx:
         ax.plot((x_, x_), (ymax, 0), "--k")
