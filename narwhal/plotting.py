@@ -3,10 +3,10 @@ import operator
 import matplotlib.pyplot as plt
 import numpy as np
 from scipy.interpolate import griddata
-import gsw
 from karta import Point, Line, LONLAT
 from narwhal.cast import Cast, CastCollection
-import narwhal.util as util
+from . import util
+from . import gsw
 
 ccmeanp = util.ccmeanp
 ccmeans = util.ccmeans
@@ -66,8 +66,8 @@ def add_sigma_contours(contourint, ax=None):
     tl = ax.get_ylim()
     SA = np.linspace(sl[0], sl[1])
     CT = np.linspace(tl[0], tl[1])
-    SIGMA = np.reshape([gsw.gsw_rho(sa, ct, 0)-1000 for ct in CT
-                                                    for sa in SA],
+    SIGMA = np.reshape([gsw.rho(sa, ct, 0)-1000 for ct in CT
+                                                for sa in SA],
                     (50, 50))
     cc = ax.contour(SA, CT, SIGMA, np.arange(np.floor(SIGMA.min()),
                                              np.ceil(SIGMA.max()), contourint),
