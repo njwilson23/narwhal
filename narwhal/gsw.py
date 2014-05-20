@@ -184,6 +184,13 @@ def argtypes(line):
             cargs.append(ctypes.c_int)
     return tuple(cargs)
 
+def argnames(line):
+    args = line.rsplit("(", 1)[1].split(")", 1)[0].split(",")
+    names = []
+    for arg in args:
+        names.append(arg.split()[1].strip())
+    return tuple(names)
+
 def restype(line):
     s = line.split(" ", 2)[1:2][0].strip()
     if s == "double":
@@ -201,5 +208,6 @@ for line in lines:
         func = getfuncpointer(name)
         func.argtypes = argtypes(line)
         func.restype = restype(line)
+        func.__doc__ = name + str(argnames(line))
         addname(line)
 
