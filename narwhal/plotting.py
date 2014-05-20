@@ -1,7 +1,7 @@
 import itertools
 import operator
-import matplotlib.pyplot as plt
 import numpy as np
+import matplotlib.pyplot as plt
 from scipy.interpolate import griddata
 from karta import Point, Line, LONLAT
 from narwhal.cast import Cast, CastCollection
@@ -132,7 +132,8 @@ DEFAULT_CONTOURF = {"cmap":     plt.cm.gist_ncar,
 def plot_section_properties(cc, ax=None, prop="temp",
                             cntrrc=None,
                             cntrfrc=None,
-                            interp_method="linear"):
+                            interp_method="linear",
+                            mask=True):
     """ Add water properties from a CastCollection to a section plot.
     
     Keyword arguments:
@@ -142,6 +143,7 @@ def plot_section_properties(cc, ax=None, prop="temp",
     cntrrc              dictionary of pyplot.contour keyword arguments
     cntrfrc             dictionary of pyplot.contourf keyword argument
     interp_method       method used by scipy.griddata
+    mask                apply a NaN mask to the bottom of the section plot
     """
     if ax is None:
         ax = plt.gca()
@@ -155,20 +157,15 @@ def plot_section_properties(cc, ax=None, prop="temp",
     y = cc[0]["pres"]
     obsx, obspres = np.meshgrid(cx, y)
     intpres, intx = np.meshgrid(y, np.linspace(cx[0], cx[-1], 30))
-
-    # generate a mask
     rawdata = cc.asarray(prop)
-    obspres_ = obspres[~np.isnan(rawdata)]
-    obsx_ = obsx[~np.isnan(rawdata)]
-    rawdata_ = rawdata[~np.isnan(rawdata)]
-    mask = griddata(np.c_[obsx_.flatten(), obspres_.flatten()],
-                           rawdata_.flatten(),
-                           np.c_[intx.flatten(), intpres.flatten()],
-                           method="linear")
-    mask = mask.reshape(intx.shape)
+
+    # generate mask
+    botdepth = [cast["botdepth"] for cast in cc]
+    zmask1 = np.interp(intx[:,0], cx, botdepth)
+    zmask = intpres.T > np.tile(zmask1, (intx.shape[1], 1))
+    zmask = zmask.T
 
     # interpolate over NaNs in a way that assumes horizontal correlation
-    #rawdata = cc.asarray(prop)
     for (i, row) in enumerate(rawdata):
         if np.any(np.isnan(row)):
             if np.any(~np.isnan(row)):
@@ -195,7 +192,7 @@ def plot_section_properties(cc, ax=None, prop="temp",
                            np.c_[intx.flatten(), intpres.flatten()],
                            method=interp_method)
     intdata = intdata.reshape(intx.shape)
-    intdata[np.isnan(mask)] = np.nan
+    intdata[zmask] = np.nan
 
     ax.contourf(intx, intpres, intdata, **cntrfrc)
     cl = ax.contour(intx, intpres, intdata, **cntrrc)
