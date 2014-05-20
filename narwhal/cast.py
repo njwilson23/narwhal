@@ -7,8 +7,9 @@ import itertools
 import collections
 import json
 import numpy as np
-from . import fileio
 from karta import Point, LONLAT
+from . import fileio
+from . import gsw
 
 class Cast(object):
     """ A Cast is a set of pressure-referenced measurements associated with a
@@ -42,6 +43,9 @@ class Cast(object):
         self._len = len(p)
         self._fields = tuple(["pres"] + [a for a in kwargs])
         return
+
+    def __len__(self):
+        return self._len
 
     def __str__(self):
         if self.coords is not None:
@@ -234,6 +238,37 @@ class CastCollection(collections.Sequence):
             cumulative.append(cumulative[-1] + a.distance(b))
             a = b
         return cumulative
+
+    def thermal_wind(self, tempkey="temp", salkey="sal", rhokey=None):
+        """ Compute profile-orthagonal relative velocity shear using hydrostatic
+        thermal wind. Output is referenced to a bottom velocity of zero.
+        """
+        if rhokey is None:
+            Temp = self.asarray(tempkey)
+            Sal = self.asarray(salkey)
+            Pres = self.asarray("pres")
+            Rho = np.empty_like(Pres)
+            (m, n) = Rho.shape
+            for i in range(m):
+                for j in range(n):
+                    ct = gsw.ct_from_t(Sal[i,j], Temp[i,j], Pres[i,j])
+                    Rho[i,j] = gsw.rho(Sal[i,j], ct, Pres[i,j])
+            del Temp
+            del Sal
+            del Pres
+        else:
+            Rho = self.asarray(rhokey)
+            (m, n) = Rho.shape
+
+        g = 9.8
+        omega = 2*np.pi / 86400.0
+        d = np.diff(self.projdist())
+        dRho = np.empty_like(Rho)
+        dRho = np.hstack([np.atleast_2d(dRho[:,1] - dRho[:,0]).T / d[0],
+                          (dRho[:,2:] - dRho[:,:-2]) / np.diff(d),
+                          np.atleast_2d(dRho[:,-1] - dRho[:,-2]).T / d[-1]])
+        dUdz = -0.5 * (g / Rho * dRho) / omega
+        return dUdz
 
     def save(self, fnm):
         """ Save a JSON-formatted representation to a file.

@@ -2,7 +2,6 @@ from __future__ import print_function
 import os, shutil
 from distutils.core import setup
 from distutils.extension import Extension
-#from numpy.distutils.extension import Extension
 import install_gsw
 
 try:
@@ -31,7 +30,7 @@ except Exception as e:
 
 setup(
     name = "narwhal",
-    version = "0.1b",
+    version = "0.1.2",
     author = "Nat Wilson",
     #package_dir = {"narwhal": "src"},
     packages = ["narwhal"],
