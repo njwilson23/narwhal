@@ -20,5 +20,5 @@ install:
   - pip install .
 
 script:
-  python tests.py
+  python tests/runtests.py
 
