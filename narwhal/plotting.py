@@ -156,14 +156,19 @@ def plot_section_properties(cc, ax=None, prop="temp",
     obsx, obspres = np.meshgrid(cx, y)
     intpres, intx = np.meshgrid(y, np.linspace(cx[0], cx[-1], 30))
 
-    # interpolate over NaNs
-    #rawdata = cc.asarray(prop)
-    #obspres = obspres[~np.isnan(rawdata)]
-    #obsx = obsx[~np.isnan(rawdata)]
-    #rawdata = rawdata[~np.isnan(rawdata)]
+    # generate a mask
+    rawdata = cc.asarray(prop)
+    obspres_ = obspres[~np.isnan(rawdata)]
+    obsx_ = obsx[~np.isnan(rawdata)]
+    rawdata_ = rawdata[~np.isnan(rawdata)]
+    mask = griddata(np.c_[obsx_.flatten(), obspres_.flatten()],
+                           rawdata_.flatten(),
+                           np.c_[intx.flatten(), intpres.flatten()],
+                           method="linear")
+    mask = mask.reshape(intx.shape)
 
     # interpolate over NaNs in a way that assumes horizontal correlation
-    rawdata = cc.asarray(prop)
+    #rawdata = cc.asarray(prop)
     for (i, row) in enumerate(rawdata):
         if np.any(np.isnan(row)):
             if np.any(~np.isnan(row)):
@@ -190,6 +195,7 @@ def plot_section_properties(cc, ax=None, prop="temp",
                            np.c_[intx.flatten(), intpres.flatten()],
                            method=interp_method)
     intdata = intdata.reshape(intx.shape)
+    intdata[np.isnan(mask)] = np.nan
 
     ax.contourf(intx, intpres, intdata, **cntrfrc)
     cl = ax.contour(intx, intpres, intdata, **cntrrc)
