@@ -44,7 +44,7 @@ def plot_ts(*casts, **kwargs):
     plotkw.setdefault("ms", 6)
 
     for i, cast in enumerate(casts):
-        sty = styles.next()
+        sty = next(styles)
         if isinstance(cast, CastCollection):
             for subcast in cast:
                 ax.plot(subcast[skey], subcast[tkey], sty, **plotkw)
@@ -159,12 +159,6 @@ def plot_section_properties(cc, ax=None, prop="temp",
     intpres, intx = np.meshgrid(y, np.linspace(cx[0], cx[-1], 30))
     rawdata = cc.asarray(prop)
 
-    # generate mask
-    botdepth = [cast["botdepth"] for cast in cc]
-    zmask1 = np.interp(intx[:,0], cx, botdepth)
-    zmask = intpres.T > np.tile(zmask1, (intx.shape[1], 1))
-    zmask = zmask.T
-
     # interpolate over NaNs in a way that assumes horizontal correlation
     for (i, row) in enumerate(rawdata):
         if np.any(np.isnan(row)):
@@ -192,7 +186,13 @@ def plot_section_properties(cc, ax=None, prop="temp",
                            np.c_[intx.flatten(), intpres.flatten()],
                            method=interp_method)
     intdata = intdata.reshape(intx.shape)
-    intdata[zmask] = np.nan
+
+    if mask:
+        botdepth = [cast["botdepth"] for cast in cc]
+        zmask1 = np.interp(intx[:,0], cx, botdepth)
+        zmask = intpres.T > np.tile(zmask1, (intx.shape[1], 1))
+        zmask = zmask.T
+        intdata[zmask] = np.nan
 
     ax.contourf(intx, intpres, intdata, **cntrfrc)
     cl = ax.contour(intx, intpres, intdata, **cntrrc)
