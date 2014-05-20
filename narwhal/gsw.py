@@ -1,15 +1,16 @@
 """ Dynamically builds Python wrappers for Gibbs Seawater Toolbox at runtime """
 
-import os
 import ctypes
+from os import listdir
+from os.path import dirname, realpath, splitext, join
 
-install_dir = os.path.split(__file__)[0]
+install_dir = dirname(realpath(__file__))
 
 def find_gsw(s):
-    return os.path.splitext(s)[1] == ".so" and \
-           s.startswith("cgsw")
-name = list(filter(find_gsw, os.listdir(install_dir)))[0]
-cgsw = ctypes.cdll.LoadLibrary(os.path.join(install_dir, name))
+    return splitext(s)[1] == ".so" and s.startswith("cgsw")
+
+name = list(filter(find_gsw, listdir(install_dir)))[0]
+cgsw = ctypes.cdll.LoadLibrary(join(install_dir, name))
 
 header = \
 """
