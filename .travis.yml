@@ -16,6 +16,7 @@ install:
   - sudo apt-get update
   - sudo apt-get install python-numpy python-scipy python-pyproj
   - pip install karta
+  - pip install pyshp
   - pip install requests
   - pip install .
 
