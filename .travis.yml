@@ -11,9 +11,6 @@ branches:
 vitualenv:
   system_site_packages: true
 
-before_install:
-  - rm -f $VIRTUAL_ENV/lib/python$TRAVIS_PYTHON_VERSION/no-global-site-packages.txt
-
 install:
     #- pip install -r requirements.txt
   - sudo apt-get update
