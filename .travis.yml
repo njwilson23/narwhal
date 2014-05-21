@@ -7,11 +7,10 @@ python:
 branches:
   only:
     - master
-    - travis
 
 install:
     #- pip install -r requirements.txt
-  - sudo apt-get install python-numpy
+  - sudo apt-get install python-numpy python-scipy
   - pip install karta
   - pip install requests
   - pip install pyproj
