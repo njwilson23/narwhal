@@ -265,23 +265,23 @@ class CastCollection(collections.Sequence):
             Temp = self.asarray(tempkey)
             Sal = self.asarray(salkey)
             Pres = self.asarray("pres")
-            ρ = np.empty_like(Pres)
-            (m, n) = ρ.shape
+            rho = np.empty_like(Pres)
+            (m, n) = rho.shape
             for i in range(m):
                 for j in range(n):
                     ct = gsw.ct_from_t(Sal[i,j], Temp[i,j], Pres[i,j])
-                    ρ[i,j] = gsw.rho(Sal[i,j], ct, Pres[i,j])
+                    rho[i,j] = gsw.rho(Sal[i,j], ct, Pres[i,j])
             del Temp
             del Sal
             del Pres
         else:
-            ρ = self.asarray(rhokey)
-            (m, n) = ρ.shape
+            rho = self.asarray(rhokey)
+            (m, n) = rho.shape
 
         g = 9.8
-        Ω = 2*np.pi / 86400.0
-        dρ = diff2(ρ, self.projdist())
-        dUdz = -(g / ρ * dρ) / (2*Ω)
+        omega = 2*np.pi / 86400.0
+        drho = diff2(rho, self.projdist())
+        dUdz = -(g / rho * drho) / (2*omega)
         U = uintegrate(dUdz, self.asarray("pres"))
 
         dudzkey_ = dudzkey
