@@ -2,7 +2,7 @@
 import unittest
 import numpy as np
 from narwhal.cast import Cast, CastCollection
-from narwhal.cast import force_monotonic
+from narwhal.cast import force_monotonic, diff2
 from narwhal.bathymetry import Bathymetry
 
 class CastTests(unittest.TestCase):
@@ -137,6 +137,18 @@ class MiscTests(unittest.TestCase):
         self.assertTrue(np.all(sm == np.array([1, 3, 5, 5+1e-16, 7,
                                                9, 13, 13+1e-16, 15])))
         return
+
+    def test_diff2(self):
+        x = np.atleast_2d(np.linspace(-1, 1, 100))
+        A = x**2 - (x + x.T)**3
+        ans = 2*x - 3*(x + x.T)**2      # true answer
+
+        A[15,35] = np.nan
+        A[30:50,50:55] = np.nan
+        A[60:65,60] = np.nan
+
+        D = diff2(A, x.ravel())
+        self.assertTrue(np.max(ans[~np.isnan(D)] - D[~np.isnan(D)]) < 0.09)
 
 if __name__ == "__main__":
     unittest.main()

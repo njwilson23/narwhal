@@ -240,9 +240,17 @@ class CastCollection(collections.Sequence):
         return cumulative
 
     def thermal_wind(self, tempkey="temp", salkey="sal", rhokey=None):
-        """ Compute profile-orthagonal relative velocity shear using hydrostatic
-        thermal wind. Output is referenced to a bottom velocity of zero.
+        """ Compute profile-orthagonal velocity shear using hydrostatic thermal
+        wind. In-situ density is computed from temperature and salinity unless
+        *rhokey* is provided.
+        
+        Parameters
+        ----------
+        tempkey         key to use for temperature if rhokey is None
+        salkey          key to use for salinity if rhokey is None
+        rhokey          key to use for density
         """
+
         if rhokey is None:
             Temp = self.asarray(tempkey)
             Sal = self.asarray(salkey)
@@ -308,4 +316,30 @@ def read(fnm):
         return CastCollection(fileio.dictascastcollection(d, Cast))
     else:
         raise IOError("Invalid input file")
+
+def diff1(V, x):
+    """ Compute hybrid centred/sided difference of vector V with positions given by x """
+    D = np.empty_like(V)
+    D[1:-1] = (V[2:] - V[:-2]) / (x[2:] - x[:-2])
+    D[0] = (V[1] - V[0]) / (x[1] - x[0])
+    D[-1] = (V[-1] - V[-2]) / (x[-1] - x[-2])
+    return D
+
+def diff2(A, x):
+    """ Return the row-wise differences in array A. Uses centred differences in
+    the interior and one-sided differences on the edges. When there are
+    interior NaNs, one-sided differences are used to fill in an much data as
+    possible. """
+    D2 = np.nan * np.empty_like(A)
+    for (i, arow) in enumerate(A):
+        start = -1
+        for j in range(len(arow)):
+            if start == -1 and ~np.isnan(arow[j]):
+                start = j
+            elif start != -1 and np.isnan(arow[j]):
+                D2[i,start:j] = diff1(arow[start:j], x[start:j])
+                start = -1
+            elif start != -1 and j == len(arow) - 1:
+                D2[i,start:] = diff1(arow[start:], x[start:])
+    return D2
 
