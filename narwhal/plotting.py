@@ -133,7 +133,9 @@ def plot_section_properties(cc, ax=None, prop="temp",
                             cntrrc=None,
                             cntrfrc=None,
                             interp_method="linear",
-                            mask=True):
+                            ninterp=30,
+                            mask=True,
+                            **kw):
     """ Add water properties from a CastCollection to a section plot.
     
     Keyword arguments:
@@ -144,6 +146,8 @@ def plot_section_properties(cc, ax=None, prop="temp",
     cntrfrc             dictionary of pyplot.contourf keyword argument
     interp_method       method used by scipy.griddata
     mask                apply a NaN mask to the bottom of the section plot
+
+    Additional keyword arguments are passed to *both* controur and contourf.
     """
     if ax is None:
         ax = plt.gca()
@@ -156,7 +160,7 @@ def plot_section_properties(cc, ax=None, prop="temp",
     cx = np.array(ccline.cumlength())
     y = cc[0]["pres"]
     obsx, obspres = np.meshgrid(cx, y)
-    intpres, intx = np.meshgrid(y, np.linspace(cx[0], cx[-1], 30))
+    intpres, intx = np.meshgrid(y, np.linspace(cx[0], cx[-1], ninterp))
     rawdata = cc.asarray(prop)
 
     # interpolate over NaNs in a way that assumes horizontal correlation
@@ -194,7 +198,9 @@ def plot_section_properties(cc, ax=None, prop="temp",
         zmask = zmask.T
         intdata[zmask] = np.nan
 
-    ax.contourf(intx, intpres, intdata, **cntrfrc)
+    cntrfrc.update(kw)
+    cntrrc.update(kw)
+    cm = ax.contourf(intx, intpres, intdata, **cntrfrc)
     cl = ax.contour(intx, intpres, intdata, **cntrrc)
     ax.clabel(cl, fmt="%.1f")
 
@@ -206,7 +212,7 @@ def plot_section_properties(cc, ax=None, prop="temp",
         ax.plot((x_, x_), (ymax, 0), "--k")
     ax.set_ylim((ymax, 0))
     ax.set_xlim((cx[0], cx[-1]))
-    return
+    return cm
 
 def plot_section_bathymetry(bathymetry, vertices=None, ax=None, maxdistance=0.01):
     """ Add bathymetry from a Bathymetry object to a section plot.

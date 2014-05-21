@@ -2,7 +2,7 @@
 import unittest
 import numpy as np
 from narwhal.cast import Cast, CastCollection
-from narwhal.cast import force_monotonic, diff2
+from narwhal.cast import force_monotonic, diff2, uintegrate
 from narwhal.bathymetry import Bathymetry
 
 class CastTests(unittest.TestCase):
@@ -143,12 +143,24 @@ class MiscTests(unittest.TestCase):
         A = x**2 - (x + x.T)**3
         ans = 2*x - 3*(x + x.T)**2      # true answer
 
+        # add holes
+        A[30:40,1] = np.nan
         A[15,35] = np.nan
         A[30:50,50:55] = np.nan
         A[60:65,60] = np.nan
+        A[60:70,-2] = np.nan
 
         D = diff2(A, x.ravel())
-        self.assertTrue(np.max(ans[~np.isnan(D)] - D[~np.isnan(D)]) < 0.09)
+        self.assertTrue(np.max(abs(ans[~np.isnan(D)] - D[~np.isnan(D)])) < 0.15)
+
+    def test_uintegrate(self):
+        x = np.atleast_2d(np.linspace(-1, 1, 100))
+        ans = x**2 - (x + x.T)**3
+        D = - 3*(x + x.T)**2
+
+        I = uintegrate(D, np.tile(x.T, (1, x.size)), ubase=ans[-1])
+        self.assertTrue(np.max(abs(ans - I)) < 0.0005)
+        return
 
 if __name__ == "__main__":
     unittest.main()

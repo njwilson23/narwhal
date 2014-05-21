@@ -6,7 +6,9 @@ import sys
 import itertools
 import collections
 import json
+import numbers
 import numpy as np
+import scipy.integrate as scint 
 from karta import Point, LONLAT
 from . import fileio
 from . import gsw
@@ -237,46 +239,66 @@ class CastCollection(collections.Sequence):
             b = Point(cast.coords, crs=LONLAT)
             cumulative.append(cumulative[-1] + a.distance(b))
             a = b
-        return cumulative
+        return np.asarray(cumulative, dtype=np.float64)
 
-    def thermal_wind(self, tempkey="temp", salkey="sal", rhokey=None):
+    def thermal_wind(self, tempkey="temp", salkey="sal", rhokey=None,
+                     dudzkey="dUdz", ukey="U", overwrite=False):
         """ Compute profile-orthagonal velocity shear using hydrostatic thermal
         wind. In-situ density is computed from temperature and salinity unless
         *rhokey* is provided.
+
+        Add a U field and a ∂U/∂z field to each cast in the collection.
         
         Parameters
         ----------
-        tempkey         key to use for temperature if rhokey is None
-        salkey          key to use for salinity if rhokey is None
+        tempkey         key to use for temperature if *rhokey* is None
+        salkey          key to use for salinity if *rhokey* is None
         rhokey          key to use for density
+        dudzkey         key to use for ∂U/∂z, subject to *overwrite*
+        ukey            key to use for U, subject to *overwrite*
+        overwrite       whether to allow cast fields to be overwritten
+                        if False, then *ukey* and *dudzkey* are incremented
+                        until there is no clash
         """
 
         if rhokey is None:
             Temp = self.asarray(tempkey)
             Sal = self.asarray(salkey)
             Pres = self.asarray("pres")
-            Rho = np.empty_like(Pres)
-            (m, n) = Rho.shape
+            ρ = np.empty_like(Pres)
+            (m, n) = ρ.shape
             for i in range(m):
                 for j in range(n):
                     ct = gsw.ct_from_t(Sal[i,j], Temp[i,j], Pres[i,j])
-                    Rho[i,j] = gsw.rho(Sal[i,j], ct, Pres[i,j])
+                    ρ[i,j] = gsw.rho(Sal[i,j], ct, Pres[i,j])
             del Temp
             del Sal
             del Pres
         else:
-            Rho = self.asarray(rhokey)
-            (m, n) = Rho.shape
+            ρ = self.asarray(rhokey)
+            (m, n) = ρ.shape
 
         g = 9.8
-        omega = 2*np.pi / 86400.0
-        d = np.diff(self.projdist())
-        dRho = np.empty_like(Rho)
-        dRho = np.hstack([np.atleast_2d(dRho[:,1] - dRho[:,0]).T / d[0],
-                          (dRho[:,2:] - dRho[:,:-2]) / np.diff(d),
-                          np.atleast_2d(dRho[:,-1] - dRho[:,-2]).T / d[-1]])
-        dUdz = -0.5 * (g / Rho * dRho) / omega
-        return dUdz
+        Ω = 2*np.pi / 86400.0
+        dρ = diff2(ρ, self.projdist())
+        dUdz = -(g / ρ * dρ) / (2*Ω)
+        U = uintegrate(dUdz, self.asarray("pres"))
+
+        dudzkey_ = dudzkey
+        ukey_ = ukey
+        for (ic,cast) in enumerate(self.casts):
+            if not overwrite:
+                i = 2
+                while dudzkey_ in cast.data:
+                    dudzkey_ = dudzkey + "_" + str(i)
+                    i += 1
+                i = 2
+                while ukey_ in cast.data:
+                    ukey_ = ukey + "_" + str(i)
+                    i += 1
+            cast.data[dudzkey_] = dUdz[:,ic]
+            cast.data[ukey_] = U[:,ic]
+        return
 
     def save(self, fnm):
         """ Save a JSON-formatted representation to a file.
@@ -337,9 +359,27 @@ def diff2(A, x):
             if start == -1 and ~np.isnan(arow[j]):
                 start = j
             elif start != -1 and np.isnan(arow[j]):
-                D2[i,start:j] = diff1(arow[start:j], x[start:j])
+                if j - start != 1:
+                    D2[i,start:j] = diff1(arow[start:j], x[start:j])
+                else:
+                    assert j-start == 1    # if this isn't true, I screwed up somewhere
                 start = -1
             elif start != -1 and j == len(arow) - 1:
                 D2[i,start:] = diff1(arow[start:], x[start:])
     return D2
 
+def uintegrate(dudz, X, ubase=0.0):
+    """ Integrate velocity shear from the first non-NaN value to the top. """
+    U = -np.nan*np.empty_like(dudz)
+    if isinstance(ubase, numbers.Number):
+        ubase = ubase * np.ones(dudz.shape[1], dtype=np.float64)
+    
+    for jcol in range(dudz.shape[1]):
+        # find the deepest non-NaN
+        imax = np.max(np.arange(dudz.shape[0])[~np.isnan(dudz[:,jcol])])
+        du = dudz[:imax+1,jcol]
+        du[np.isnan(du)] = 0.0
+        U[:imax+1,jcol] = scint.cumtrapz(du, x=X[:imax+1,jcol],
+                                         initial=0.0)
+        U[:imax+1,jcol] -= U[imax,jcol] - ubase[jcol]
+    return U
