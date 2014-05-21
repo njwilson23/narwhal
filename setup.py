@@ -30,7 +30,7 @@ except Exception as e:
 
 setup(
     name = "narwhal",
-    version = "0.1.2",
+    version = "0.2.0",
     author = "Nat Wilson",
     #package_dir = {"narwhal": "src"},
     packages = ["narwhal"],
