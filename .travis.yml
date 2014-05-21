@@ -8,12 +8,15 @@ branches:
   only:
     - master
 
+before_install:
+  - rm -f $VIRTUAL_ENV/lib/python$TRAVIS_PYTHON_VERSION/no-global-site-packages.txt
+
 install:
     #- pip install -r requirements.txt
-  - sudo apt-get install python-numpy python-scipy
+  - sudo apt-get update
+  - sudo apt-get install python-numpy python-scipy python-pyproj
   - pip install karta
   - pip install requests
-  - pip install pyproj
   - pip install .
 
 script:
