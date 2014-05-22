@@ -36,7 +36,7 @@ def dictascast(d, obj):
     p = d_["vectors"].pop("pres")
     prop = d["scalars"]
     for (key, value) in prop.items():
-        if "date" in key:
+        if "date" in key or "time" in key and isinstance(prop[key], str):
             try:
                 prop[key] = dateutil.parser.parse(value)
             except (TypeError, ValueError):
