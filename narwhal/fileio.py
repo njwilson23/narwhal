@@ -21,8 +21,8 @@ def castasdict(cast):
             dvector[key] = cast[key].tolist()
         else:
             dvector[key] = list(cast[key])
-    d = dict(type="cast", scalars=dscalar, vectors=dvector, coords=cast.coords,
-            primarykey=cast.primarykey)
+    d = dict(type=cast._type, scalars=dscalar, vectors=dvector,
+            coords=cast.coords, primarykey=cast.primarykey)
     return d
 
 def dictascast(d, obj):

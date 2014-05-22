@@ -158,7 +158,9 @@ class Cast(object):
 
 
 class CTDCast(Cast):
-    """ Specialization of Cast guaranteed to have salinity and temperature fields. """
+    """ Specialization of Cast guaranteed to have salinity and temperature
+    fields. """
+    _type = "ctdcast"
 
     def __init__(self, p, sal=None, temp=None, coords=None, properties=None,
                  **kwargs):
@@ -168,6 +170,7 @@ class CTDCast(Cast):
 
 class LADCP(Cast):
     """ Specialization of Cast for LADCP data. Requires *u* and *v* fields. """
+    _type = "ladcpcast"
 
     def __init__(self, z, u=None, v=None, err=None, coords=None, properties=None,
                  **kwargs):
@@ -178,6 +181,7 @@ class LADCP(Cast):
 
 class XBTCast(Cast):
     """ Specialization of Cast with temperature field. """
+    _type = "xbtcast"
 
     def __init__(self, p, temp=None, coords=None, properties=None, **kwargs):
         super(XBTCast, self).__init__(p, temp=temp, coords=coords,
@@ -359,12 +363,21 @@ def read(fnm):
     """ Convenience function for reading JSON-formatted measurement data. """
     with open(fnm, "r") as f:
         d = json.load(f)
-    if d.get("type", None) == "cast":
+    typ = d.get("type", None)
+    if typ == "cast":
         return fileio.dictascast(d, Cast)
-    elif d.get("type", None) == "ctd_collection":
+    elif typ == "ctdcast":
+        return fileio.dictascast(d, CTDCast)
+    elif typ == "xbtcast":
+        return fileio.dictascast(d, XBTCast)
+    elif typ == "ladcpcast":
+        return fileio.dictascast(d, LADCP)
+    elif typ == "ctd_collection":
         return CastCollection(fileio.dictascastcollection(d, Cast))
+    elif typ is None:
+        raise IOError("couldn't read data type - file may be corrupt")
     else:
-        raise IOError("Invalid input file")
+        raise IOError("Invalid type: {0}".format(typ))
 
 def diff1(V, x):
     """ Compute hybrid centred/sided difference of vector V with positions given by x """
