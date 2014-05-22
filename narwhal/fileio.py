@@ -4,6 +4,7 @@ objects to persistent files. """
 import json
 import copy
 import datetime
+import dateutil.parser
 import numpy
 from karta import Point, geojson
 
@@ -12,10 +13,10 @@ def castasdict(cast):
     vectors = [key for key in cast.data]
     dscalar, dvector = {}, {}
     for key in scalars:
-        if isinstance(cast[key], datetime.datetime):
-            dscalar[key] = cast[key].strftime("%Y-%m-%d %H:%M:%S")
+        if isinstance(cast.properties[key], datetime.datetime):
+            dscalar[key] = cast.properties[key].isoformat(sep=" ")
         else:
-            dscalar[key] = cast[key]
+            dscalar[key] = cast.properties[key]
     for key in vectors:
         if isinstance(cast[key], numpy.ndarray):
             dvector[key] = cast[key].tolist()
@@ -34,6 +35,12 @@ def dictascast(d, obj):
     primkey = d_.pop("primarykey", "pres")
     p = d_["vectors"].pop("pres")
     prop = d["scalars"]
+    for (key, value) in prop.items():
+        if "date" in key:
+            try:
+                prop[key] = dateutil.parser.parse(value)
+            except (TypeError, ValueError):
+                pass
     cast = obj(p, coords=coords, primarykey=primkey, properties=prop,
             **d_["vectors"])
     return cast

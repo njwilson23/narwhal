@@ -1,5 +1,6 @@
 import unittest
 import os
+import datetime
 import numpy as np
 import narwhal
 from narwhal.cast import Cast, CTDCast, XBTCast, LADCP
@@ -137,9 +138,13 @@ class IOTests(unittest.TestCase):
         self.p = p
         self.temp = temp
         self.sal = sal
-        self.cast = Cast(self.p, temp=self.temp, sal=self.sal)
-        self.ctd = CTDCast(self.p, temp=self.temp, sal=self.sal)
-        self.xbt = XBTCast(self.p, temp=self.temp, sal=self.sal)
+        dt = datetime.datetime(1993, 8, 18, 14, 42, 36)
+        self.cast = Cast(self.p, temp=self.temp, sal=self.sal,
+                        properties={"date":dt})
+        self.ctd = CTDCast(self.p, temp=self.temp, sal=self.sal,
+                        properties={"date":dt})
+        self.xbt = XBTCast(self.p, temp=self.temp, sal=self.sal,
+                        properties={"date":dt})
         return
 
     def test_save(self):
