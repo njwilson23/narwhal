@@ -1,5 +1,6 @@
 import itertools
 import operator
+import copy
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.interpolate import griddata
@@ -135,6 +136,7 @@ def plot_section_properties(cc, ax=None, prop="temp",
                             interp_method="linear",
                             ninterp=30,
                             mask=True,
+                            bottomkey="depth",
                             **kw):
     """ Add water properties from a CastCollection to a section plot.
     
@@ -146,6 +148,7 @@ def plot_section_properties(cc, ax=None, prop="temp",
     cntrfrc             dictionary of pyplot.contourf keyword argument
     interp_method       method used by scipy.griddata
     mask                apply a NaN mask to the bottom of the section plot
+    bottomkey           key in properties giving bottom depth
 
     Additional keyword arguments are passed to *both* controur and contourf.
     """
@@ -192,14 +195,18 @@ def plot_section_properties(cc, ax=None, prop="temp",
     intdata = intdata.reshape(intx.shape)
 
     if mask:
-        botdepth = [cast["botdepth"] for cast in cc]
-        zmask1 = np.interp(intx[:,0], cx, botdepth)
+        depth = [cast.properties[bottomkey] for cast in cc]
+        zmask1 = np.interp(intx[:,0], cx, depth)
         zmask = intpres.T > np.tile(zmask1, (intx.shape[1], 1))
         zmask = zmask.T
         intdata[zmask] = np.nan
 
-    cntrfrc.update(kw)
-    cntrrc.update(kw)
+    if len(kw) != 0:
+        cntrrc = copy.copy(cntrrc)
+        cntrfrc = copy.copy(cntrfrc)
+        cntrrc.update(kw)
+        cntrfrc.update(kw)
+
     cm = ax.contourf(intx, intpres, intdata, **cntrfrc)
     cl = ax.contour(intx, intpres, intdata, **cntrrc)
     ax.clabel(cl, fmt="%.1f")
