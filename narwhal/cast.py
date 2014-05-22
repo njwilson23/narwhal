@@ -14,18 +14,33 @@ from . import fileio
 from . import gsw
 
 class Cast(object):
-    """ A Cast is a set of pressure-referenced measurements associated with a
-    single coordinate. """
+    """ A Cast is a set of referenced measurements associated with a single
+    coordinate.
+    
+    Water properties are provided as keyword arguments. There are several
+    reserved keywords:
+
+    *coords*        Tuple containing the geographic coordinates of the
+                    observation
+
+    *properties*    Dictionary of scalar metadata
+
+    *primarykey*    Indicates the name of vertical measure. Usually pressure
+                    ("pres"), but could be other things, e.g. depth ("z")
+
+    *bathymetry*    Object containing bathymetric data [deprecated]
+    """
 
     _type = "cast"
 
-    def __init__(self, p, coords=None, bathymetry=None, **kwargs):
+    def __init__(self, p, coords=None, bathymetry=None, primarykey="pres",
+                 **kwargs):
 
         self.coords = coords
         self.bath = bathymetry
 
         self.data = collections.OrderedDict()
-        self.data["pres"] = p
+        self.data[primarykey] = p
 
         def _fieldmaker(n, arg):
             if arg is not None:
@@ -43,7 +58,7 @@ class Cast(object):
             self.data[kw] = _fieldmaker(len(p), val)
 
         self._len = len(p)
-        self._fields = tuple(["pres"] + [a for a in kwargs])
+        self._fields = tuple([primarykey] + [a for a in kwargs])
         return
 
     def __len__(self):
@@ -145,6 +160,15 @@ class CTDCast(Cast):
                  **kwargs):
         super(CTDCast, self).__init__(p, sal=sal, temp=temp, coords=coords,
                                       bathymetry=bathymetry, **kwargs)
+        return
+
+class LADCP(Cast):
+    """ Specialization of Cast for LADCP data. Requires *u* and *v* fields. """
+
+    def __init__(self, z, u=None, v=None, err=None, coords=None, bathymetry=None,
+                 **kwargs):
+        super(LADCP, self).__init__(z, u=u, v=v, err=err, coords=coords,
+                                    bathymetry=bathymetry, **kwargs)
         return
 
 
