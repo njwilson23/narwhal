@@ -187,9 +187,10 @@ class LADCP(Cast):
     _type = "ladcpcast"
 
     def __init__(self, z, u=None, v=None, err=None, coords=None, properties=None,
-                 **kwargs):
+                 primarykey="z", **kwargs):
         super(LADCP, self).__init__(z, u=u, v=v, err=err, coords=coords,
-                                    properties=properties, **kwargs)
+                                    properties=properties, primarykey=primarykey,
+                                    **kwargs)
         return
 
 

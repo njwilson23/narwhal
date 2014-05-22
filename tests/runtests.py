@@ -8,6 +8,11 @@ from narwhal.cast import CastCollection
 from narwhal.cast import force_monotonic, diff2, uintegrate
 from narwhal.bathymetry import Bathymetry
 
+directory = os.path.dirname(__file__)
+DATADIR = os.path.join(directory, "data")
+if not os.path.exists(DATADIR):
+    os.mkdir(DATADIR)
+
 class CastTests(unittest.TestCase):
 
     def setUp(self):
@@ -148,32 +153,36 @@ class IOTests(unittest.TestCase):
         return
 
     def test_save(self):
-        directory = os.path.dirname(__file__)
-        datadir = os.path.join(directory, "data")
-        if not os.path.exists(datadir):
-                os.mkdir(datadir)
-
-        fnm = os.path.join(datadir, "cast_test.nwl")
+        fnm = os.path.join(DATADIR, "cast_test.nwl")
         self.cast.save(fnm)
 
-        fnm = os.path.join(datadir, "ctd_test.nwl")
+        fnm = os.path.join(DATADIR, "ctd_test.nwl")
         self.ctd.save(fnm)
 
-        fnm = os.path.join(datadir, "xbt_test.nwl")
+        fnm = os.path.join(DATADIR, "xbt_test.nwl")
         self.xbt.save(fnm)
         return
 
-    def test_load(self):
-        directory = os.path.dirname(__file__)
-        datadir = os.path.join(directory, "data")
+    def test_save_zprimarykey(self):
+        cast = Cast(np.arange(len(self.p)), temp=self.temp, sal=self.sal,
+                    primarykey="z", properties={})
+        cast.save(os.path.join(DATADIR, "ctdz_test.nwl"))
+        return
 
-        cast = narwhal.read(os.path.join(datadir, "reference_cast_test.nwl"))
-        ctd = narwhal.read(os.path.join(datadir, "reference_ctd_test.nwl"))
-        xbt = narwhal.read(os.path.join(datadir, "reference_xbt_test.nwl"))
+    def test_load(self):
+        cast = narwhal.read(os.path.join(DATADIR, "reference_cast_test.nwl"))
+        ctd = narwhal.read(os.path.join(DATADIR, "reference_ctd_test.nwl"))
+        xbt = narwhal.read(os.path.join(DATADIR, "reference_xbt_test.nwl"))
         self.assertEqual(cast, self.cast)
         self.assertEqual(ctd, self.ctd)
         self.assertEqual(xbt, self.xbt)
         return
+
+    def test_load_zprimarykey(self):
+        castl = narwhal.read(os.path.join(DATADIR, "reference_ctdz_test.nwl"))
+        cast = Cast(np.arange(len(self.p)), temp=self.temp, sal=self.sal,
+                    primarykey="z", properties={})
+        self.assertEqual(cast, castl)
 
 class MiscTests(unittest.TestCase):
 

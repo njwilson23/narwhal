@@ -33,7 +33,7 @@ def dictascast(d, obj):
     _ = d_.pop("type")
     coords = d_.pop("coords")
     primkey = d_.pop("primarykey", "pres")
-    p = d_["vectors"].pop("pres")
+    p = d_["vectors"].pop(primkey)
     prop = d["scalars"]
     for (key, value) in prop.items():
         if "date" in key or "time" in key and isinstance(prop[key], str):
