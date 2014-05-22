@@ -1,5 +1,6 @@
 
-from .cast import Cast, CastCollection, read
+from .cast import Cast, CTDCast, XBTCast, LADCP
+from .cast import CastCollection, read
 from .bathymetry import Bathymetry
 from . import gsw
 from . import util
