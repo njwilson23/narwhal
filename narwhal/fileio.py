@@ -8,8 +8,8 @@ import numpy
 from karta import Point, geojson
 
 def castasdict(cast):
-    scalars = [key for key in cast.data if not hasattr(cast[key], "__iter__")]
-    vectors = [key for key in cast.data if hasattr(cast[key], "__iter__")]
+    scalars = [key for key in cast.properties]
+    vectors = [key for key in cast.data]
     dscalar, dvector = {}, {}
     for key in scalars:
         if isinstance(cast[key], datetime.datetime):
@@ -21,7 +21,8 @@ def castasdict(cast):
             dvector[key] = cast[key].tolist()
         else:
             dvector[key] = list(cast[key])
-    d = dict(type="cast", scalars=dscalar, vectors=dvector, coords=cast.coords)
+    d = dict(type="cast", scalars=dscalar, vectors=dvector, coords=cast.coords,
+            primarykey=cast.primarykey)
     return d
 
 def dictascast(d, obj):
@@ -30,9 +31,11 @@ def dictascast(d, obj):
     d_ = copy.copy(d)
     _ = d_.pop("type")
     coords = d_.pop("coords")
+    primkey = d_.pop("primarykey", "pres")
     p = d_["vectors"].pop("pres")
-    d_["vectors"].update(d_["scalars"])
-    cast = obj(p, coords=coords, **d_["vectors"])
+    prop = d["scalars"]
+    cast = obj(p, coords=coords, primarykey=primkey, properties=prop,
+            **d_["vectors"])
     return cast
 
 def dictascastcollection(d, castobj):

@@ -27,18 +27,22 @@ class Cast(object):
 
     *primarykey*    Indicates the name of vertical measure. Usually pressure
                     ("pres"), but could be other things, e.g. depth ("z")
-
-    *bathymetry*    Object containing bathymetric data [deprecated]
     """
 
     _type = "cast"
 
-    def __init__(self, p, coords=None, bathymetry=None, primarykey="pres",
+    def __init__(self, p, coords=None, properties=None, primarykey="pres",
                  **kwargs):
 
-        self.coords = coords
-        self.bath = bathymetry
+        if properties is None:
+            self.properties = {}
+        elif isinstance(properties, dict):
+            self.properties = properties
+        else:
+            raise TypeError("properties must be a dictionary")
 
+        self.primarykey = primarykey
+        self.coords = coords
         self.data = collections.OrderedDict()
         self.data[primarykey] = p
 
@@ -156,28 +160,28 @@ class Cast(object):
 class CTDCast(Cast):
     """ Specialization of Cast guaranteed to have salinity and temperature fields. """
 
-    def __init__(self, p, sal=None, temp=None, coords=None, bathymetry=None,
+    def __init__(self, p, sal=None, temp=None, coords=None, properties=None,
                  **kwargs):
         super(CTDCast, self).__init__(p, sal=sal, temp=temp, coords=coords,
-                                      bathymetry=bathymetry, **kwargs)
+                                      properties=properties, **kwargs)
         return
 
 class LADCP(Cast):
     """ Specialization of Cast for LADCP data. Requires *u* and *v* fields. """
 
-    def __init__(self, z, u=None, v=None, err=None, coords=None, bathymetry=None,
+    def __init__(self, z, u=None, v=None, err=None, coords=None, properties=None,
                  **kwargs):
         super(LADCP, self).__init__(z, u=u, v=v, err=err, coords=coords,
-                                    bathymetry=bathymetry, **kwargs)
+                                    properties=properties, **kwargs)
         return
 
 
 class XBTCast(Cast):
     """ Specialization of Cast with temperature field. """
 
-    def __init__(self, p, temp=None, coords=None, bathymetry=None, **kwargs):
+    def __init__(self, p, temp=None, coords=None, properties=None, **kwargs):
         super(XBTCast, self).__init__(p, temp=temp, coords=coords,
-                                      bathymetry=bathymetry, **kwargs)
+                                      properties=properties, **kwargs)
         return
 
 
@@ -232,11 +236,10 @@ class CastCollection(collections.Sequence):
         """
         for cast in self.casts:
             if hasattr(cast, "coords"):
-                cast["botdepth"] = bathymetry.atxy(*cast.coords)
+                cast.properties["depth"] = bathymetry.atxy(*cast.coords)
             else:
-                cast["botdepth"] = np.nan
+                cast.properties["tdepth"] = np.nan
                 sys.stderr.write("Warning: cast has no coordinates")
-        self.bath = bathymetry
         return
 
     def mean(self):
