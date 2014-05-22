@@ -288,7 +288,7 @@ class CastCollection(collections.Sequence):
         return np.asarray(cumulative, dtype=np.float64)
 
     def thermal_wind(self, tempkey="temp", salkey="sal", rhokey=None,
-                     dudzkey="dUdz", ukey="U", overwrite=False):
+                     dudzkey="dudz", ukey="u", overwrite=False):
         """ Compute profile-orthagonal velocity shear using hydrostatic thermal
         wind. In-situ density is computed from temperature and salinity unless
         *rhokey* is provided.
@@ -327,9 +327,9 @@ class CastCollection(collections.Sequence):
         g = 9.8
         omega = 2*np.pi / 86400.0
         drho = diff2(rho, self.projdist())
-        dUdz = -(g / rho * drho) / (2*omega)
-        U = uintegrate(dUdz, self.asarray("pres"))
-
+        dudz = -(g / rho * drho) / (2*omega)
+        u = uintegrate(dudz, self.asarray("pres"))  # strictly speaking, should 
+                                                    # calculate actual depth here
         dudzkey_ = dudzkey
         ukey_ = ukey
         for (ic,cast) in enumerate(self.casts):
@@ -342,8 +342,8 @@ class CastCollection(collections.Sequence):
                 while ukey_ in cast.data:
                     ukey_ = ukey + "_" + str(i)
                     i += 1
-            cast.data[dudzkey_] = dUdz[:,ic]
-            cast.data[ukey_] = U[:,ic]
+            cast.data[dudzkey_] = dudz[:,ic]
+            cast.data[ukey_] = u[:,ic]
         return
 
     def save(self, fnm):
