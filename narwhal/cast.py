@@ -2,6 +2,7 @@
 Cast and CastCollection classes for managing CTD observations
 """
 
+import os
 import sys
 import itertools
 import collections
@@ -163,6 +164,8 @@ class Cast(object):
 
         fnm::string     File name to save to
         """
+        if os.path.splitext(fnm)[1] != ".nwl":
+            fnm = fnm + ".nwl"
         with open(fnm, "w") as f:
             fileio.writecast(f, self)
         return
@@ -347,6 +350,8 @@ class CastCollection(collections.Sequence):
 
         fnm::string     File name to save to
         """
+        if os.path.splitext(fnm)[1] != ".nwl":
+            fnm = fnm + ".nwl"
         with open(fnm, "w") as f:
             fileio.writecastcollection(f, self)
 
