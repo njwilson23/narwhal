@@ -1,7 +1,9 @@
-
 import unittest
+import os
 import numpy as np
-from narwhal.cast import Cast, CastCollection
+import narwhal
+from narwhal.cast import Cast, CTDCast, XBTCast, LADCP
+from narwhal.cast import CastCollection
 from narwhal.cast import force_monotonic, diff2, uintegrate
 from narwhal.bathymetry import Bathymetry
 
@@ -57,14 +59,14 @@ class CastTests(unittest.TestCase):
         #                 2.7674560521632685)
         return
 
-    def test_projectother(self):
-        pass
+    #def test_projectother(self):
+    #    pass
 
-    def test_calculate_sigma(self):
-        pass
+    #def test_calculate_sigma(self):
+    #    pass
 
-    def test_calculate_theta(self):
-        pass
+    #def test_calculate_theta(self):
+    #    pass
 
 class CastCollectionTests(unittest.TestCase):
 
@@ -122,7 +124,50 @@ class BathymetryTests(unittest.TestCase):
                      coords=(-17.45, 80.16)))
         cc.add_bathymetry(self.bathymetry)
         correctresult = np.array([91.87894384, 122.9704543, 154.58219622])
-        self.assertTrue(np.allclose(cc["botdepth"], correctresult))
+        depths = [c.properties["depth"] for c in cc]
+        self.assertTrue(np.allclose(depths, correctresult))
+        return
+
+class IOTests(unittest.TestCase):
+
+    def setUp(self):
+        p = np.arange(1, 1001, 2)
+        temp = 10. * np.exp(-.008*p) - 15. * np.exp(-0.005*(p+100)) + 2.
+        sal = -14. * np.exp(-.01*p) + 34.
+        self.p = p
+        self.temp = temp
+        self.sal = sal
+        self.cast = Cast(self.p, temp=self.temp, sal=self.sal)
+        self.ctd = CTDCast(self.p, temp=self.temp, sal=self.sal)
+        self.xbt = XBTCast(self.p, temp=self.temp, sal=self.sal)
+        return
+
+    def test_save(self):
+        directory = os.path.dirname(__file__)
+        datadir = os.path.join(directory, "data")
+        if not os.path.exists(datadir):
+                os.mkdir(datadir)
+
+        fnm = os.path.join(datadir, "cast_test.nwl")
+        self.cast.save(fnm)
+
+        fnm = os.path.join(datadir, "ctd_test.nwl")
+        self.ctd.save(fnm)
+
+        fnm = os.path.join(datadir, "xbt_test.nwl")
+        self.xbt.save(fnm)
+        return
+
+    def test_load(self):
+        directory = os.path.dirname(__file__)
+        datadir = os.path.join(directory, "data")
+
+        cast = narwhal.read(os.path.join(datadir, "reference_cast_test.nwl"))
+        self.assertEqual(cast, self.cast)
+        ctd = narwhal.read(os.path.join(datadir, "reference_ctd_test.nwl"))
+        self.assertEqual(ctd, self.ctd)
+        xbt = narwhal.read(os.path.join(datadir, "reference_xbt_test.nwl"))
+        self.assertEqual(xbt, self.xbt)
         return
 
 class MiscTests(unittest.TestCase):
