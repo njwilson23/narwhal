@@ -44,13 +44,13 @@ class Cast(object):
         self.primarykey = primarykey
         self.coords = coords
         self.data = collections.OrderedDict()
-        self.data[primarykey] = p
+        self.data[primarykey] = np.asarray(p)
 
         def _fieldmaker(n, arg):
             if arg is not None:
-                return arg
+                return np.asarray(arg)
             else:
-                return [None for _ in xrange(n)]
+                return np.nan * np.empty(n)
 
         # Python 3 workaround
         try:
@@ -58,7 +58,7 @@ class Cast(object):
         except AttributeError:
             items = kwargs.items()
 
-        for kw, val in items:
+        for (kw, val) in items:
             self.data[kw] = _fieldmaker(len(p), val)
 
         self._len = len(p)
@@ -107,7 +107,18 @@ class Cast(object):
         elif hasattr(other, "_type") and (other._type == "ctd_collection"):
             return CastCollection(self, *[a for a in other])
         else:
-            raise TypeError("No rule to add {0} to {1}".format(type(self), type(other)))
+            raise TypeError("No rule to add {0} to {1}".format(type(self), 
+                                                               type(other)))
+
+    def __eq__(self, other):
+        if self._fields != other._fields or \
+                self.properties != other.properties or \
+                self.coords != other.coords or \
+                False in (np.all(self.data[k] == other.data[k])
+                                for k in self._fields):
+            return False
+        else:
+            return True
 
     def nanmask(self):
         """ Return a mask for observations containing at least one NaN. """

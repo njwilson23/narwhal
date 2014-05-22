@@ -163,10 +163,10 @@ class IOTests(unittest.TestCase):
         datadir = os.path.join(directory, "data")
 
         cast = narwhal.read(os.path.join(datadir, "reference_cast_test.nwl"))
-        self.assertEqual(cast, self.cast)
         ctd = narwhal.read(os.path.join(datadir, "reference_ctd_test.nwl"))
-        self.assertEqual(ctd, self.ctd)
         xbt = narwhal.read(os.path.join(datadir, "reference_xbt_test.nwl"))
+        self.assertEqual(cast, self.cast)
+        self.assertEqual(ctd, self.ctd)
         self.assertEqual(xbt, self.xbt)
         return
 
