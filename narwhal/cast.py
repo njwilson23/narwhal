@@ -176,7 +176,7 @@ class CTDCast(Cast):
     fields. """
     _type = "ctdcast"
 
-    def __init__(self, p, sal=None, temp=None, coords=None, properties=None,
+    def __init__(self, p, sal, temp, coords=None, properties=None,
                  **kwargs):
         super(CTDCast, self).__init__(p, sal=sal, temp=temp, coords=coords,
                                       properties=properties, **kwargs)
@@ -186,9 +186,9 @@ class LADCP(Cast):
     """ Specialization of Cast for LADCP data. Requires *u* and *v* fields. """
     _type = "ladcpcast"
 
-    def __init__(self, z, u=None, v=None, err=None, coords=None, properties=None,
+    def __init__(self, z, u, v, coords=None, properties=None,
                  primarykey="z", **kwargs):
-        super(LADCP, self).__init__(z, u=u, v=v, err=err, coords=coords,
+        super(LADCP, self).__init__(z, u=u, v=v, coords=coords,
                                     properties=properties, primarykey=primarykey,
                                     **kwargs)
         return
@@ -198,7 +198,7 @@ class XBTCast(Cast):
     """ Specialization of Cast with temperature field. """
     _type = "xbtcast"
 
-    def __init__(self, p, temp=None, coords=None, properties=None, **kwargs):
+    def __init__(self, p, temp, coords=None, properties=None, **kwargs):
         super(XBTCast, self).__init__(p, temp=temp, coords=coords,
                                       properties=properties, **kwargs)
         return
