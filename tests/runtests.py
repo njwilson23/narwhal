@@ -3,6 +3,7 @@ import os
 import datetime
 import numpy as np
 import narwhal
+from narwhal import gsw
 from narwhal.cast import Cast, CTDCast, XBTCast, LADCP
 from narwhal.cast import CastCollection
 from narwhal.cast import force_monotonic, diff2, uintegrate
@@ -63,6 +64,17 @@ class CastTests(unittest.TestCase):
                          0.77935861)
         #self.assertEqual(np.round(self.cast1.interpolate("pres", "temp", 1.5), 8),
         #                 2.7674560521632685)
+        return
+
+    def test_add_density(self):
+        p = np.arange(10)
+        t = 20.0 * 0.2 * p
+        s = 30.0 * 0.25 * p
+        cast = CTDCast(p, s, t)
+        ct = np.array([gsw.ct_from_t(s_, t_, p_) for (s_,t_,p_) in zip(s, t, p)])
+        rho = np.array([gsw.rho(s_, ct_, p_) for (s_,ct_,p_) in zip(s, ct, p)])
+        cast.add_density()
+        self.assertTrue(np.allclose(rho, cast["rho"]))
         return
 
     #def test_projectother(self):

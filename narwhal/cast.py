@@ -199,9 +199,25 @@ class CTDCast(Cast):
                                       properties=properties, **kwargs)
         return
 
-    def add_depth(self):
-        """ Use temperature, salinity, and pressure to calculate in in-situ
-        density and depth. """
+    def add_density(self):
+        """ Add in-situ density to fields, and return the field name. """
+        constemp = (gsw.ct_from_t(sa, t, p) for (sa, t, p)
+                        in zip(self["sal"], self["temp"], self["pres"]))
+        rho = np.array([gsw.rho(sa, ct, p) for (sa, ct, p)
+                        in zip(self["sal"], constemp, self["pres"])])
+        return self._addkeydata("rho", rho)
+
+    def add_depth(self, rhokey=None):
+        """ Use temperature, salinity, and pressure to calculate depth. If
+        in-situ density is already in a field, *rhokey* can be provided to
+        avoid recalculating it. """
+        if rhokey is None:
+            rhokey = self.add_density()
+        rho = self[rhokey]
+        dz = self["pres"] / (rho * 9.8)
+        depth = np.cumsum(dz)
+        return self._addkeydata("depth", rho)
+
 
 class LADCP(Cast):
     """ Specialization of Cast for LADCP data. Requires *u* and *v* fields. """
@@ -234,7 +250,8 @@ class CastCollection(collections.Sequence):
             self.casts = []
         elif isinstance(args[0], Cast):
             self.casts = list(args)
-        elif (len(args) == 1) and (False not in (isinstance(a, Cast) for a in args[0])):
+        elif (len(args) == 1) and \
+                (False not in (isinstance(a, Cast) for a in args[0])):
             self.casts = args[0]
         else:
             raise TypeError("Arguments must be either Cast types or an "
@@ -327,7 +344,6 @@ class CastCollection(collections.Sequence):
                         if False, then *ukey* and *dudzkey* are incremented
                         until there is no clash
         """
-
         if rhokey is None:
             Temp = self.asarray(tempkey)
             Sal = self.asarray(salkey)
