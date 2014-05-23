@@ -221,7 +221,18 @@ class CTDCast(Cast):
         if rhokey is None:
             rhokey = self.add_density()
         rho = self[rhokey]
-        depth = self["pres"] / (rho * G) * 1e4
+
+        # remove initial NaNs by replacing them with the first non-NaN
+        nnans = 0
+        r = rho[0]
+        while np.isnan(r):
+            nnans += 1
+            r = rho[nnans]
+        rho[:nnans] = rho[nnans+1]
+
+        dp = np.hstack([self["pres"][0], np.diff(self["pres"])])
+        dz = dp / (rho * G) * 1e4
+        depth = np.cumsum(dz)
         return self._addkeydata("depth", depth)
 
 
