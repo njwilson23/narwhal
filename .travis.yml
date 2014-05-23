@@ -1,25 +1,29 @@
 language: python
 python:
   - "2.7"
-    #- "3.3"    # travis doesn't have apt packages for Python 3
-    #- "3.4"
+  - "3.3"
+  - "3.4"
 
 branches:
   only:
     - master
     - travis
 
-virtualenv:
-  system_site_packages: true
+before_install:
+  - sudo apt-get update
+  - wget http://repo.continuum.io/miniconda/Miniconda-latest-Linux-x86_64.sh -O miniconda.sh
+  - chmod +x miniconda.sh
+  - ./miniconda.sh -b
+  - export PATH=/home/travis/miniconda/bin:$PATH
+  - conda update --yes conda
+  - conda info -a
 
 install:
-    #- pip install -r requirements.txt
-  - sudo apt-get update
-  - sudo apt-get install python-numpy python-scipy python-pyproj
-  - pip install karta
-  - pip install pyshp
-  - pip install requests
-  - pip install .
+  - sudo apt-get install python-numpy   # needed to get numpy C-headers, which aren't being shown for the travis install
+  - conda create --yes -n test-environment python=$TRAVIS_PYTHON_VERSION numpy scipy pip
+  - source activate test-environment
+  - pip install karta pyshp pyproj requests python-dateutil
+  - pip install . -v
 
 script:
   python tests/runtests.py
