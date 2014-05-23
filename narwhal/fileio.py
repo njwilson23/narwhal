@@ -60,7 +60,7 @@ def writecast(f, cast):
 def writecastcollection(f, cc):
     """ Write CastCollection to a file-like stream. """
     casts = [castasdict(cast) for cast in cc]
-    d = dict(type="ctd_collection", casts=casts)
+    d = dict(type="castcollection", casts=casts)
     json.dump(d, f)
     return
 

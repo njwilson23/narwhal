@@ -109,9 +109,9 @@ class Cast(object):
         return
 
     def __add__(self, other):
-        if hasattr(other, "_type") and (other._type == "cast"):
+        if hasattr(other, "_type") and (other._type[-4:] == "cast"):
             return CastCollection(self, other)
-        elif hasattr(other, "_type") and (other._type == "ctd_collection"):
+        elif hasattr(other, "_type") and (other._type == "castcollection"):
             return CastCollection(self, *[a for a in other])
         else:
             raise TypeError("No rule to add {0} to {1}".format(type(self), 
@@ -249,7 +249,7 @@ class XBTCast(Cast):
 
 class CastCollection(collections.Sequence):
     """ A CastCollection is an indexable collection of Cast instances """
-    _type = "ctd_collection"
+    _type = "castcollection"
 
     def __init__(self, *args):
         if len(args) == 0:
@@ -294,13 +294,13 @@ class CastCollection(collections.Sequence):
         return (a for a in self.casts)
 
     def __add__(self, other):
-        if hasattr(other, "_type") and (other._type == "ctd_collection"):
+        if hasattr(other, "_type") and (other._type == "castcollection"):
             return CastCollection(list(a for a in itertools.chain(self.casts, other.casts)))
-        elif hasattr(other, "_type") and (other._type == "cast"):
+        elif hasattr(other, "_type") and (other._type[-4:] == "cast"):
             return CastCollection(self.casts + [other])
         else:
-            raise TypeError("Addition requires both arguments to fulfill the "
-                            "ctd_collection interface")
+            raise TypeError("Can only add castcollection and *cast types to "
+                            "CastCollection")
 
     def add_bathymetry(self, bathymetry):
         """ Reference Bathymetry instance `bathymetry` to CastCollection.
@@ -436,7 +436,7 @@ def _fromjson(d):
         return fileio.dictascast(d, XBTCast)
     elif typ == "ladcpcast":
         return fileio.dictascast(d, LADCP)
-    elif typ == "ctd_collection":
+    elif typ == "castcollection":
         casts = [_fromjson(castdict) for castdict in d["casts"]]
         return CastCollection(casts)
     elif typ is None:
