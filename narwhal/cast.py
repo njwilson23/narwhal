@@ -121,6 +121,22 @@ class Cast(object):
         else:
             return True
 
+    def _addkeydata(self, key, data, overwrite=False):
+        """ Add data under *key*. If *key* already exists, iterates over
+        [key]_2, [key]_3... until an unused identifier is found. Returns the
+        key finally used.
+
+        Use case: for automatic addition of fields.
+        """
+        key_ = key
+        if not overwrite:
+            i = 2
+            while key_ in self.data:
+                key_ = key + "_" + str(i)
+                i += 1
+        self.data[key_] = data
+        return key_
+
     def nanmask(self):
         """ Return a mask for observations containing at least one NaN. """
         vectors = [a for a in self.data.values() if hasattr(a, "__iter__")]
@@ -181,6 +197,10 @@ class CTDCast(Cast):
         super(CTDCast, self).__init__(p, sal=sal, temp=temp, coords=coords,
                                       properties=properties, **kwargs)
         return
+
+    def add_depth(self):
+        """ Use temperature, salinity, and pressure to calculate in in-situ
+        density and depth. """
 
 class LADCP(Cast):
     """ Specialization of Cast for LADCP data. Requires *u* and *v* fields. """
@@ -327,23 +347,13 @@ class CastCollection(collections.Sequence):
         g = 9.8
         omega = 2*np.pi / 86400.0
         drho = diff2(rho, self.projdist())
-        dudz = -(g / rho * drho) / (2*omega)
+        sinphi = np.sin([c.coords[1] for c in self.casts])
+        dudz = -(g / rho * drho) / (2*omega*sinphi)
         u = uintegrate(dudz, self.asarray("pres"))  # strictly speaking, should 
                                                     # calculate actual depth here
-        dudzkey_ = dudzkey
-        ukey_ = ukey
         for (ic,cast) in enumerate(self.casts):
-            if not overwrite:
-                i = 2
-                while dudzkey_ in cast.data:
-                    dudzkey_ = dudzkey + "_" + str(i)
-                    i += 1
-                i = 2
-                while ukey_ in cast.data:
-                    ukey_ = ukey + "_" + str(i)
-                    i += 1
-            cast.data[dudzkey_] = dudz[:,ic]
-            cast.data[ukey_] = u[:,ic]
+            cast._addkeydata(dudzkey, dudz[:,ic], overwrite=overwrite)
+            cast._addkeydata(ukey, u[:,ic], overwrite=overwrite)
         return
 
     def save(self, fnm):
