@@ -220,9 +220,8 @@ class CTDCast(Cast):
         if rhokey is None:
             rhokey = self.add_density()
         rho = self[rhokey]
-        dz = self["pres"] / (rho * G)
-        depth = np.cumsum(dz)
-        return self._addkeydata("depth", rho)
+        depth = self["pres"] / (rho * G) * 1e4
+        return self._addkeydata("depth", depth)
 
 
 class LADCP(Cast):
@@ -347,7 +346,9 @@ class CastCollection(collections.Sequence):
         wind. In-situ density is computed from temperature and salinity unless
         *rhokey* is provided.
 
-        Add a U field and a ∂U/∂z field to each cast in the collection.
+        Adds a U field and a ∂U/∂z field to each cast in the collection. As a
+        side-effect, if casts have no "depth" field, one is added and populated
+        from temperature and salinity fields.
         
         Parameters
         ----------
@@ -377,13 +378,17 @@ class CastCollection(collections.Sequence):
             rho = self.asarray(rhokey)
             (m, n) = rho.shape
 
+        for cast in self:
+            if "depth" not in cast.data.keys():
+                cast.add_depth()
+
         g = G
         omega = OMEGA
         drho = diff2(rho, self.projdist())
         sinphi = np.sin([c.coords[1]*np.pi/180.0 for c in self.casts])
         dudz = (g / rho * drho) / (2*omega*sinphi)
-        u = uintegrate(dudz, self.asarray("pres"))  # strictly speaking, should 
-                                                    # calculate actual depth here
+        u = uintegrate(dudz, self.asarray("depth"))
+
         for (ic,cast) in enumerate(self.casts):
             cast._addkeydata(dudzkey, dudz[:,ic], overwrite=overwrite)
             cast._addkeydata(ukey, u[:,ic], overwrite=overwrite)
@@ -440,9 +445,9 @@ def _fromjson(d):
         casts = [_fromjson(castdict) for castdict in d["casts"]]
         return CastCollection(casts)
     elif typ is None:
-        raise IOError("couldn't read data type - file may be corrupt")
+        raise AttributeError("couldn't read data type - file may be corrupt")
     else:
-        raise IOError("Invalid type: {0}".format(typ))
+        raise LookupError("Invalid type: {0}".format(typ))
 
 def diff1(V, x):
     """ Compute hybrid centred/sided difference of vector V with positions given by x """
