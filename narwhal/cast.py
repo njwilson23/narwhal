@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 Cast and CastCollection classes for managing CTD observations
 """
