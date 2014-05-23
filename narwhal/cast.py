@@ -14,6 +14,12 @@ from karta import Point, LONLAT
 from . import fileio
 from . import gsw
 
+
+# Global physical constants
+G = 9.8
+OMEGA = 2*np.pi / 86400.0
+
+
 class Cast(object):
     """ A Cast is a set of referenced measurements associated with a single
     coordinate.
@@ -214,7 +220,7 @@ class CTDCast(Cast):
         if rhokey is None:
             rhokey = self.add_density()
         rho = self[rhokey]
-        dz = self["pres"] / (rho * 9.8)
+        dz = self["pres"] / (rho * G)
         depth = np.cumsum(dz)
         return self._addkeydata("depth", rho)
 
@@ -361,8 +367,8 @@ class CastCollection(collections.Sequence):
             rho = self.asarray(rhokey)
             (m, n) = rho.shape
 
-        g = 9.8
-        omega = 2*np.pi / 86400.0
+        g = G
+        omega = OMEGA
         drho = diff2(rho, self.projdist())
         sinphi = np.sin([c.coords[1]*np.pi/180.0 for c in self.casts])
         dudz = (g / rho * drho) / (2*omega*sinphi)
