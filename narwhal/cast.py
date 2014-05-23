@@ -277,6 +277,16 @@ class CastCollection(collections.Sequence):
         else:
             raise KeyError("Key {0} not found in all casts".format(key))
 
+    def __eq__(self, other):
+        if not hasattr(other, "_type") or (self._type != other._type):
+            return False
+        if len(self) != len(other):
+            return False
+        for (ca, cb) in zip(self, other):
+            if ca != cb:
+                return False
+        return True
+
     def __contains__(self, cast):
         return True if (cast in self.casts) else False
 
@@ -412,6 +422,11 @@ def read(fnm):
     """ Convenience function for reading JSON-formatted measurement data. """
     with open(fnm, "r") as f:
         d = json.load(f)
+    return _fromjson(d)
+
+def _fromjson(d):
+    """ Lower level function to (possibly recursively) convert JSON into
+    narwhal object. """
     typ = d.get("type", None)
     if typ == "cast":
         return fileio.dictascast(d, Cast)
@@ -422,7 +437,8 @@ def read(fnm):
     elif typ == "ladcpcast":
         return fileio.dictascast(d, LADCP)
     elif typ == "ctd_collection":
-        return CastCollection(fileio.dictascastcollection(d, Cast))
+        casts = [_fromjson(castdict) for castdict in d["casts"]]
+        return CastCollection(casts)
     elif typ is None:
         raise IOError("couldn't read data type - file may be corrupt")
     else:

@@ -162,6 +162,7 @@ class IOTests(unittest.TestCase):
                         properties={"date":dt})
         self.xbt = XBTCast(self.p, temp=self.temp, sal=self.sal,
                         properties={"date":dt})
+        self.collection = CastCollection(self.ctd, self.xbt, self.ctd)
         return
 
     def test_save(self):
@@ -173,6 +174,11 @@ class IOTests(unittest.TestCase):
 
         fnm = os.path.join(DATADIR, "xbt_test.nwl")
         self.xbt.save(fnm)
+        return
+
+    def test_save_collection(self):
+        fnm = os.path.join(DATADIR, "coll_test.nwl")
+        self.collection.save(fnm)
         return
 
     def test_save_zprimarykey(self):
@@ -188,6 +194,11 @@ class IOTests(unittest.TestCase):
         self.assertEqual(cast, self.cast)
         self.assertEqual(ctd, self.ctd)
         self.assertEqual(xbt, self.xbt)
+        return
+
+    def test_load_collection(self):
+        coll = narwhal.read(os.path.join(DATADIR, "reference_coll_test.nwl"))
+        self.assertEqual(coll, self.collection)
         return
 
     def test_load_zprimarykey(self):
