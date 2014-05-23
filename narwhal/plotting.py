@@ -130,7 +130,7 @@ DEFAULT_CONTOUR = {"colors":    "black"}
 DEFAULT_CONTOURF = {"cmap":     plt.cm.gist_ncar,
                     "extend":   "both"}
 
-def plot_section_properties(cc, ax=None, prop="temp",
+def plot_section_properties(cc, prop="temp", ax=None,
                             cntrrc=None,
                             cntrfrc=None,
                             interp_method="linear",
@@ -161,7 +161,7 @@ def plot_section_properties(cc, ax=None, prop="temp",
 
     ccline = Line([c.coords for c in cc], crs=LONLAT)
     cx = np.array(ccline.cumlength())
-    y = cc[0]["pres"]
+    y = cc[0][cc[0].primarykey]
     obsx, obspres = np.meshgrid(cx, y)
     intpres, intx = np.meshgrid(y, np.linspace(cx[0], cx[-1], ninterp))
     rawdata = cc.asarray(prop)
@@ -209,10 +209,10 @@ def plot_section_properties(cc, ax=None, prop="temp",
 
     cm = ax.contourf(intx, intpres, intdata, **cntrfrc)
     cl = ax.contour(intx, intpres, intdata, **cntrrc)
-    ax.clabel(cl, fmt="%.1f")
+    ax.clabel(cl, fmt="%.2f")
 
     # Set plot bounds
-    presgen = (np.array(c["pres"]) for c in cc)
+    presgen = (np.array(c[c.primarykey]) for c in cc)
     validgen = (~np.isnan(c[prop]) for c in cc)
     ymax = max(p[msk][-1] for p,msk in zip(presgen, validgen))
     for x_ in cx:
