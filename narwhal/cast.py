@@ -149,7 +149,8 @@ class Cast(object):
         return nv
 
     def interpolate(self, y, x, v, force=False):
-        """ Interpolate property y as a function of property x at values given by vector x=v.
+        """ Interpolate property y as a function of property x at values given
+        by vector x=v.
 
         y::string       name of property to interpolate
         x::string       name of reference property
@@ -347,8 +348,8 @@ class CastCollection(collections.Sequence):
         g = 9.8
         omega = 2*np.pi / 86400.0
         drho = diff2(rho, self.projdist())
-        sinphi = np.sin([c.coords[1] for c in self.casts])
-        dudz = -(g / rho * drho) / (2*omega*sinphi)
+        sinphi = np.sin([c.coords[1]*np.pi/180.0 for c in self.casts])
+        dudz = (g / rho * drho) / (2*omega*sinphi)
         u = uintegrate(dudz, self.asarray("pres"))  # strictly speaking, should 
                                                     # calculate actual depth here
         for (ic,cast) in enumerate(self.casts):
@@ -365,7 +366,6 @@ class CastCollection(collections.Sequence):
             fnm = fnm + ".nwl"
         with open(fnm, "w") as f:
             fileio.writecastcollection(f, self)
-
 
 
 def force_monotonic(u):
@@ -429,7 +429,7 @@ def diff2(A, x):
                 if j - start != 1:
                     D2[i,start:j] = diff1(arow[start:j], x[start:j])
                 else:
-                    assert j-start == 1    # if this isn't true, I screwed up somewhere
+                    assert j-start == 1
                 start = -1
             elif start != -1 and j == len(arow) - 1:
                 D2[i,start:] = diff1(arow[start:], x[start:])
