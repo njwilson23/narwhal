@@ -12,6 +12,7 @@ import numpy as np
 from karta import Point, LONLAT
 from . import fileio
 from . import gsw
+from . import util
 
 
 # Global physical constants
@@ -68,7 +69,7 @@ class Cast(object):
             self.data[kw] = _fieldmaker(len(p), val)
 
         self._len = len(p)
-        self._fields = tuple([primarykey] + [a for a in kwargs])
+        self._fields = [primarykey] + [a for a in kwargs]
         return
 
     def __len__(self):
@@ -143,6 +144,7 @@ class Cast(object):
             while key_ in self.data:
                 key_ = key + "_" + str(i)
                 i += 1
+        self._fields.append(key_)
         self.data[key_] = data
         return key_
 
@@ -399,10 +401,10 @@ class CastCollection(collections.Sequence):
             if "depth" not in cast.data.keys():
                 cast.add_depth()
 
-        drho = diff2(rho, self.projdist())
+        drho = util.diff2(rho, self.projdist())
         sinphi = np.sin([c.coords[1]*np.pi/180.0 for c in self.casts])
         dudz = (G / rho * drho) / (2*OMEGA*sinphi)
-        u = uintegrate(dudz, self.asarray("depth"))
+        u = util.uintegrate(dudz, self.asarray("depth"))
 
         for (ic,cast) in enumerate(self.casts):
             cast._addkeydata(dudzkey, dudz[:,ic], overwrite=overwrite)
@@ -462,18 +464,19 @@ class CastCollection(collections.Sequence):
             cmid = (0.5*(c1[0]+c2[0]), 0.5*(c1[1]+c2[1]))
             z1 = self[i]["depth"]
             z2 = self[i+1]["depth"]
-            z = z1 if len(z1[~np.isnan(z1)]) > len(~z2[np.isnan(z2)]) else z2
-            midcasts[i] = Cast(z, primarykey="depth", coords=cmid)
+            z = z1 if len(z1[~np.isnan(z1)]) > len(z2[~np.isnan(z2)]) else z2
+            midcasts.append(Cast(z, primarykey="depth", coords=cmid))
 
-        drho = diff2_inner(rho, self.projdist())
+        drho = util.diff2_inner(rho, self.projdist())
         sinphi = np.sin([c.coords[1]*np.pi/180.0 for c in midcasts])
-        dudz = (G / rho * drho) / (2*OMEGA*sinphi)
-        u = uintegrate(dudz, self.asarray("depth"))
+        rhoavg = 0.5 * (rho[:,:-1] + rho[:,1:])
+        dudz = (G / rhoavg * drho) / (2*OMEGA*sinphi)
+        u = util.uintegrate(dudz, self.asarray("depth"))
 
         for (ic,cast) in enumerate(midcasts):
             cast._addkeydata(dudzkey, dudz[:,ic], overwrite=overwrite)
             cast._addkeydata(ukey, u[:,ic], overwrite=overwrite)
-        return midcasts
+        return CastCollection(midcasts)
 
     def save(self, fnm):
         """ Save a JSON-formatted representation to a file.
