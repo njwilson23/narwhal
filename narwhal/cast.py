@@ -402,8 +402,8 @@ class CastCollection(collections.Sequence):
             cast._addkeydata(ukey, u[:,ic], overwrite=overwrite)
         return
 
-    def thermal_wind2(self, tempkey="temp", salkey="sal", rhokey=None,
-                     dudzkey="dudz", ukey="u", overwrite=False):
+    def thermal_wind_inner(self, tempkey="temp", salkey="sal", rhokey=None,
+                           dudzkey="dudz", ukey="u", overwrite=False):
         """ Alternative implementation that creates a new cast collection
         consistng of points between the observation casts.
         
