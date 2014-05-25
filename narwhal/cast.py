@@ -126,6 +126,10 @@ class Cast(object):
         else:
             return True
 
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+
     def _addkeydata(self, key, data, overwrite=False):
         """ Add data under *key*. If *key* already exists, iterates over
         [key]_2, [key]_3... until an unused identifier is found. Returns the
@@ -295,6 +299,9 @@ class CastCollection(collections.Sequence):
             if ca != cb:
                 return False
         return True
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
 
     def __contains__(self, cast):
         return True if (cast in self.casts) else False
