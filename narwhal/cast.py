@@ -8,9 +8,7 @@ import sys
 import itertools
 import collections
 import json
-import numbers
 import numpy as np
-import scipy.integrate as scint 
 from karta import Point, LONLAT
 from . import fileio
 from . import gsw
@@ -394,17 +392,81 @@ class CastCollection(collections.Sequence):
             if "depth" not in cast.data.keys():
                 cast.add_depth()
 
-        g = G
-        omega = OMEGA
         drho = diff2(rho, self.projdist())
         sinphi = np.sin([c.coords[1]*np.pi/180.0 for c in self.casts])
-        dudz = (g / rho * drho) / (2*omega*sinphi)
+        dudz = (G / rho * drho) / (2*OMEGA*sinphi)
         u = uintegrate(dudz, self.asarray("depth"))
 
         for (ic,cast) in enumerate(self.casts):
             cast._addkeydata(dudzkey, dudz[:,ic], overwrite=overwrite)
             cast._addkeydata(ukey, u[:,ic], overwrite=overwrite)
         return
+
+    def thermal_wind2(self, tempkey="temp", salkey="sal", rhokey=None,
+                     dudzkey="dudz", ukey="u", overwrite=False):
+        """ Alternative implementation that creates a new cast collection
+        consistng of points between the observation casts.
+        
+        Compute profile-orthagonal velocity shear using hydrostatic thermal
+        wind. In-situ density is computed from temperature and salinity unless
+        *rhokey* is provided.
+
+        Adds a U field and a ∂U/∂z field to each cast in the collection. As a
+        side-effect, if casts have no "depth" field, one is added and populated
+        from temperature and salinity fields.
+        
+        Parameters
+        ----------
+        tempkey         key to use for temperature if *rhokey* is None
+        salkey          key to use for salinity if *rhokey* is None
+        rhokey          key to use for density
+        dudzkey         key to use for ∂U/∂z, subject to *overwrite*
+        ukey            key to use for U, subject to *overwrite*
+        overwrite       whether to allow cast fields to be overwritten
+                        if False, then *ukey* and *dudzkey* are incremented
+                        until there is no clash
+        """
+        if rhokey is None:
+            Temp = self.asarray(tempkey)
+            Sal = self.asarray(salkey)
+            Pres = self.asarray("pres")
+            rho = np.empty_like(Pres)
+            (m, n) = rho.shape
+            for i in range(m):
+                for j in range(n):
+                    ct = gsw.ct_from_t(Sal[i,j], Temp[i,j], Pres[i,j])
+                    rho[i,j] = gsw.rho(Sal[i,j], ct, Pres[i,j])
+            del Temp
+            del Sal
+            del Pres
+        else:
+            rho = self.asarray(rhokey)
+            (m, n) = rho.shape
+
+        for cast in self:
+            if "depth" not in cast.data.keys():
+                cast.add_depth()
+
+        # Add casts in intermediate positions
+        midcasts = []
+        for i in range(len(self.casts)-1):
+            c1 = self[i].coords
+            c2 = self[i+1].coords
+            cmid = (0.5*(c1[0]+c2[0]), 0.5*(c1[1]+c2[1]))
+            z1 = self[i]["depth"]
+            z2 = self[i+1]["depth"]
+            z = z1 if len(z1[~np.isnan(z1)]) > len(~z2[np.isnan(z2)]) else z2
+            midcasts[i] = Cast(z, primarykey="depth", coords=cmid)
+
+        drho = diff2_inner(rho, self.projdist())
+        sinphi = np.sin([c.coords[1]*np.pi/180.0 for c in midcasts])
+        dudz = (G / rho * drho) / (2*OMEGA*sinphi)
+        u = uintegrate(dudz, self.asarray("depth"))
+
+        for (ic,cast) in enumerate(midcasts):
+            cast._addkeydata(dudzkey, dudz[:,ic], overwrite=overwrite)
+            cast._addkeydata(ukey, u[:,ic], overwrite=overwrite)
+        return midcasts
 
     def save(self, fnm):
         """ Save a JSON-formatted representation to a file.
@@ -416,24 +478,6 @@ class CastCollection(collections.Sequence):
         with open(fnm, "w") as f:
             fileio.writecastcollection(f, self)
 
-
-def force_monotonic(u):
-    """ Given a nearly monotonically-increasing vector u, return a vector u'
-    that is monotonic by incrementing each value u_i that is less than u_(i-1).
-
-    u::iterable         vector to adjust
-    """
-    # naive implementation
-    #v = u.copy()
-    #for i in xrange(1, len(v)):
-    #    if v[i] <= v[i-1]:
-    #        v[i] = v[i-1] + 1e-16
-    #return v
-
-    # more efficient implementation
-    v = [u1 if u1 > u0 else u0 + 1e-16
-            for u0, u1 in zip(u[:-1], u[1:])]
-    return np.hstack([u[0], v])
 
 def read(fnm):
     """ Convenience function for reading JSON-formatted measurement data. """
@@ -461,47 +505,3 @@ def _fromjson(d):
     else:
         raise LookupError("Invalid type: {0}".format(typ))
 
-def diff1(V, x):
-    """ Compute hybrid centred/sided difference of vector V with positions given by x """
-    D = np.empty_like(V)
-    D[1:-1] = (V[2:] - V[:-2]) / (x[2:] - x[:-2])
-    D[0] = (V[1] - V[0]) / (x[1] - x[0])
-    D[-1] = (V[-1] - V[-2]) / (x[-1] - x[-2])
-    return D
-
-def diff2(A, x):
-    """ Return the row-wise differences in array A. Uses centred differences in
-    the interior and one-sided differences on the edges. When there are
-    interior NaNs, one-sided differences are used to fill in an much data as
-    possible. """
-    D2 = np.nan * np.empty_like(A)
-    for (i, arow) in enumerate(A):
-        start = -1
-        for j in range(len(arow)):
-            if start == -1 and ~np.isnan(arow[j]):
-                start = j
-            elif start != -1 and np.isnan(arow[j]):
-                if j - start != 1:
-                    D2[i,start:j] = diff1(arow[start:j], x[start:j])
-                else:
-                    assert j-start == 1
-                start = -1
-            elif start != -1 and j == len(arow) - 1:
-                D2[i,start:] = diff1(arow[start:], x[start:])
-    return D2
-
-def uintegrate(dudz, X, ubase=0.0):
-    """ Integrate velocity shear from the first non-NaN value to the top. """
-    U = -np.nan*np.empty_like(dudz)
-    if isinstance(ubase, numbers.Number):
-        ubase = ubase * np.ones(dudz.shape[1], dtype=np.float64)
-    
-    for jcol in range(dudz.shape[1]):
-        # find the deepest non-NaN
-        imax = np.max(np.arange(dudz.shape[0])[~np.isnan(dudz[:,jcol])])
-        du = dudz[:imax+1,jcol]
-        du[np.isnan(du)] = 0.0
-        U[:imax+1,jcol] = scint.cumtrapz(du, x=X[:imax+1,jcol],
-                                         initial=0.0)
-        U[:imax+1,jcol] -= U[imax,jcol] - ubase[jcol]
-    return U
