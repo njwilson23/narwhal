@@ -8,17 +8,11 @@ def force_monotonic(u):
 
     u::iterable         vector to adjust
     """
-    # naive implementation
-    #v = u.copy()
-    #for i in xrange(1, len(v)):
-    #    if v[i] <= v[i-1]:
-    #        v[i] = v[i-1] + 1e-16
-    #return v
-
-    # more efficient implementation
-    v = [u1 if u1 > u0 else u0 + 1e-16
-            for u0, u1 in zip(u[:-1], u[1:])]
-    return np.hstack([u[0], v])
+    v = u.copy()
+    for i in range(1, len(v)):
+        if v[i] <= v[i-1]:
+            v[i] = v[i-1] + 1e-16
+    return v
 
 def diff1(V, x):
     """ Compute hybrid centred/sided difference of vector V with positions given by x """
