@@ -5,6 +5,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.tri as mtri
 from scipy.interpolate import griddata
+from scipy import ndimage
 from karta import Point, Line, LONLAT
 from narwhal.cast import Cast, CastCollection
 from . import plotutil
@@ -138,6 +139,7 @@ def plot_section_properties(cc, prop="temp", ax=None,
                             ninterp=30,
                             mask=True,
                             bottomkey="depth",
+                            kernelsize=None,
                             **kw):
     """ Add water properties from a CastCollection to a section plot.
     
@@ -150,6 +152,10 @@ def plot_section_properties(cc, prop="temp", ax=None,
     interp_method       method used by scipy.griddata
     mask                apply a NaN mask to the bottom of the section plot
     bottomkey           key in properties giving bottom depth
+    kernelsize          smooth the property field using a moving average
+                        gaussian to attenuate artefacts.
+                        make this as small as possible that still gives
+                        reasonable results [default: None]
 
     Additional keyword arguments are passed to *both* controur and contourf.
     """
@@ -196,6 +202,9 @@ def plot_section_properties(cc, prop="temp", ax=None,
                            np.c_[intx.flatten(), intpres.flatten()],
                            method=interp_method)
     intdata = intdata.reshape(intx.shape)
+
+    if kernelsize is not None:
+        intdata = ndimage.filters.gaussian_filter(intdata, kernelsize)
 
     if mask:
         depth = [cast.properties[bottomkey] for cast in cc]
