@@ -401,7 +401,7 @@ class CastCollection(collections.Sequence):
             if "depth" not in cast.data.keys():
                 cast.add_depth()
 
-        drho = util.diff2(rho, self.projdist())
+        drho = util.diff2_dinterp(rho, self.projdist())
         sinphi = np.sin([c.coords[1]*np.pi/180.0 for c in self.casts])
         dudz = (G / rho * drho) / (2*OMEGA*sinphi)
         u = util.uintegrate(dudz, self.asarray("depth"))

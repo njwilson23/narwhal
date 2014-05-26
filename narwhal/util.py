@@ -1,6 +1,7 @@
 import numbers
 import numpy as np
-import scipy.integrate as scint 
+import scipy.integrate as scint
+from scipy.ndimage.morphology import binary_dilation
 
 def force_monotonic(u):
     """ Given a nearly monotonically-increasing vector u, return a vector u'
@@ -44,6 +45,84 @@ def diff2(A, x):
                 D2[i,start:] = diff1(arow[start:], x[start:])
     return D2
 
+def diff2_dinterp(A_, x):
+    """ Perform row-wise differences in array A. Handle NaNs by extrapolating
+    differences downward, performing a centred differences, and replacing the
+    NaN values in the output.
+
+    Compared to diff2 and diff2_inner, this is a generally much less accurate
+    approximation (L-∞), however it has the virtue of allowing centred
+    differences everywhere, avoiding non-physical jumps in the resulting field.
+    """
+
+    def erode_nans(u, du):
+        """ Given u and a derivative du, extend u whereever a NaN borders a non-NaN """
+        isnan = np.isnan
+        for j in range(len(u)):
+
+            if isnan (u[j]) and j != 0 and j != len(u)-1:
+                if isnan(u[j+1]) and not isnan(u[j-1]):
+                    d = 0.5 * (du[j] + du[j-1])
+                    u[j] = u[j-1] + d
+                elif not isnan(u[j+1]) and isnan(u[j-1]):
+                    d = 0.5 * (du[j] + du[j+1])
+                    u[j] = u[j+1] - d
+                elif not isnan(u[j+1]) and not isnan(u[j-2]):
+                    #u[j] = 0.5 * (u[j-1] + u[j+1])
+                    u[j] = 0.5 * (u[j-1] + 0.5 * (du[j] + du[j-1]) +
+                                  u[j+1] - 0.5 * (du[j] + du[j+1]))
+                else:
+                    pass
+
+            elif j == 0 and isnan(u[j]) and not isnan(u[j+1]):
+                u[j] = u[j+1] - 0.5 * (du[j] + du[j+1])
+
+            elif j == len(u)-1 and isnan(u[j]) and not isnan(u[j-1]):
+                u[j] = u[j-1] + 0.5 * (du[j] + du[j-1])
+
+            else:
+                pass
+
+        return u
+
+    A = A_.copy()
+    D2 = np.empty_like(A_)
+    for (i, row) in enumerate(A):
+
+        if np.any(np.isnan(row)):
+
+            if not np.all(np.isnan(row)) and i != 0:
+
+                while np.any(np.isnan(row)):
+                    row = erode_nans(row, D2[i-1,:])
+                A[i,:] = row
+
+            else:
+
+                # Extend upward
+                for j in range(len(row)):
+
+                    if np.isnan(row[j]):
+                        k = 0
+                        while k != A.shape[0]-1:
+                            if not np.isnan(A[k,j]):
+                                A[:k,j] = A[k,j]
+                                break
+                            k += 1
+
+                        if k == A.shape[0]-1:
+                            raise ValueError("there's a whole column of NaNs")
+
+        D2[i,:] = diff1(A[i,:], x)
+
+        if i != 0:                      # Replace differences with the previous row
+            nans = np.isnan(A_[i,:])    # to avoid propagating synthetic data
+            nans = binary_dilation(nans)
+            D2[i,nans] = D2[i-1,nans]
+
+    D2[np.isnan(A_)] = np.nan
+    return D2
+
 def diff1_inner(V, x):
     """ Compute centred differences between points given by x """
     D = np.empty_like(len(V)-1)
@@ -78,7 +157,7 @@ def uintegrate(dudz, X, ubase=0.0):
     U = -np.nan*np.empty_like(dudz)
     if isinstance(ubase, numbers.Number):
         ubase = ubase * np.ones(dudz.shape[1], dtype=np.float64)
-    
+
     for jcol in range(dudz.shape[1]):
         # find the deepest non-NaN
         imax = np.max(np.arange(dudz.shape[0])[~np.isnan(dudz[:,jcol])])

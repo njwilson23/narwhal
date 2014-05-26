@@ -8,6 +8,7 @@ from narwhal.cast import Cast, CTDCast, XBTCast, LADCP
 from narwhal.cast import CastCollection
 from narwhal.bathymetry import Bathymetry
 from narwhal.util import force_monotonic, diff2, uintegrate, diff2_inner
+from narwhal import util
 
 directory = os.path.dirname(__file__)
 DATADIR = os.path.join(directory, "data")
@@ -234,6 +235,7 @@ class MiscTests(unittest.TestCase):
 
         D = diff2(A, x.ravel())
         self.assertTrue(np.max(abs(ans[~np.isnan(D)] - D[~np.isnan(D)])) < 0.15)
+        return
 
     def test_diff2_inner(self):
         x = np.atleast_2d(np.linspace(-1, 1, 100))
@@ -250,6 +252,23 @@ class MiscTests(unittest.TestCase):
 
         D = diff2_inner(A, x.ravel())
         self.assertTrue(np.max(abs(ans[~np.isnan(D)] - D[~np.isnan(D)])) < 0.0002)
+        return
+
+    def test_diff2_dinterp(self):
+        x = np.atleast_2d(np.linspace(-1, 1, 100))
+        A = x**2 - (x + x.T)**3
+        ans = 2*x - 3*(x + x.T)**2      # true answer
+
+        # add holes
+        A[30:40,1] = np.nan
+        A[15,35] = np.nan
+        A[30:50,50:55] = np.nan
+        A[60:65,60] = np.nan
+        A[60:70,-2] = np.nan
+
+        D = util.diff2_dinterp(A, x.ravel())
+        self.assertTrue(np.max(abs(ans[~np.isnan(D)] - D[~np.isnan(D)])) < 2.0)
+        return
 
     def test_uintegrate(self):
         x = np.atleast_2d(np.linspace(-1, 1, 100))
