@@ -6,11 +6,11 @@ import matplotlib.pyplot as plt
 from scipy.interpolate import griddata
 from karta import Point, Line, LONLAT
 from narwhal.cast import Cast, CastCollection
-from . import util
+from . import plotutil
 from . import gsw
 
-ccmeanp = util.ccmeanp
-ccmeans = util.ccmeans
+ccmeanp = plotutil.ccmeanp
+ccmeans = plotutil.ccmeans
 
 ###### T-S plots #######
 
