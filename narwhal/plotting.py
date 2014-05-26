@@ -3,6 +3,7 @@ import operator
 import copy
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib.tri as mtri
 from scipy.interpolate import griddata
 from karta import Point, Line, LONLAT
 from narwhal.cast import Cast, CastCollection
@@ -180,13 +181,15 @@ def plot_section_properties(cc, prop="temp", ax=None,
                             meanval = val
                         else:
                             meanval = 0.5 * (val + row[start-1])
-                        row[start:idx] = meanval
+                        rawdata[i,start:idx] = meanval
                         start = -1
                 if start != -1:
                     rawdata[i,start:] = row[start-1]
             else:
                 if i != 0:
-                    row = rawdata[i-1]
+                    rawdata[i] = rawdata[i-1]  # Extrapolate down
+                else:
+                    rawdata[i] = rawdata[i+1]  # Extrapolate to surface
 
     intdata = griddata(np.c_[obsx.flatten(), obspres.flatten()],
                            rawdata.flatten(),
@@ -209,6 +212,98 @@ def plot_section_properties(cc, prop="temp", ax=None,
 
     cm = ax.contourf(intx, intpres, intdata, **cntrfrc)
     cl = ax.contour(intx, intpres, intdata, **cntrrc)
+    ax.clabel(cl, fmt="%.2f")
+
+    # Set plot bounds
+    presgen = (np.array(c[c.primarykey]) for c in cc)
+    validgen = (~np.isnan(c[prop]) for c in cc)
+    ymax = max(p[msk][-1] for p,msk in zip(presgen, validgen))
+    for x_ in cx:
+        ax.plot((x_, x_), (ymax, 0), "--", color="0.3")
+    ax.set_ylim((ymax, 0))
+    ax.set_xlim((cx[0], cx[-1]))
+    return cm
+
+def plot_section_properties_tri(cc, prop="temp", ax=None,
+                                cntrrc=None,
+                                cntrfrc=None,
+                                mask=True,
+                                bottomkey="depth",
+                                **kw):
+    """ Add water properties from a CastCollection to a section plot and show
+    using tricontourf. Does not indicate no data, so consider using
+    `plot_section_properties` instead.
+    
+    Keyword arguments:
+    ------------------
+    ax                  specific Axes instance to plot on
+    prop                Cast property to show
+    cntrrc              dictionary of pyplot.contour keyword arguments
+    cntrfrc             dictionary of pyplot.contourf keyword argument
+    interp_method       method used by scipy.griddata
+    mask                apply a NaN mask to the bottom of the section plot
+    bottomkey           key in properties giving bottom depth
+
+    Additional keyword arguments are passed to *both* controur and contourf.
+    """
+    if ax is None:
+        ax = plt.gca()
+    if cntrrc is None:
+        cntrrc = DEFAULT_CONTOUR
+    if cntrfrc is None:
+        cntrfrc = DEFAULT_CONTOURF
+
+    ccline = Line([c.coords for c in cc], crs=LONLAT)
+    cx = np.array(ccline.cumlength())
+
+    # interpolate over NaNs in a way that assumes horizontal correlation
+    rawdata = cc.asarray(prop)
+    for (i, row) in enumerate(rawdata):
+        if np.any(np.isnan(row)):
+            if np.any(~np.isnan(row)):
+                # find groups of NaNs
+                start = -1
+                for (idx, val) in enumerate(row):
+                    if start == -1 and np.isnan(val):
+                        start = idx
+                    elif start != -1 and not np.isnan(val):
+                        if start == 0:
+                            meanval = val
+                        else:
+                            meanval = 0.5 * (val + row[start-1])
+                        rawdata[i,start:idx] = meanval
+                        start = -1
+                if start != -1:
+                    rawdata[i,start:] = row[start-1]
+            else:
+                if i != 0:
+                    rawdata[i] = rawdata[i-1]  # Extrapolate down
+                else:
+                    rawdata[i] = rawdata[i+1]  # Extrapolate to surface
+
+    X, Y, Z = [], [], []
+    for (i, cast) in enumerate(cc):
+        d = cast.properties[bottomkey]
+        pkey = cast.primarykey
+        y = cast[pkey][cast[pkey] < d]      # z where z is less than maximum depth
+        Y.extend(y)
+        X.extend([cx[i] for _ in range(len(y))])
+        Z.extend(rawdata[:,i][cast[pkey] < d])
+
+    tri = mtri.Triangulation(X, Y)
+
+    if np.any(np.isnan(rawdata)):
+        print("NaNs remaining")
+        rawdata[np.isnan(rawdata)] = 999.0
+
+    if len(kw) != 0:
+        cntrrc = copy.copy(cntrrc)
+        cntrfrc = copy.copy(cntrfrc)
+        cntrrc.update(kw)
+        cntrfrc.update(kw)
+
+    cm = ax.tricontourf(tri, Z, **cntrfrc)
+    cl = ax.tricontour(tri, Z, **cntrrc)
     ax.clabel(cl, fmt="%.2f")
 
     # Set plot bounds
