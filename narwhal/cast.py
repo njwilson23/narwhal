@@ -412,7 +412,8 @@ class CastCollection(collections.Sequence):
         return
 
     def thermal_wind_inner(self, tempkey="temp", salkey="sal", rhokey=None,
-                           dudzkey="dudz", ukey="u", overwrite=False):
+                           dudzkey="dudz", ukey="u", bottomkey="depth",
+                           overwrite=False):
         """ Alternative implementation that creates a new cast collection
         consistng of points between the observation casts.
         
@@ -452,9 +453,9 @@ class CastCollection(collections.Sequence):
             rho = self.asarray(rhokey)
             (m, n) = rho.shape
 
-        for cast in self:
-            if "depth" not in cast.data.keys():
-                cast.add_depth()
+        def avgcolumns(a, b):
+            avg = a if len(a[~np.isnan(a)]) > len(b[~np.isnan(b)]) else b
+            return avg
 
         # Add casts in intermediate positions
         midcasts = []
@@ -462,21 +463,26 @@ class CastCollection(collections.Sequence):
             c1 = self[i].coords
             c2 = self[i+1].coords
             cmid = (0.5*(c1[0]+c2[0]), 0.5*(c1[1]+c2[1]))
-            z1 = self[i]["depth"]
-            z2 = self[i+1]["depth"]
-            z = z1 if len(z1[~np.isnan(z1)]) > len(z2[~np.isnan(z2)]) else z2
-            midcasts.append(Cast(z, primarykey="depth", coords=cmid))
+            p = avgcolumns(self[i]["pres"], self[i+1]["pres"])
+            t = avgcolumns(self[i]["temp"], self[i+1]["temp"])
+            s = avgcolumns(self[i]["sal"], self[i+1]["sal"])
+            cast = CTDCast(p, temp=t, sal=s, primarykey="pres", coords=cmid)
+            cast.add_depth()
+            cast.properties[bottomkey] = 0.5 * (self[i].properties[bottomkey] +
+                                                self[i+1].properties[bottomkey])
+            midcasts.append(cast)
 
+        coll = CastCollection(midcasts)
         drho = util.diff2_inner(rho, self.projdist())
         sinphi = np.sin([c.coords[1]*np.pi/180.0 for c in midcasts])
         rhoavg = 0.5 * (rho[:,:-1] + rho[:,1:])
         dudz = (G / rhoavg * drho) / (2*OMEGA*sinphi)
-        u = util.uintegrate(dudz, self.asarray("depth"))
+        u = util.uintegrate(dudz, coll.asarray("depth"))
 
-        for (ic,cast) in enumerate(midcasts):
+        for (ic,cast) in enumerate(coll):
             cast._addkeydata(dudzkey, dudz[:,ic], overwrite=overwrite)
             cast._addkeydata(ukey, u[:,ic], overwrite=overwrite)
-        return CastCollection(midcasts)
+        return coll
 
     def save(self, fnm):
         """ Save a JSON-formatted representation to a file.
