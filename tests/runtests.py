@@ -79,6 +79,18 @@ class CastTests(unittest.TestCase):
         self.assertTrue(np.allclose(rho, cast["rho"]))
         return
 
+    def test_LADCP_shear(self):
+        z = np.arange(0, 300)
+        u = z**1.01 - z
+        v = z**1.005 - z
+        u_ans = 1.01 * z**0.01 - 1
+        v_ans = 1.005 * z**0.005 - 1
+        lad = narwhal.LADCP(z, u, v)
+        lad.add_shear()
+        self.assertTrue(np.max(abs(lad["dudz"][1:-1] - u_ans[1:-1])) < 0.005)
+        self.assertTrue(np.max(abs(lad["dvdz"][1:-1] - v_ans[1:-1])) < 0.005)
+        return
+
     #def test_projectother(self):
     #    pass
 

@@ -251,6 +251,14 @@ class LADCP(Cast):
                                     **kwargs)
         return
 
+    def add_shear(self):
+        """ Compute the velocity shear for *u* and *v*. """
+        dudz = util.diff1(self["u"], self["z"])
+        dvdz = util.diff1(self["v"], self["z"])
+        self._addkeydata("dudz", dudz)
+        self._addkeydata("dvdz", dvdz)
+        return
+
 
 class XBTCast(Cast):
     """ Specialization of Cast with temperature field. """
