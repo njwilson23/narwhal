@@ -72,9 +72,10 @@ class CastTests(unittest.TestCase):
         p = np.arange(10)
         t = 20.0 * 0.2 * p
         s = 30.0 * 0.25 * p
-        cast = CTDCast(p, s, t)
-        ct = np.array([gsw.ct_from_t(s_, t_, p_) for (s_,t_,p_) in zip(s, t, p)])
-        rho = np.array([gsw.rho(s_, ct_, p_) for (s_,ct_,p_) in zip(s, ct, p)])
+        cast = CTDCast(p, s, t, coords=(-20, 50))
+        sa = np.array([gsw.sa_from_sp(s_, p_, -20, 50) for (s_, p_) in zip(s, p)])
+        ct = np.array([gsw.ct_from_t(s_, t_, p_) for (s_,t_,p_) in zip(sa, t, p)])
+        rho = np.array([gsw.rho(s_, ct_, p_) for (s_,ct_,p_) in zip(sa, ct, p)])
         cast.add_density()
         self.assertTrue(np.allclose(rho, cast["rho"]))
         return
@@ -220,6 +221,7 @@ class MiscTests(unittest.TestCase):
 
         D = util.diff2_dinterp(A, x.ravel())
         self.assertTrue(np.max(abs(ans[~np.isnan(D)] - D[~np.isnan(D)])) < 2.0)
+        # Scheme has lousy accuracy in this test, but I think it's a fairly bad case
         return
 
     def test_uintegrate(self):
