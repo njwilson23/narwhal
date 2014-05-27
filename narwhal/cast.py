@@ -213,11 +213,11 @@ class CTDCast(Cast):
 
     def add_density(self):
         """ Add in-situ density to fields, and return the field name. """
-        constemp = (gsw.ct_from_t(sa, t, p) for (sa, t, p)
-                        in zip(self["sal"], self["temp"], self["pres"]))
-        rho = np.array([gsw.rho(sa, ct, p) for (sa, ct, p)
-                        in zip(self["sal"], constemp, self["pres"])])
-        return self._addkeydata("rho", rho)
+        SA = [gsw.sa_from_sp(sp, p, self.coords[0], self.coords[1])
+                    for (sp, p) in zip(self["sal"], self["p"])]
+        CT = (gsw.ct_from_t(sa, t, p) for (sa, t, p) in zip(SA, self["temp"], self["pres"]))
+        rho = [gsw.rho(sa, ct, p) for (sa, ct, p) in zip(SA, CT, self["pres"])]
+        return self._addkeydata("rho", np.asarray(rho))
 
     def add_depth(self, rhokey=None):
         """ Use temperature, salinity, and pressure to calculate depth. If
@@ -353,6 +353,20 @@ class CastCollection(collections.Sequence):
 
     def mean(self):
         raise NotImplementedError()
+
+    def castwhere(self, key, value):
+        """ Return the first cast where cast.properties[key] == value """
+        for cast in self.casts:
+            if cast.properties.get(key, None) == value:
+                return cast
+
+    def castswhere(self, key, value):
+        """ Return all casts where cast.properties[key] == value """
+        casts = []
+        for cast in self.casts:
+            if cast.properties.get(key, None) == value:
+                casts.append(cast)
+        return casts
 
     def asarray(self, key):
         """ Naively return values as an array, assuming that all casts are indexed
