@@ -9,6 +9,7 @@ import itertools
 import collections
 import json
 import numpy as np
+from scipy import ndimage
 from karta import Point, LONLAT
 from . import fileio
 from . import gsw
@@ -251,10 +252,19 @@ class LADCP(Cast):
                                     **kwargs)
         return
 
-    def add_shear(self):
-        """ Compute the velocity shear for *u* and *v*. """
-        dudz = util.diff1(self["u"], self["z"])
-        dvdz = util.diff1(self["v"], self["z"])
+    def add_shear(self, sigma=None):
+        """ Compute the velocity shear for *u* and *v*. If *sigma* is not None,
+        smooth the data with a gaussian filter before computing the derivative.
+        """
+        if sigma is not None:
+            u = ndimage.filters.gaussian_filter1d(self["u"], sigma)
+            v = ndimage.filters.gaussian_filter1d(self["v"], sigma)
+        else:
+            u = self["u"]
+            v = self["v"]
+
+        dudz = util.diff1(u, self["z"])
+        dvdz = util.diff1(v, self["z"])
         self._addkeydata("dudz", dudz)
         self._addkeydata("dvdz", dvdz)
         return
