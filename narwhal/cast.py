@@ -413,21 +413,17 @@ class CastCollection(collections.Sequence):
                         until there is no clash
         """
         if rhokey is None:
-            Temp = self.asarray(tempkey)
-            Sal = self.asarray(salkey)
-            Pres = self.asarray("pres")
-            rho = np.empty_like(Pres)
-            (m, n) = rho.shape
-            for i in range(m):
-                for j in range(n):
-                    ct = gsw.ct_from_t(Sal[i,j], Temp[i,j], Pres[i,j])
-                    rho[i,j] = gsw.rho(Sal[i,j], ct, Pres[i,j])
-            del Temp
-            del Sal
-            del Pres
-        else:
-            rho = self.asarray(rhokey)
-            (m, n) = rho.shape
+            rhokeys = []
+            for cast in self.casts:
+                rhokeys.append(cast.add_density())
+            if False in (r == rhokeys[0] for r in rhokeys[1:]):
+                raise NameError("Tried to add density field, but ended up with "
+                                "different keys - aborting")
+            else:
+                rhokey = rhokeys[0]
+
+        rho = self.asarray(rhokey)
+        (m, n) = rho.shape
 
         for cast in self:
             if "depth" not in cast.data.keys():
@@ -469,21 +465,17 @@ class CastCollection(collections.Sequence):
                         until there is no clash
         """
         if rhokey is None:
-            Temp = self.asarray(tempkey)
-            Sal = self.asarray(salkey)
-            Pres = self.asarray("pres")
-            rho = np.empty_like(Pres)
-            (m, n) = rho.shape
-            for i in range(m):
-                for j in range(n):
-                    ct = gsw.ct_from_t(Sal[i,j], Temp[i,j], Pres[i,j])
-                    rho[i,j] = gsw.rho(Sal[i,j], ct, Pres[i,j])
-            del Temp
-            del Sal
-            del Pres
-        else:
-            rho = self.asarray(rhokey)
-            (m, n) = rho.shape
+            rhokeys = []
+            for cast in self.casts:
+                rhokeys.append(cast.add_density())
+            if False in (r == rhokeys[0] for r in rhokeys[1:]):
+                raise NameError("Tried to add density field, but ended up with "
+                                "different keys - aborting")
+            else:
+                rhokey = rhokeys[0]
+
+        rho = self.asarray(rhokey)
+        (m, n) = rho.shape
 
         def avgcolumns(a, b):
             avg = a if len(a[~np.isnan(a)]) > len(b[~np.isnan(b)]) else b
