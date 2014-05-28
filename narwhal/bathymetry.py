@@ -27,12 +27,15 @@ class Bathymetry2d(object):
                 * (a.greatcircle(ptonseg) / a.greatcircle(b)) \
                 + a.data["depth"]
 
-    def projdist(self):
+    def projdist(self, reverse=False):
         distances = [seg[0].greatcircle(seg[1]) for seg in self.line.segments()]
         cumulative = [0]
         for val in distances:
             cumulative.append(cumulative[-1] + val)
+        if reverse:
+            cumulative.reverse()
         return cumulative
+
 
 Bathymetry = Bathymetry2d
 
