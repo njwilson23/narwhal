@@ -140,6 +140,8 @@ def plot_section_properties(cc, prop="temp", ax=None,
                             mask=True,
                             bottomkey="depth",
                             kernelsize=None,
+                            clabelfmt="%.2f",
+                            clabelmanual=False,
                             **kw):
     """ Add water properties from a CastCollection to a section plot.
     
@@ -156,6 +158,8 @@ def plot_section_properties(cc, prop="temp", ax=None,
                         gaussian to attenuate artefacts.
                         make this as small as possible that still gives
                         reasonable results [default: None]
+    clabelfmt           format string for clabel [default: "%.2f"]
+    clabelmanual        pass `manual=True` to clabel [default: False]
 
     Additional keyword arguments are passed to *both* controur and contourf.
     """
@@ -221,7 +225,6 @@ def plot_section_properties(cc, prop="temp", ax=None,
 
     cm = ax.contourf(intx, intpres, intdata, **cntrfrc)
     cl = ax.contour(intx, intpres, intdata, **cntrrc)
-    ax.clabel(cl, fmt="%.2f")
 
     # Set plot bounds
     presgen = (np.array(c[c.primarykey]) for c in cc)
@@ -231,6 +234,7 @@ def plot_section_properties(cc, prop="temp", ax=None,
         ax.plot((x_, x_), (ymax, 0), "--", color="0.3")
     ax.set_ylim((ymax, 0))
     ax.set_xlim((cx[0], cx[-1]))
+    ax.clabel(cl, fmt=clabelfmt, manual=clabelmanual)
     return cm
 
 def plot_section_properties_tri(cc, prop="temp", ax=None,
@@ -339,7 +343,7 @@ def plot_section_bathymetry(bathymetry, vertices=None, ax=None, maxdistance=0.01
         ax = plt.gca()
     
     # The bathymetry x should be plotted with respect to CTD line
-    if "vertices":
+    if vertices:
         bx = []
         segdist = [0.0]
         depth = []
@@ -368,7 +372,7 @@ def plot_section_bathymetry(bathymetry, vertices=None, ax=None, maxdistance=0.01
         depth = bathymetry.depth
     
     ymax = bathymetry.depth.max()
-    ax.fill_between(bx, depth, ymax*np.ones_like(depth), color="0.0")
+    ax.fill_between(bx, depth, ymax*np.ones_like(depth), color="0.0", zorder=8)
     return
 
 def plot_section(cc, bathymetry, ax=None, **kw):
