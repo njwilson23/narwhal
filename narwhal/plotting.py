@@ -7,7 +7,7 @@ import matplotlib.tri as mtri
 from scipy.interpolate import griddata
 from scipy import ndimage
 from karta import Point, Line, LONLAT
-from narwhal.cast import Cast, CastCollection
+from narwhal.cast import CastCollection
 from . import plotutil
 from . import gsw
 
@@ -95,7 +95,7 @@ def add_mixing_line(origin, ax=None, icetheta=0, **kw):
     ice_eff_theta = 0.0 - L/cp - ci/cp * (0.0 - icetheta)
 
     ax = ax if ax is not None else plt.gca()
-    xl, yl = ax.get_xlim(), ax.get_ylim()
+    yl = ax.get_ylim()
     ax.plot((origin[0], 0.0), (origin[1], ice_eff_theta), **kw)
     ax.set_ylim(yl)
     return
@@ -132,44 +132,7 @@ DEFAULT_CONTOUR = {"colors":    "black"}
 DEFAULT_CONTOURF = {"cmap":     plt.cm.gist_ncar,
                     "extend":   "both"}
 
-def plot_section_properties(cc, prop="temp", ax=None,
-                            cntrrc=None,
-                            cntrfrc=None,
-                            interp_method="linear",
-                            ninterp=30,
-                            mask=True,
-                            bottomkey="depth",
-                            kernelsize=None,
-                            clabelfmt="%.2f",
-                            clabelmanual=False,
-                            **kw):
-    """ Add water properties from a CastCollection to a section plot.
-    
-    Keyword arguments:
-    ------------------
-    ax                  specific Axes instance to plot on
-    prop                Cast property to show
-    cntrrc              dictionary of pyplot.contour keyword arguments
-    cntrfrc             dictionary of pyplot.contourf keyword argument
-    interp_method       method used by scipy.griddata
-    mask                apply a NaN mask to the bottom of the section plot
-    bottomkey           key in properties giving bottom depth
-    kernelsize          smooth the property field using a moving average
-                        gaussian to attenuate artefacts.
-                        make this as small as possible that still gives
-                        reasonable results [default: None]
-    clabelfmt           format string for clabel [default: "%.2f"]
-    clabelmanual        pass `manual=True` to clabel [default: False]
-
-    Additional keyword arguments are passed to *both* controur and contourf.
-    """
-    if ax is None:
-        ax = plt.gca()
-    if cntrrc is None:
-        cntrrc = DEFAULT_CONTOUR
-    if cntrfrc is None:
-        cntrfrc = DEFAULT_CONTOURF
-
+def _interpolate_section_grid(cc, prop, bottomkey, ninterp, interp_method):
     ccline = Line([c.coords for c in cc], crs=LONLAT)
     cx = np.array(ccline.cumlength())
     y = cc[0][cc[0].primarykey]
@@ -206,6 +169,44 @@ def plot_section_properties(cc, prop="temp", ax=None,
                            np.c_[intx.flatten(), intpres.flatten()],
                            method=interp_method)
     intdata = intdata.reshape(intx.shape)
+    return intx, intpres, intdata, cx
+
+def plot_section_properties(cc, prop="temp", ax=None,
+                            cntrrc=None,
+                            cntrfrc=None,
+                            interp_method="linear",
+                            ninterp=30,
+                            mask=True,
+                            bottomkey="depth",
+                            kernelsize=None,
+                            clabelfmt="%.2f",
+                            clabelmanual=False,
+                            **kw):
+    """ Add water properties from a CastCollection to a section plot.
+    
+    Keyword arguments:
+    ------------------
+    ax                  specific Axes instance to plot on
+    prop                Cast property to show
+    cntrrc              dictionary of pyplot.contour keyword arguments
+    cntrfrc             dictionary of pyplot.contourf keyword argument
+    interp_method       method used by scipy.griddata
+    mask                apply a NaN mask to the bottom of the section plot
+    bottomkey           key in properties giving bottom depth
+    kernelsize          smooth the property field using a moving average
+                        gaussian to attenuate artefacts.
+                        make this as small as possible that still gives
+                        reasonable results [default: None]
+    clabelfmt           format string for clabel [default: "%.2f"]
+    clabelmanual        pass `manual=True` to clabel [default: False]
+
+    Additional keyword arguments are passed to *both* controur and contourf.
+    """
+    if ax is None:
+        ax = plt.gca()
+    cntrrc, cntrfrc = _handle_contour_options(cntrrc, cntrfrc, kw)
+    (intx, intpres, intdata, cx) = _interpolate_section_grid(cc, prop,
+                                        bottomkey, ninterp, interp_method)
 
     if kernelsize is not None:
         intdata = ndimage.filters.gaussian_filter(intdata, kernelsize)
@@ -217,55 +218,24 @@ def plot_section_properties(cc, prop="temp", ax=None,
         zmask = zmask.T
         intdata[zmask] = np.nan
 
-    if len(kw) != 0:
-        cntrrc = copy.copy(cntrrc)
-        cntrfrc = copy.copy(cntrfrc)
-        cntrrc.update(kw)
-        cntrfrc.update(kw)
-
     cm = ax.contourf(intx, intpres, intdata, **cntrfrc)
     cl = ax.contour(intx, intpres, intdata, **cntrrc)
 
-    # Set plot bounds
-    presgen = (np.array(c[c.primarykey]) for c in cc)
+    _set_section_bounds(ax, cc, cx, prop)
+    ax.clabel(cl, fmt=clabelfmt, manual=clabelmanual)
+    return cm
+
+def _set_section_bounds(ax, cc, cx, prop):
+    zgen = (np.array(c[c.primarykey]) for c in cc)
     validgen = (~np.isnan(c[prop]) for c in cc)
-    ymax = max(p[msk][-1] for p,msk in zip(presgen, validgen))
+    ymax = max(p[msk][-1] for p,msk in zip(zgen, validgen))
     for x_ in cx:
         ax.plot((x_, x_), (ymax, 0), "--", color="0.3")
     ax.set_ylim((ymax, 0))
     ax.set_xlim((cx[0], cx[-1]))
-    ax.clabel(cl, fmt=clabelfmt, manual=clabelmanual)
-    return cm
+    return
 
-def plot_section_properties_tri(cc, prop="temp", ax=None,
-                                cntrrc=None,
-                                cntrfrc=None,
-                                mask=True,
-                                bottomkey="depth",
-                                **kw):
-    """ Add water properties from a CastCollection to a section plot and show
-    using tricontourf. Does not indicate no data, so consider using
-    `plot_section_properties` instead.
-    
-    Keyword arguments:
-    ------------------
-    ax                  specific Axes instance to plot on
-    prop                Cast property to show
-    cntrrc              dictionary of pyplot.contour keyword arguments
-    cntrfrc             dictionary of pyplot.contourf keyword argument
-    interp_method       method used by scipy.griddata
-    mask                apply a NaN mask to the bottom of the section plot
-    bottomkey           key in properties giving bottom depth
-
-    Additional keyword arguments are passed to *both* controur and contourf.
-    """
-    if ax is None:
-        ax = plt.gca()
-    if cntrrc is None:
-        cntrrc = DEFAULT_CONTOUR
-    if cntrfrc is None:
-        cntrfrc = DEFAULT_CONTOURF
-
+def _interpolate_section_tri(cc, prop, bottomkey):
     ccline = Line([c.coords for c in cc], crs=LONLAT)
     cx = np.array(ccline.cumlength())
 
@@ -309,24 +279,56 @@ def plot_section_properties_tri(cc, prop="temp", ax=None,
         print("NaNs remaining")
         rawdata[np.isnan(rawdata)] = 999.0
 
+    return tri, Z, cx
+
+def _handle_contour_options(cntrrc, cntrfrc, kw):
+    if cntrrc is None:
+        cntrrc = DEFAULT_CONTOUR
+    if cntrfrc is None:
+        cntrfrc = DEFAULT_CONTOURF
+
     if len(kw) != 0:
         cntrrc = copy.copy(cntrrc)
         cntrfrc = copy.copy(cntrfrc)
         cntrrc.update(kw)
         cntrfrc.update(kw)
+    return cntrrc, cntrfrc
+
+
+def plot_section_properties_tri(cc, prop="temp", ax=None,
+                                cntrrc=None,
+                                cntrfrc=None,
+                                mask=True,
+                                bottomkey="depth",
+                                clabelfmt="%.2f",
+                                clabelmanual=False,
+                                **kw):
+    """ Add water properties from a CastCollection to a section plot and show
+    using tricontourf. Does not indicate no data, so consider using
+    `plot_section_properties` instead.
+    
+    Keyword arguments:
+    ------------------
+    ax                  specific Axes instance to plot on
+    prop                Cast property to show
+    cntrrc              dictionary of pyplot.contour keyword arguments
+    cntrfrc             dictionary of pyplot.contourf keyword argument
+    interp_method       method used by scipy.griddata
+    mask                apply a NaN mask to the bottom of the section plot
+    bottomkey           key in properties giving bottom depth
+
+    Additional keyword arguments are passed to *both* controur and contourf.
+    """
+    if ax is None:
+        ax = plt.gca()
+    cntrrc, cntrfrc = _handle_contour_options(cntrrc, cntrfrc, kw)
+    (tri, Z, cx) = _interpolate_section_tri()
 
     cm = ax.tricontourf(tri, Z, **cntrfrc)
     cl = ax.tricontour(tri, Z, **cntrrc)
-    ax.clabel(cl, fmt="%.2f")
 
-    # Set plot bounds
-    presgen = (np.array(c[c.primarykey]) for c in cc)
-    validgen = (~np.isnan(c[prop]) for c in cc)
-    ymax = max(p[msk][-1] for p,msk in zip(presgen, validgen))
-    for x_ in cx:
-        ax.plot((x_, x_), (ymax, 0), "--", color="0.3")
-    ax.set_ylim((ymax, 0))
-    ax.set_xlim((cx[0], cx[-1]))
+    _set_section_bounds(ax, cc, cx, prop)
+    ax.clabel(cl, fmt=clabelfmt, manual=clabelmanual)
     return cm
 
 def plot_section_bathymetry(bathymetry, vertices=None, ax=None, maxdistance=0.01):
@@ -347,7 +349,6 @@ def plot_section_bathymetry(bathymetry, vertices=None, ax=None, maxdistance=0.01
         bx = []
         segdist = [0.0]
         depth = []
-        vline = Line(vertices, crs=LONLAT)
         for a,b in zip(vertices[:-1], vertices[1:]):
             # find all bathymetry within a threshold
             seg = Line((a,b), crs=LONLAT)
