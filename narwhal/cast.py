@@ -8,6 +8,7 @@ import sys
 import itertools
 import collections
 import json
+from functools import reduce
 import numpy as np
 from scipy import ndimage
 from karta import Point, LONLAT
@@ -184,7 +185,7 @@ class Cast(object):
         if np.all(np.diff(self[x]) > 0.0):
             return np.interp(v, self[x], self[y])
         elif force:
-            return np.interp(v, force_monotonic(self[x]), self[y])
+            return np.interp(v, util.force_monotonic(self[x]), self[y])
         else:
             raise ValueError("x is not monotonic")
 
