@@ -171,6 +171,75 @@ def _interpolate_section_grid(cc, prop, bottomkey, ninterp, interp_method):
     intdata = intdata.reshape(intx.shape)
     return intx, intpres, intdata, cx
 
+def _interpolate_section_tri(cc, prop, bottomkey):
+    ccline = Line([c.coords for c in cc], crs=LONLAT)
+    cx = np.array(ccline.cumlength())
+
+    # interpolate over NaNs in a way that assumes horizontal correlation
+    rawdata = cc.asarray(prop)
+    for (i, row) in enumerate(rawdata):
+        if np.any(np.isnan(row)):
+            if np.any(~np.isnan(row)):
+                # find groups of NaNs
+                start = -1
+                for (idx, val) in enumerate(row):
+                    if start == -1 and np.isnan(val):
+                        start = idx
+                    elif start != -1 and not np.isnan(val):
+                        if start == 0:
+                            meanval = val
+                        else:
+                            meanval = 0.5 * (val + row[start-1])
+                        rawdata[i,start:idx] = meanval
+                        start = -1
+                if start != -1:
+                    rawdata[i,start:] = row[start-1]
+            else:
+                if i != 0:
+                    rawdata[i] = rawdata[i-1]  # Extrapolate down
+                else:
+                    rawdata[i] = rawdata[i+1]  # Extrapolate to surface
+
+    X, Y, Z = [], [], []
+    for (i, cast) in enumerate(cc):
+        d = cast.properties[bottomkey]
+        pkey = cast.primarykey
+        y = cast[pkey][cast[pkey] < d]      # z where z is less than maximum depth
+        Y.extend(y)
+        X.extend([cx[i] for _ in range(len(y))])
+        Z.extend(rawdata[:,i][cast[pkey] < d])
+
+    tri = mtri.Triangulation(X, Y)
+
+    if np.any(np.isnan(rawdata)):
+        print("NaNs remaining")
+        rawdata[np.isnan(rawdata)] = 999.0
+
+    return tri, Z, cx
+
+def _set_section_bounds(ax, cc, cx, prop):
+    zgen = (np.array(c[c.primarykey]) for c in cc)
+    validgen = (~np.isnan(c[prop]) for c in cc)
+    ymax = max(p[msk][-1] for p,msk in zip(zgen, validgen))
+    for x_ in cx:
+        ax.plot((x_, x_), (ymax, 0), "--", color="0.3")
+    ax.set_ylim((ymax, 0))
+    ax.set_xlim((cx[0], cx[-1]))
+    return
+
+def _handle_contour_options(cntrrc, cntrfrc, kw):
+    if cntrrc is None:
+        cntrrc = DEFAULT_CONTOUR
+    if cntrfrc is None:
+        cntrfrc = DEFAULT_CONTOURF
+
+    if len(kw) != 0:
+        cntrrc = copy.copy(cntrrc)
+        cntrfrc = copy.copy(cntrfrc)
+        cntrrc.update(kw)
+        cntrfrc.update(kw)
+    return cntrrc, cntrfrc
+
 def plot_section_properties(cc, prop="temp", ax=None,
                             cntrrc=None,
                             cntrfrc=None,
@@ -224,76 +293,6 @@ def plot_section_properties(cc, prop="temp", ax=None,
     _set_section_bounds(ax, cc, cx, prop)
     ax.clabel(cl, fmt=clabelfmt, manual=clabelmanual)
     return cm
-
-def _set_section_bounds(ax, cc, cx, prop):
-    zgen = (np.array(c[c.primarykey]) for c in cc)
-    validgen = (~np.isnan(c[prop]) for c in cc)
-    ymax = max(p[msk][-1] for p,msk in zip(zgen, validgen))
-    for x_ in cx:
-        ax.plot((x_, x_), (ymax, 0), "--", color="0.3")
-    ax.set_ylim((ymax, 0))
-    ax.set_xlim((cx[0], cx[-1]))
-    return
-
-def _interpolate_section_tri(cc, prop, bottomkey):
-    ccline = Line([c.coords for c in cc], crs=LONLAT)
-    cx = np.array(ccline.cumlength())
-
-    # interpolate over NaNs in a way that assumes horizontal correlation
-    rawdata = cc.asarray(prop)
-    for (i, row) in enumerate(rawdata):
-        if np.any(np.isnan(row)):
-            if np.any(~np.isnan(row)):
-                # find groups of NaNs
-                start = -1
-                for (idx, val) in enumerate(row):
-                    if start == -1 and np.isnan(val):
-                        start = idx
-                    elif start != -1 and not np.isnan(val):
-                        if start == 0:
-                            meanval = val
-                        else:
-                            meanval = 0.5 * (val + row[start-1])
-                        rawdata[i,start:idx] = meanval
-                        start = -1
-                if start != -1:
-                    rawdata[i,start:] = row[start-1]
-            else:
-                if i != 0:
-                    rawdata[i] = rawdata[i-1]  # Extrapolate down
-                else:
-                    rawdata[i] = rawdata[i+1]  # Extrapolate to surface
-
-    X, Y, Z = [], [], []
-    for (i, cast) in enumerate(cc):
-        d = cast.properties[bottomkey]
-        pkey = cast.primarykey
-        y = cast[pkey][cast[pkey] < d]      # z where z is less than maximum depth
-        Y.extend(y)
-        X.extend([cx[i] for _ in range(len(y))])
-        Z.extend(rawdata[:,i][cast[pkey] < d])
-
-    tri = mtri.Triangulation(X, Y)
-
-    if np.any(np.isnan(rawdata)):
-        print("NaNs remaining")
-        rawdata[np.isnan(rawdata)] = 999.0
-
-    return tri, Z, cx
-
-def _handle_contour_options(cntrrc, cntrfrc, kw):
-    if cntrrc is None:
-        cntrrc = DEFAULT_CONTOUR
-    if cntrfrc is None:
-        cntrfrc = DEFAULT_CONTOURF
-
-    if len(kw) != 0:
-        cntrrc = copy.copy(cntrrc)
-        cntrfrc = copy.copy(cntrfrc)
-        cntrrc.update(kw)
-        cntrfrc.update(kw)
-    return cntrrc, cntrfrc
-
 
 def plot_section_properties_tri(cc, prop="temp", ax=None,
                                 cntrrc=None,
