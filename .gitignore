@@ -1,4 +1,16 @@
+.ipynb_checkpoints/
+
+# Temporary files
 *.pyc
 *.swp
+tests/.coverage
+tests/htmlcov/
+
+# Binaries
 *.zip
 *.so
+
+# Build information
+build/
+deps/
+*.egg-info
