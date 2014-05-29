@@ -1,4 +1,5 @@
 import unittest
+import io
 import os
 import datetime
 import numpy as np
@@ -28,26 +29,54 @@ class IOTests(unittest.TestCase):
         self.collection = CastCollection(self.ctd, self.xbt, self.ctd)
         return
 
+    def assertFilesEqual(self, f1, f2):
+        f1.seek(0)
+        f2.seek(0)
+        s1 = f1.read()
+        s2 = f2.read()
+        self.assertEqual(s1, s2)
+        return
+
     def test_save(self):
-        fnm = os.path.join(DATADIR, "cast_test.nwl")
-        self.cast.save(fnm)
+        #fnm = os.path.join(DATADIR, "cast_test.nwl")
+        try:
+            f = io.StringIO()
+            self.cast.save(f)
+        finally:
+            f.close()
 
-        fnm = os.path.join(DATADIR, "ctd_test.nwl")
-        self.ctd.save(fnm)
+        #fnm = os.path.join(DATADIR, "ctd_test.nwl")
+        try:
+            f = io.StringIO()
+            self.ctd.save(f)
+        finally:
+            f.close()
 
-        fnm = os.path.join(DATADIR, "xbt_test.nwl")
-        self.xbt.save(fnm)
+        #fnm = os.path.join(DATADIR, "xbt_test.nwl")
+        try:
+            f = io.StringIO()
+            self.xbt.save(f)
+        finally:
+            f.close()
         return
 
     def test_save_collection(self):
-        fnm = os.path.join(DATADIR, "coll_test.nwl")
-        self.collection.save(fnm)
+        #fnm = os.path.join(DATADIR, "coll_test.nwl")
+        try:
+            f = io.StringIO()
+            self.collection.save(f)
+        finally:
+            f.close()
         return
 
     def test_save_zprimarykey(self):
         cast = Cast(np.arange(len(self.p)), temp=self.temp, sal=self.sal,
                     primarykey="z", properties={})
-        cast.save(os.path.join(DATADIR, "ctdz_test.nwl"))
+        f = io.StringIO()
+        try:
+            cast.save(f)
+        finally:
+            f.close()
         return
 
     def test_load(self):

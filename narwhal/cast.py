@@ -194,10 +194,13 @@ class Cast(object):
 
         fnm::string     File name to save to
         """
-        if os.path.splitext(fnm)[1] != ".nwl":
-            fnm = fnm + ".nwl"
-        with open(fnm, "w") as f:
-            fileio.writecast(f, self)
+        if hasattr(fnm, "write"):
+            fileio.writecast(fnm, self)
+        else:
+            if os.path.splitext(fnm)[1] != ".nwl":
+                fnm = fnm + ".nwl"
+            with open(fnm, "w") as f:
+                fileio.writecast(f, self)
         return
 
 
@@ -514,10 +517,14 @@ class CastCollection(collections.Sequence):
 
         fnm::string     File name to save to
         """
-        if os.path.splitext(fnm)[1] != ".nwl":
-            fnm = fnm + ".nwl"
-        with open(fnm, "w") as f:
-            fileio.writecastcollection(f, self)
+        if hasattr(fnm, "write"):
+            fileio.writecastcollection(fnm, self)
+        else:
+            if os.path.splitext(fnm)[1] != ".nwl":
+                fnm = fnm + ".nwl"
+            with open(fnm, "w") as f:
+                fileio.writecastcollection(f, self)
+        return
 
 
 def read(fnm):
