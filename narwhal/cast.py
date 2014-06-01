@@ -104,6 +104,8 @@ class Cast(object):
     def __setitem__(self, key, val):
         if isinstance(key, str):
             self.data[key] = val
+            if key not in self._fields:
+                self._fields.append(key)
         elif isinstance(key, int):
             raise KeyError("Cast object profiles are not mutable")
         else:
@@ -131,7 +133,6 @@ class Cast(object):
 
     def __ne__(self, other):
         return not self.__eq__(other)
-
 
     def _addkeydata(self, key, data, overwrite=False):
         """ Add data under *key*. If *key* already exists, iterates over
@@ -341,6 +342,22 @@ class CastCollection(collections.Sequence):
         else:
             raise TypeError("Can only add castcollection and *cast types to "
                             "CastCollection")
+
+    def __repr__(self):
+        s = "CastCollection with {n} casts:".format(n=len(self.casts))
+        i = 0
+        while i != 10 and i != len(self.casts):
+            c = self[i]
+            s +=  ("\n  {num:3g} {typestr:6s} {lon:3.3f} {lat:2.3f}    "
+                    "{keys}".format(typestr=c._type[:-4], num=i+1,
+                                    lon=c.coords[0], lat=c.coords[1],
+                                    keys=c._fields[:8]))
+            if len(c._fields) > 8:
+                s += " ..."
+            i += 1
+        if len(self.casts) > 10:
+            s += "\n  (...)"
+        return s
 
     def add_bathymetry(self, bathymetry):
         """ Reference Bathymetry instance `bathymetry` to CastCollection.
