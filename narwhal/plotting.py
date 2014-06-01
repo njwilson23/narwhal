@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 import matplotlib.tri as mtri
 from scipy.interpolate import griddata
 from scipy import ndimage
-from karta import Point, Line, LONLAT
+from karta import Point, Line, LONLAT, CARTESIAN
 from narwhal.cast import CastCollection
 from . import plotutil
 from . import gsw
@@ -219,8 +219,8 @@ def _interpolate_section_tri(cc, prop, bottomkey):
 
 def _set_section_bounds(ax, cc, cx, prop):
     zgen = (np.array(c[c.primarykey]) for c in cc)
-    validgen = (~np.isnan(c[prop]) for c in cc)
-    ymax = max(p[msk][-1] for p,msk in zip(zgen, validgen))
+    validmsk = (~np.isnan(c[prop]) for c in cc)
+    ymax = max(p[msk][-1] for p,msk in zip(zgen, validmsk))
     for x_ in cx:
         ax.plot((x_, x_), (ymax, 0), "--", color="0.3")
     ax.set_ylim((ymax, 0))
@@ -321,7 +321,7 @@ def plot_section_properties_tri(cc, prop="temp", ax=None,
     if ax is None:
         ax = plt.gca()
     cntrrc, cntrfrc = _handle_contour_options(cntrrc, cntrfrc, kw)
-    (tri, Z, cx) = _interpolate_section_tri()
+    (tri, Z, cx) = _interpolate_section_tri(cc, prop, bottomkey)
 
     cm = ax.tricontourf(tri, Z, **cntrfrc)
     cl = ax.tricontour(tri, Z, **cntrrc)
@@ -330,7 +330,7 @@ def plot_section_properties_tri(cc, prop="temp", ax=None,
     ax.clabel(cl, fmt=clabelfmt, manual=clabelmanual)
     return cm
 
-def plot_section_bathymetry(bathymetry, vertices=None, ax=None, maxdistance=0.01):
+def plot_section_bathymetry(bathymetry, vertices=None, ax=None, maxdistance=0.01, crs=LONLAT):
     """ Add bathymetry from a Bathymetry object to a section plot.
     
     Keyword arguments:
@@ -348,17 +348,18 @@ def plot_section_bathymetry(bathymetry, vertices=None, ax=None, maxdistance=0.01
         bx = []
         segdist = [0.0]
         depth = []
+        bathpts = [pt for pt in bathymetry.line]
         for a,b in zip(vertices[:-1], vertices[1:]):
             # find all bathymetry within a threshold
-            seg = Line((a,b), crs=LONLAT)
-            bcoords = [v for v in zip(bathymetry.line.vertices, bathymetry.depth)
-                       if seg.within_distance(Point(v[0], crs=LONLAT), 0.01)]
+            seg = Line((a,b), crs=crs)
+            bcoords = [v for v in zip(bathpts, bathymetry.depth)
+                         if seg.within_distance(v[0], 200.0)]
 
             # project each point in bbox onto the segment, and record
             # the distance from the origin as bx
-            pta = Point(a, crs=LONLAT)
-            for xy, z in bcoords:
-                p = seg.nearest_on_boundary(Point(xy, crs=LONLAT))
+            pta = Point(a, crs=crs)
+            for pt, z in bcoords:
+                p = seg.nearest_on_boundary(pt)
                 bx.append(segdist[-1] + p.distance(pta))
                 depth.append(z)
 
