@@ -4,7 +4,7 @@
 
 Narwhal is a Python2 / Python3 library for organizing and manipulating hydrographic data.
 
-![](classmap.svg)
+![narwhal type hierarchy](https://rawgit.com/njwilson23/narwhal/test-readme/classmap.svg)
 
 The `Cast` and `CastCollection` types serialize themselves as JSON objects for
 storage.
