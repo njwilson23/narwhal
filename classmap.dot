@@ -1,0 +1,17 @@
+/* Map of narwhal classes */
+
+digraph classmap {
+    {
+        Cast [shape=box];
+        CastCollection [shape=box];
+        Bathymetry2d [shape=box];
+    }
+
+    Cast -> CTDCast;
+    Cast -> XBTCast;
+    Cast -> LADCP;
+
+    CastCollection;
+
+    Bathymetry2d;
+}

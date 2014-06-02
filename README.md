@@ -4,14 +4,7 @@
 
 Narwhal is a Python2 / Python3 library for organizing and manipulating hydrographic data.
 
-| Narwhal class             |                 | Description               |
-|---------------------------|-----------------|---------------------------|
-| `cast.Cast`               |                 | Generic cast type         |
-|                           | `cast.CTDCast`  | CTD Cast                  |
-|                           | `cast.XBTCast`  | XBT Cast                  |
-|                           | `cast.LADCP`    | LADCP observation         |
-| `cast.CastCollection`     |                 | Multiple casts            |
-| `bathymetry.Bathymetry2d` |                 | Bathymetric line          |   
+![](classmap.svg)
 
 The `Cast` and `CastCollection` types serialize themselves as JSON objects for
 storage.
@@ -28,5 +21,7 @@ in the `narwhal.gsw` submodule.
 - matplotlib (optional; for plotting)
 - C-compiler (optional; for GSW)
 
-Narwhal is under development and should be considered alpha quality.
+Narwhal is experimental, and should be considered alpha quality. Also consider
+[python-oceans](https://github.com/ocefpaf/python-oceans) and
+[oce](https://github.com/dankelley/oce) (R).
 
