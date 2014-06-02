@@ -1,11 +1,16 @@
 import unittest
-import io
 import os
+import sys
 import datetime
 import numpy as np
 import narwhal
 from narwhal.cast import Cast, CTDCast, XBTCast, LADCP
 from narwhal.cast import CastCollection
+
+if sys.version_info[0] < 3:
+    from cStringIO import StringIO
+else:
+    from io import StringIO
 
 directory = os.path.dirname(__file__)
 DATADIR = os.path.join(directory, "data")
@@ -40,21 +45,21 @@ class IOTests(unittest.TestCase):
     def test_save(self):
         #fnm = os.path.join(DATADIR, "cast_test.nwl")
         try:
-            f = io.StringIO()
+            f = StringIO()
             self.cast.save(f)
         finally:
             f.close()
 
         #fnm = os.path.join(DATADIR, "ctd_test.nwl")
         try:
-            f = io.StringIO()
+            f = StringIO()
             self.ctd.save(f)
         finally:
             f.close()
 
         #fnm = os.path.join(DATADIR, "xbt_test.nwl")
         try:
-            f = io.StringIO()
+            f = StringIO()
             self.xbt.save(f)
         finally:
             f.close()
@@ -63,7 +68,7 @@ class IOTests(unittest.TestCase):
     def test_save_collection(self):
         #fnm = os.path.join(DATADIR, "coll_test.nwl")
         try:
-            f = io.StringIO()
+            f = StringIO()
             self.collection.save(f)
         finally:
             f.close()
@@ -72,7 +77,7 @@ class IOTests(unittest.TestCase):
     def test_save_zprimarykey(self):
         cast = Cast(np.arange(len(self.p)), temp=self.temp, sal=self.sal,
                     primarykey="z", properties={})
-        f = io.StringIO()
+        f = StringIO()
         try:
             cast.save(f)
         finally:
