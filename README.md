@@ -4,7 +4,7 @@
 
 Narwhal is a Python library for organizing and manipulating oceanographic survey data.
 
-![narwhal type hierarchy](https://rawgit.com/njwilson23/narwhal/test-readme/classmap.svg)
+![narwhal type hierarchy](https://rawgit.com/njwilson23/narwhal/master/classmap.svg)
 
 The `Cast` and `CastCollection` types serialize themselves as JSON objects for
 storage.
