@@ -156,7 +156,8 @@ class BathymetryTests(unittest.TestCase):
                 Cast(np.arange(100), T=np.random.rand(100), S=np.random.rand(100),
                      coords=(-17.45, 80.16)))
         cc.add_bathymetry(self.bathymetry)
-        correctresult = np.array([91.87894384, 122.9704543, 154.58219622])
+        correctresult = np.array([92.61373822294766, 123.15924954803165,
+                                  150.24992416068667])
         depths = [c.properties["depth"] for c in cc]
         self.assertTrue(np.allclose(depths, correctresult))
         return
