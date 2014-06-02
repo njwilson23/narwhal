@@ -16,6 +16,69 @@ ccmeans = plotutil.ccmeans
 
 ###### T-S plots #######
 
+def _ensureiterable(item):
+    """ Turn *item* into an infinite lazy iterable. """
+    if hasattr(item, "__iter__"):
+        return itertools.cycle(item)
+    else:
+        return itertools.repeat(item)
+
+def _getiterable(kw, name, default):
+    """ Equivalent to dict.get except that it ensures the result is an iterable. """
+    return _ensureiterable(kw.get(name, default))
+
+def plot_ts(*castlikes, xkey="sal", ykey="theta", ax=None,
+            drawlegend=True, contourint=None, **kwargs):
+    """ Plot a T-S diagram from Casts or CastCollections """
+    if ax is None:
+        ax = plt.gca()
+    
+    labels = _getiterable(kwargs, "labels", ["Cast "+str(i+1) for i in range(len(castlikes))])
+    styles = _getiterable(kwargs, "styles", ["ok", "sr", "db", "^g"])
+    colors = _getiterable(kwargs, "colors", (0, 0.5, 0.8))
+
+    plotkw = {"ms": 6}
+    for key in kwargs:
+        if key not in ("labels", "styles", "colors"):
+            plotkw[key] = kwargs[key]
+
+    for i, cast in enumerate(castlikes):
+        sty = next(styles)
+        plotkw["label"] = next(labels)
+        plotkw["color"] = next(colors)
+        if hasattr(cast, "_type") and cast._type == "castcollection":
+            x = np.hstack([np.hstack([subcast[xkey], np.nan]) for subcast in cast])
+            y = np.hstack([np.hstack([subcast[ykey], np.nan]) for subcast in cast])
+            ax.plot(x, y, sty, **plotkw)
+        else:
+            ax.plot(cast[xkey], cast[ykey], sty, **plotkw)
+
+    if len(castlikes) > 1 and drawlegend:
+        ax.legend(loc="best", frameon=False)
+
+    if contourint is not None:
+        add_sigma_contours(contourint, ax)
+
+    ax.set_xlabel("Salinity")
+    ax.set_ylabel(u"Potential temperature (\u00b0C)")
+    return ax
+
+def add_sigma_contours(contourint, ax=None):
+    """ Add density contours to a T-S plot """
+    ax = ax if ax is not None else plt.gca()
+    sl = ax.get_xlim()
+    tl = ax.get_ylim()
+    SA = np.linspace(sl[0], sl[1])
+    CT = np.linspace(tl[0], tl[1])
+    SIGMA = np.reshape([gsw.rho(sa, ct, 0)-1000 for ct in CT for sa in SA],
+                       (50, 50))
+    cc = ax.contour(SA, CT, SIGMA, np.arange(np.floor(SIGMA.min()),
+                                             np.ceil(SIGMA.max()), contourint),
+                    colors="0.4")
+    prec = max(0, int(-np.floor(np.log10(contourint))))
+    plt.clabel(cc, fmt="%.{0}f".format(prec))
+    return
+
 def plot_ts_average(*casts, **kwargs):
     if False not in map(lambda c: c._type == "cast", casts):
         avgcasts = [ccmeanp(casts)]
@@ -31,102 +94,41 @@ def plot_ts_average(*casts, **kwargs):
     plot_ts(*avgcasts, **kwargs)
     return
 
-def _ensureiterable(item):
-    """ Turn *item* into an infinite lazy iterable. """
-    if hasattr(item, "__iter__"):
-        return itertools.cycle(item)
-    else:
-        return itertools.repeat(item)
-
-def _getiterable(kw, name, default):
-    """ Equivalent to dict.get except that it ensures the result is an iterable. """
-    return _ensureiterable(kw.get(name, default))
-
-def plot_ts(*casts, xkey="sal", ykey="theta", ax=None,
-            drawlegend=True, contourint=None, **kwargs):
-    """ Plot a T-S diagram from Casts or CastCollections """
-    if ax is None:
-        ax = plt.gca()
-    
-    labels = _getiterable(kwargs, "labels", ["Cast "+str(i+1) for i in range(len(casts))])
-    styles = _getiterable(kwargs, "styles", ["ok", "sr", "db", "^g"])
-
-    plotkw = {"ms": 6}
-    for key in kwargs:
-        if key not in ("labels", "styles"):
-            plotkw[key] = kwargs[key]
-
-    for i, cast in enumerate(casts):
-        sty = next(styles)
-        label = next(labels)
-        if hasattr(cast, "_type") and cast._type == "castcollection":
-            lines = []
-            for subcast in cast:
-                line = ax.plot(subcast[xkey], subcast[ykey], sty, **plotkw)
-                lines.append(line[0])
-            lines[-1].set_label(label)
-        else:
-            lines = ax.plot(cast[xkey], cast[ykey], sty, label=labels[i], **plotkw)
-
-    if len(casts) > 1 and drawlegend:
-        ax.legend(loc="best", frameon=False)
-
-    if contourint is not None:
-        add_sigma_contours(contourint, ax)
-
-    ax.set_xlabel("Salinity")
-    ax.set_ylabel(u"Potential temperature (\u00b0C)")
-    return lines
-
-def add_sigma_contours(contourint, ax=None):
-    ax = ax if ax is not None else plt.gca()
-    sl = ax.get_xlim()
-    tl = ax.get_ylim()
-    SA = np.linspace(sl[0], sl[1])
-    CT = np.linspace(tl[0], tl[1])
-    SIGMA = np.reshape([gsw.rho(sa, ct, 0)-1000 for ct in CT
-                                                for sa in SA],
-                    (50, 50))
-    cc = ax.contour(SA, CT, SIGMA, np.arange(np.floor(SIGMA.min()),
-                                             np.ceil(SIGMA.max()), contourint),
-                    colors="0.4")
-    prec = max(0, int(-np.floor(np.log10(contourint))))
-    plt.clabel(cc, fmt="%.{0}f".format(prec))
-    return
-
-def add_mixing_line(origin, ax=None, icetheta=0, **kw):
-    """ Draw a mixing line from `origin::(sal0, theta0)` to the
-    effective potential temperature of ice at potential temperature
-    `icetheta`, as given by *Jenkins, 1999*.
+def add_mixing_line(ptA, ptB, ax=None, **kw):
+    """ Draw a mixing line between two points in T-S space, provided as
+    tuples::(sal, theta).
     """
+    ax = ax if ax is not None else plt.gca()
     kw.setdefault("linestyle", "--")
     kw.setdefault("color", "black")
     kw.setdefault("linewidth", 1.5)
 
+    xl, yl = ax.get_xlim(), ax.get_ylim()
+    ax.plot((ptA[0], ptB[0]), (ptA[1], ptB[1]), **kw)
+    ax.set_xlim(xl)
+    ax.set_ylim(yl)
+    return
+
+def add_meltwater_line(origin, ax=None, icetheta=-10, **kw):
+    """ Draw a line on a TS plot representing the mixing line between a source
+    water at `origin::(sal0, theta0)` and meltwater from an ice mass with
+    temperature `icetheta`. 
+
+    The effective potential temperature of ice at potential temperature
+    `icetheta` is used as given by *Jenkins, 1999*.
+    """
     L = 335e3
     cp = 4.18e3
     ci = 2.11e3
     ice_eff_theta = 0.0 - L/cp - ci/cp * (0.0 - icetheta)
-
-    ax = ax if ax is not None else plt.gca()
-    yl = ax.get_ylim()
-    ax.plot((origin[0], 0.0), (origin[1], ice_eff_theta), **kw)
-    ax.set_ylim(yl)
-    return
-
-def add_melt_line(origin, ax=None, icetheta=-10, **kw):
-    add_mixing_line(origin, ax, icetheta, **kw)
+    add_mixing_line(origin, (0.0, ice_eff_theta), ax=ax, **kw)
     return
 
 def add_runoff_line(origin, ax=None, **kw):
-    ax = ax if ax is not None else plt.gca()
-    xl, yl = ax.get_xlim(), ax.get_ylim()
-    kw.setdefault("linestyle", "--")
-    kw.setdefault("color", "black")
-    kw.setdefault("linewidth", 1.5)
-    ax.plot((origin[0], 0.0), (origin[1], 0.0), **kw)
-    ax.set_xlim(xl)
-    ax.set_ylim(yl)
+    """ Draw mixing line from `origin::(sal0, theta0)` to glacier runoff,
+    assumed to be fresh and at the pressure-melting point.
+    """
+    add_mixing_line(origin, (0.0, 0.0), **kw)
     return
 
 def add_freezing_line(ax=None, p=0.0, air_sat_fraction=0.1, **kw):
