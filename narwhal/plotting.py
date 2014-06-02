@@ -31,38 +31,52 @@ def plot_ts_average(*casts, **kwargs):
     plot_ts(*avgcasts, **kwargs)
     return
 
-def plot_ts(*casts, **kwargs):
+def _ensureiterable(item):
+    """ Turn *item* into an infinite lazy iterable. """
+    if hasattr(item, "__iter__"):
+        return itertools.cycle(item)
+    else:
+        return itertools.repeat(item)
+
+def _getiterable(kw, name, default):
+    """ Equivalent to dict.get except that it ensures the result is an iterable. """
+    return _ensureiterable(kw.get(name, default))
+
+def plot_ts(*casts, xkey="sal", ykey="theta", ax=None,
+            drawlegend=True, contourint=None, **kwargs):
     """ Plot a T-S diagram from Casts or CastCollections """
-    ax = kwargs.get("ax", plt.gca())
-    drawlegend = kwargs.get("drawlegend", True)
-    contourint = kwargs.get("contourint", 0.5)
-    labels = kwargs.get("labels", ["cast "+str(i+1) for i in range(len(casts))])
-    styles = kwargs.get("styles", itertools.cycle(("ok", "sr", "db", "^g")))
-    tkey = kwargs.get("temperature", "theta")
-    skey = kwargs.get("salinity", "sal")
-    plotkw = {}
+    if ax is None:
+        ax = plt.gca()
+    
+    labels = _getiterable(kwargs, "labels", ["Cast "+str(i+1) for i in range(len(casts))])
+    styles = _getiterable(kwargs, "styles", ["ok", "sr", "db", "^g"])
+
+    plotkw = {"ms": 6}
     for key in kwargs:
-        if key not in ("drawlegend", "contourint", "labels", "styles"):
+        if key not in ("labels", "styles"):
             plotkw[key] = kwargs[key]
-    plotkw.setdefault("ms", 6)
 
     for i, cast in enumerate(casts):
         sty = next(styles)
-        if isinstance(cast, CastCollection):
+        label = next(labels)
+        if hasattr(cast, "_type") and cast._type == "castcollection":
+            lines = []
             for subcast in cast:
-                ax.plot(subcast[skey], subcast[tkey], sty, **plotkw)
-            ax.lines[-1].set_label(labels[i])
+                line = ax.plot(subcast[xkey], subcast[ykey], sty, **plotkw)
+                lines.append(line[0])
+            lines[-1].set_label(label)
         else:
-            ax.plot(cast[skey], cast[tkey], sty, label=labels[i], **plotkw)
+            lines = ax.plot(cast[xkey], cast[ykey], sty, label=labels[i], **plotkw)
 
     if len(casts) > 1 and drawlegend:
         ax.legend(loc="best", frameon=False)
 
     if contourint is not None:
         add_sigma_contours(contourint, ax)
+
     ax.set_xlabel("Salinity")
     ax.set_ylabel(u"Potential temperature (\u00b0C)")
-    return
+    return lines
 
 def add_sigma_contours(contourint, ax=None):
     ax = ax if ax is not None else plt.gca()
