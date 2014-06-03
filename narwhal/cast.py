@@ -152,9 +152,11 @@ class Cast(object):
         self.data[key_] = data
         return key_
 
-    def nanmask(self):
+    def nanmask(self, fields=None):
         """ Return a mask for observations containing at least one NaN. """
-        vectors = [a for a in self.data.values() if hasattr(a, "__iter__")]
+        if fields is None:
+            fields = self._fields
+        vectors = [v for (k,v) in self.data.items() if k in fields]
         return np.isnan(np.vstack(vectors).sum(axis=0))
 
     def nvalid(self):
@@ -270,9 +272,9 @@ class CTDCast(Cast):
         mass1 = np.empty(len(self)) * np.nan
         mass2 = np.empty(len(self)) * np.nan
         mass3 = np.empty(len(self)) * np.nan
-        mass1[:n] = frac[::3]
-        mass2[:n] = frac[1::3]
-        mass3[:n] = frac[2::3]
+        mass1[~msk] = frac[::3]
+        mass2[~msk] = frac[1::3]
+        mass3[~msk] = frac[2::3]
         return (mass1, mass2, mass3)
 
 
