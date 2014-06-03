@@ -252,23 +252,24 @@ class CTDCast(Cast):
         must be fields in the CTDCast [default: ("sal", "temp")].
         """
         if len(sources) != 3:
-            raise ValueError("Only three constituent partitioning defined")
+            raise ValueError("Three potential source waters must be given "
+                             "(not {0})".format(len(sources)))
         n = self.nvalid()
         I = sprs.eye(n)
         A_ = np.array([[sources[0][0], sources[1][0], sources[2][0]],
                        [sources[0][1], sources[1][1], sources[2][1]],
                        [         1.0,          1.0,          1.0]])
-        As = sprs.kron(I, A_)
+        As = sprs.kron(I, A_, "csr")
         b = np.empty(3*n)
         msk = self.nanmask()
         b[::3] = self[tracers[0]][~msk]
         b[1::3] = self[tracers[1]][~msk]
-        b[2::3] = 3.0               # lagrange multiplier
+        b[2::3] = 1.0               # lagrange multiplier
 
-        f = sprs.linalg.spsolve(As, b)
-        mass1 = f[::3]
-        mass2 = f[1::3]
-        mass3 = f[2::3]
+        frac = sprs.linalg.spsolve(As, b)
+        mass1 = frac[::3]
+        mass2 = frac[1::3]
+        mass3 = frac[2::3]
         return (mass1, mass2, mass3)
 
 
