@@ -267,9 +267,12 @@ class CTDCast(Cast):
         b[2::3] = 1.0               # lagrange multiplier
 
         frac = sprs.linalg.spsolve(As, b)
-        mass1 = frac[::3]
-        mass2 = frac[1::3]
-        mass3 = frac[2::3]
+        mass1 = np.empty(len(self)) * np.nan
+        mass2 = np.empty(len(self)) * np.nan
+        mass3 = np.empty(len(self)) * np.nan
+        mass1[:n] = frac[::3]
+        mass2[:n] = frac[1::3]
+        mass3[:n] = frac[2::3]
         return (mass1, mass2, mass3)
 
 
