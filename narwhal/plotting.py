@@ -33,9 +33,10 @@ def plot_ts(*castlikes, xkey="sal", ykey="theta", ax=None,
     if ax is None:
         ax = plt.gca()
     
-    labels = _getiterable(kwargs, "labels", ["Cast "+str(i+1) for i in range(len(castlikes))])
+    labels = _getiterable(kwargs, "labels", ["Cast "+str(i+1) 
+                                                for i in range(len(castlikes))])
     styles = _getiterable(kwargs, "styles", ["ok", "sr", "db", "^g"])
-    colors = _getiterable(kwargs, "colors", (0, 0.5, 0.8))
+    colors = _getiterable(kwargs, "colors", [(0, 0.5, 0.8)])
 
     plotkw = {"ms": 6}
     for key in kwargs:
