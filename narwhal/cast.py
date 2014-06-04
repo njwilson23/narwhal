@@ -148,7 +148,8 @@ class Cast(object):
             while key_ in self.data:
                 key_ = key + "_" + str(i)
                 i += 1
-        self._fields.append(key_)
+        if key_ not in self._fields:
+            self._fields.append(key_)
         self.data[key_] = data
         return key_
 
