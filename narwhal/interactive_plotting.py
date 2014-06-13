@@ -1,4 +1,5 @@
-from . import narwhal
+""" Creates interactive narwhal plots for the web using D3 through mpld3 """
+
 from . import plotting as nplt
 import mpld3
 from mpld3 import plugins
@@ -7,20 +8,15 @@ import collections
 import matplotlib
 from mpld3.utils import get_id
 
-
 def plot_ts(*args, **kwargs):
     """ Create an interactive JavaScript T-S plot. """
-    sty = "-"
-    colors = [(0, 0.5, 0.8), (0.7, 0, 0.2), (0.2, 0.8, 0.2)]
-    names = kwargs.get("labels", ["Cast "+str(i+1) for i in range(len(args))])
-
     ax = nplt.plot_ts(*args, **kwargs)
-    pg = InteractiveLegendPlugin(ax.lines, names)
-    plugins.connect(fig, pg)
-
+    pg = InteractiveLegendPlugin(ax.lines,
+            kwargs.get("labels", [lin.get_label() for lin in ax.lines]),
+            alpha_unsel=kwargs.get("alpha", 0.2))
+    plugins.connect(ax.figure, pg)
     mpld3.display()
-    return
-
+    return ax
 
 # From mpld3 master, modified for use here
 # mpld3 is released under a BSD license reproduced below
@@ -59,7 +55,7 @@ Inspired by http://bl.ocks.org/simzou/6439398
 
 Parameters
 ----------
-plot_elements : iterable of matplotliblib elements
+plot_elements : iterable of matplotlib elements
 the elements to associate with a given legend items
 labels : iterable of strings
 The labels for each legend element
