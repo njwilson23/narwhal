@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 import matplotlib.tri as mtri
 from scipy.interpolate import griddata
 from scipy import ndimage
+from scipy import stats
 from karta import Point, Line, LONLAT, CARTESIAN
 from narwhal.cast import CastCollection
 from . import plotutil
@@ -93,6 +94,32 @@ def plot_ts_average(*casts, **kwargs):
             else:
                 raise TypeError("argument is neither a cast nor a castcollection")
     plot_ts(*avgcasts, **kwargs)
+    return
+
+def plot_ts_kde(*casts, xkey="sal", ykey="theta", ax=None, bw_method=0.2,
+                tres=0.2, sres=0.2):
+    """ Plot a kernel density estimate T-S diagram """
+    if ax is None:
+        ax = plt.gca()
+    
+    temp = np.hstack([c[ykey] for c in casts])
+    sal = np.hstack([c[xkey] for c in casts])
+    nm = np.hstack([c.nanmask() for c in casts])
+
+    temp = temp[~nm]
+    sal = sal[~nm]
+
+    tmin = min(temp) - 0.5
+    tmax = max(temp) + 0.5
+    smin = min(sal) - 1
+    smax = max(sal) + 1
+
+    kernel = stats.gaussian_kde(np.vstack([temp, sal]), bw_method=bw_method)
+    T, S = np.mgrid[tmin:tmax:tres, smin:smax:sres]
+    xs = np.vstack([T.ravel(), S.ravel()])
+    Z = kernel(xs).reshape(T.shape)
+
+    ax.pcolormesh(S, T, Z, cmap="gist_earth_r")
     return
 
 def add_mixing_line(ptA, ptB, ax=None, **kw):
