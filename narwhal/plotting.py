@@ -4,6 +4,7 @@ import copy
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.tri as mtri
+import brewer2mpl
 from scipy.interpolate import griddata
 from scipy import ndimage
 from scipy import stats
@@ -11,6 +12,9 @@ from karta import Point, Line, LONLAT, CARTESIAN
 from narwhal.cast import CastCollection
 from . import plotutil
 from . import gsw
+
+import warnings
+warnings.filterwarnings("ignore", category=DeprecationWarning)
 
 ccmeanp = plotutil.ccmeanp
 ccmeans = plotutil.ccmeans
@@ -37,7 +41,10 @@ def plot_ts(*castlikes, xkey="sal", ykey="theta", ax=None,
     labels = _getiterable(kwargs, "labels", ["Cast "+str(i+1) 
                                                 for i in range(len(castlikes))])
     styles = _getiterable(kwargs, "styles", ["ok", "sr", "db", "^g"])
-    colors = _getiterable(kwargs, "colors", [(0, 0.5, 0.8)])
+
+    n = min(8, max(3, len(castlikes)))
+    defaultcolors = brewer2mpl.get_map("Dark2", "Qualitative", n).hex_colors
+    colors = _getiterable(kwargs, "colors", defaultcolors)
 
     plotkw = {"ms": 6}
     for key in kwargs:
