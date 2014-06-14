@@ -81,9 +81,10 @@ def add_sigma_contours(contourint, ax=None):
     CT = np.linspace(tl[0], tl[1])
     SIGMA = np.reshape([gsw.rho(sa, ct, 0)-1000 for ct in CT for sa in SA],
                        (50, 50))
-    cc = ax.contour(SA, CT, SIGMA, np.arange(np.floor(SIGMA.min()),
-                                             np.ceil(SIGMA.max()), contourint),
-                    colors="0.4")
+
+    lev0 = np.sign(SIGMA.min()) * ((abs(SIGMA.min()) // contourint) + 1) * contourint
+    levels = np.arange(lev0, SIGMA.max(), contourint)
+    cc = ax.contour(SA, CT, SIGMA, levels=levels, colors="0.4")
     prec = max(0, int(-np.floor(np.log10(contourint))))
     plt.clabel(cc, fmt="%.{0}f".format(prec))
     return
