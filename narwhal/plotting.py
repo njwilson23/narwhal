@@ -34,7 +34,31 @@ def _getiterable(kw, name, default):
 
 def plot_ts(*castlikes, xkey="sal", ykey="theta", ax=None,
             drawlegend=True, contourint=None, **kwargs):
-    """ Plot a T-S diagram from Casts or CastCollections """
+    """ Plot a T-S diagram from Casts or CastCollections 
+    
+    Arguments may be one or more Cast or CastCollection instances.
+
+    Keyword arguments:
+    ------------------
+
+    xkey        The data key to plot along x-axis [default: "sal"]
+
+    ykey        The data key to plot along y-axis [default: "theta"]
+
+    ax          The Axes instance to draw to
+
+    drawlegend  Whether to add a legend
+
+    contourint  Interval for sigma contours (deprecated) [default: None]
+
+    labels      An iterable of strings for the legend
+
+    styles      A single or iterable of matplotlib linestyle strings
+
+    colors      A single or iterable of line/marker colors
+
+    Additional keyword arguments are passed to `plot`
+    """
     if ax is None:
         ax = plt.gca()
     
@@ -46,13 +70,16 @@ def plot_ts(*castlikes, xkey="sal", ykey="theta", ax=None,
     defaultcolors = brewer2mpl.get_map("Dark2", "Qualitative", n).hex_colors
     colors = _getiterable(kwargs, "colors", defaultcolors)
 
-    plotkw = {"ms": 6}
+    plotkws = {"ms": itertools.repeat(6)}
     for key in kwargs:
         if key not in ("labels", "styles", "colors"):
-            plotkw[key] = kwargs[key]
+            plotkws[key] = _ensureiterable(kwargs[key])
 
     for i, cast in enumerate(castlikes):
         sty = next(styles)
+        plotkw = {}
+        for key in plotkws:
+            plotkw[key] = next(plotkws[key])
         plotkw["label"] = next(labels)
         plotkw["color"] = next(colors)
         if hasattr(cast, "_type") and cast._type == "castcollection":
