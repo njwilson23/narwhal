@@ -57,6 +57,8 @@ def plot_ts(*castlikes, xkey="sal", ykey="theta", ax=None,
 
     colors      A single or iterable of line/marker colors
 
+    markersizes A single of iterable of marker sizes
+
     Additional keyword arguments are passed to `plot`
     """
     if ax is None:
@@ -69,6 +71,7 @@ def plot_ts(*castlikes, xkey="sal", ykey="theta", ax=None,
     n = min(8, max(3, len(castlikes)))
     defaultcolors = brewer2mpl.get_map("Dark2", "Qualitative", n).hex_colors
     colors = _getiterable(kwargs, "colors", defaultcolors)
+    markersizes = _getiterable(kwargs, "ms", 6)
 
     plotkws = {"ms": itertools.repeat(6)}
     for key in kwargs:
@@ -82,6 +85,7 @@ def plot_ts(*castlikes, xkey="sal", ykey="theta", ax=None,
             plotkw[key] = next(plotkws[key])
         plotkw["label"] = next(labels)
         plotkw["color"] = next(colors)
+        plotkw["ms"] = next(markersizes)
         if hasattr(cast, "_type") and cast._type == "castcollection":
             x = np.hstack([np.hstack([subcast[xkey], np.nan]) for subcast in cast])
             y = np.hstack([np.hstack([subcast[ykey], np.nan]) for subcast in cast])
