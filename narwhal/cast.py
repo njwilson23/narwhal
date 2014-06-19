@@ -30,13 +30,12 @@ class Cast(object):
     Water properties are provided as keyword arguments. There are several
     reserved keywords:
 
-    *coords*        Tuple containing the geographic coordinates of the
-                    observation
+    coords::iterable[2]     the geographic coordinates of the observation
 
-    *properties*    Dictionary of scalar metadata
+    properties::dict        scalar metadata
 
-    *primarykey*    Indicates the name of vertical measure. Usually pressure
-                    ("pres"), but could be other things, e.g. depth ("z")
+    primarykey::string      the name of vertical measure. Usually pressure
+                            ("pres"), but could be e.g. depth ("z")
     """
 
     _type = "cast"
@@ -136,9 +135,9 @@ class Cast(object):
         return not self.__eq__(other)
 
     def _addkeydata(self, key, data, overwrite=False):
-        """ Add data under *key*. If *key* already exists, iterates over
-        [key]_2, [key]_3... until an unused identifier is found. Returns the
-        key finally used.
+        """ Add `data::array` under `key::string`. If `key` already exists,
+        iterates over [key]_2, [key]_3... until an unused identifier is found.
+        Returns the key finally used.
 
         Use case: for automatic addition of fields.
         """
@@ -171,7 +170,9 @@ class Cast(object):
         by vector x=v.
 
         y::string       name of property to interpolate
+
         x::string       name of reference property
+
         v::iterable     vector of values for x
 
         force::bool     whether to coerce x to be monotonic (defualt False)
@@ -195,9 +196,7 @@ class Cast(object):
             raise ValueError("x is not monotonic")
 
     def save(self, fnm):
-        """ Save a JSON-formatted representation to a file.
-
-        fnm::string     File name to save to
+        """ Save a JSON-formatted representation to a file at `fnm::string`.
         """
         if hasattr(fnm, "write"):
             fileio.writecast(fnm, self)
@@ -230,7 +229,7 @@ class CTDCast(Cast):
 
     def add_depth(self, rhokey=None):
         """ Use temperature, salinity, and pressure to calculate depth. If
-        in-situ density is already in a field, *rhokey* can be provided to
+        in-situ density is already in a field, `rhokey::string` can be provided to
         avoid recalculating it. """
         if rhokey is None:
             rhokey = self.add_density()
@@ -250,10 +249,15 @@ class CTDCast(Cast):
         return self._addkeydata("depth", depth)
 
     def water_fractions(self, sources, tracers=("sal", "temp")):
-        """ Compute water mass fractions based on conservative tracers. Sources
-        is a list of tuples giving the prototype water masses. The tracers to
-        must be fields in the CTDCast [default: ("sal", "temp")].
+        """ Compute water mass fractions based on conservative tracers.
+        `sources::[tuple, tuple, ...]` is a list of tuples giving the prototype water
+        masses.
+        
+        tracers::[string, string]       must be fields in the CTDCast to use as
+                                        conservative tracers
+                                        [default: ("sal", "temp")].
         """
+
         if len(sources) != 3:
             raise ValueError("Three potential source waters must be given "
                              "(not {0})".format(len(sources)))
@@ -319,7 +323,16 @@ class XBTCast(Cast):
 
 
 class CastCollection(collections.Sequence):
-    """ A CastCollection is an indexable collection of Cast instances """
+    """ A CastCollection is an indexable collection of Cast instances.
+   
+    Create from casts or an iterable ordered sequence of casts:
+
+        CastCollection(cast1, cast2, cast3...)
+
+    or
+
+        CastCollection([cast1, cast2, cast3...])
+    """
     _type = "castcollection"
 
     def __init__(self, *args):
@@ -457,14 +470,20 @@ class CastCollection(collections.Sequence):
         
         Parameters
         ----------
-        tempkey         key to use for temperature if *rhokey* is None
-        salkey          key to use for salinity if *rhokey* is None
-        rhokey          key to use for density
-        dudzkey         key to use for ∂U/∂z, subject to *overwrite*
-        ukey            key to use for U, subject to *overwrite*
-        overwrite       whether to allow cast fields to be overwritten
-                        if False, then *ukey* and *dudzkey* are incremented
-                        until there is no clash
+
+        tempkey::string     key to use for temperature if *rhokey* is None
+
+        salkey::string      key to use for salinity if *rhokey* is None
+
+        rhokey::string      key to use for density, or None [default: None]
+
+        dudzkey::string     key to use for ∂U/∂z, subject to *overwrite*
+
+        ukey::string        key to use for U, subject to *overwrite*
+
+        overwrite::bool     whether to allow cast fields to be overwritten
+                            if False, then *ukey* and *dudzkey* are incremented
+                            until there is no clash
         """
         if rhokey is None:
             rhokeys = []
@@ -509,14 +528,20 @@ class CastCollection(collections.Sequence):
         
         Parameters
         ----------
-        tempkey         key to use for temperature if *rhokey* is None
-        salkey          key to use for salinity if *rhokey* is None
-        rhokey          key to use for density
-        dudzkey         key to use for ∂U/∂z, subject to *overwrite*
-        ukey            key to use for U, subject to *overwrite*
-        overwrite       whether to allow cast fields to be overwritten
-                        if False, then *ukey* and *dudzkey* are incremented
-                        until there is no clash
+
+        tempkey::string     key to use for temperature if *rhokey* is None
+
+        salkey::string      key to use for salinity if *rhokey* is None
+
+        rhokey::string      key to use for density, or None [default: None]
+
+        dudzkey::string     key to use for ∂U/∂z, subject to *overwrite*
+
+        ukey::string        key to use for U, subject to *overwrite*
+
+        overwrite::bool     whether to allow cast fields to be overwritten
+                            if False, then *ukey* and *dudzkey* are incremented
+                            until there is no clash
         """
         if rhokey is None:
             rhokeys = []
@@ -578,7 +603,9 @@ class CastCollection(collections.Sequence):
 
 
 def read(fnm):
-    """ Convenience function for reading JSON-formatted measurement data. """
+    """ Convenience function for reading JSON-formatted measurement data from
+    `fnm::string`.
+    """
     with open(fnm, "r") as f:
         d = json.load(f)
     return _fromjson(d)
