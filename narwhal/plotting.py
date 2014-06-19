@@ -469,13 +469,35 @@ def plot_section(cc, bathymetry, ax=None, **kw):
     plot_section_bathymetry(bathymetry, vertices=vertices, ax=ax)
     return
 
-def plot_map(*castlikes, ax=None, **kw):
-    """ Plot a simple map of cast locations. """
-    def plot_coords(ax, cast):
+def plot_profiles(*castlikes, key="temp", ax=None, **kw):
+    """ Plot vertical profiles from casts """
+    def _plot_profile(ax, cast):
         if hasattr(cast, "_type"):
             if cast._type == "castcollection":
                 for cast_ in cast:
-                    plot_coords(ax, cast_)
+                    _plot_profile(ax, cast_)
+            else:
+                z = cast[cast.primarykey]
+                ax.plot(cast[key], z, **kw)
+        else:
+            raise TypeError("Argument not Cast or CastCollection-like")
+        return
+
+    if ax is None:
+        ax = plt.gca()
+    for castlike in castlikes:
+        _plot_profile(ax, castlike)
+    if not ax.yaxis_inverted():
+        ax.invert_yaxis()
+    return ax
+
+def plot_map(*castlikes, ax=None, **kw):
+    """ Plot a simple map of cast locations. """
+    def _plot_coords(ax, cast):
+        if hasattr(cast, "_type"):
+            if cast._type == "castcollection":
+                for cast_ in cast:
+                    _plot_coords(ax, cast_)
             else:
                 ax.plot(cast.coords[0], cast.coords[1], "ok")
         else:
@@ -485,6 +507,5 @@ def plot_map(*castlikes, ax=None, **kw):
     if ax is None:
         ax = plt.gca()
     for castlike in castlikes:
-        plot_coords(ax, castlike)
-
-    return
+        _plot_coords(ax, castlike)
+    return ax
