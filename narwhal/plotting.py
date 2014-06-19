@@ -469,3 +469,22 @@ def plot_section(cc, bathymetry, ax=None, **kw):
     plot_section_bathymetry(bathymetry, vertices=vertices, ax=ax)
     return
 
+def plot_map(*castlikes, ax=None, **kw):
+    """ Plot a simple map of cast locations. """
+    def plot_coords(ax, cast):
+        if hasattr(cast, "_type"):
+            if cast._type == "castcollection":
+                for cast_ in cast:
+                    plot_coords(ax, cast_)
+            else:
+                ax.plot(cast.coords[0], cast.coords[1], "ok")
+        else:
+            raise TypeError("Argument not Cast or CastCollection-like")
+        return
+
+    if ax is None:
+        ax = plt.gca()
+    for castlike in castlikes:
+        plot_coords(ax, castlike)
+
+    return
