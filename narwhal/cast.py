@@ -8,6 +8,7 @@ import sys
 import itertools
 import collections
 import json
+import gzip
 from functools import reduce
 import numpy as np
 from scipy import ndimage
@@ -195,16 +196,18 @@ class Cast(object):
         else:
             raise ValueError("x is not monotonic")
 
-    def save(self, fnm):
+    def save(self, fnm, binary=True):
         """ Save a JSON-formatted representation to a file at `fnm::string`.
         """
         if hasattr(fnm, "write"):
-            fileio.writecast(fnm, self)
+            fileio.writecast(fnm, self, binary=binary)
         else:
-            if os.path.splitext(fnm)[1] != ".nwl":
-                fnm = fnm + ".nwl"
-            with open(fnm, "w") as f:
-                fileio.writecast(f, self)
+            flg = "wb" if binary else "w"
+            ext = ".nwz" if binary else ".nwl"
+            if os.path.splitext(fnm)[1] != ext:
+                fnm = fnm + ext
+            with open(fnm, flg) as f:
+                fileio.writecast(f, self, binary=binary)
         return
 
 
@@ -587,18 +590,20 @@ class CastCollection(collections.Sequence):
             cast._addkeydata(ukey, u[:,ic], overwrite=overwrite)
         return coll
 
-    def save(self, fnm):
+    def save(self, fnm, binary=True):
         """ Save a JSON-formatted representation to a file.
 
         fnm::string     File name to save to
         """
         if hasattr(fnm, "write"):
-            fileio.writecastcollection(fnm, self)
+            fileio.writecastcollection(fnm, self, binary=binary)
         else:
-            if os.path.splitext(fnm)[1] != ".nwl":
-                fnm = fnm + ".nwl"
-            with open(fnm, "w") as f:
-                fileio.writecastcollection(f, self)
+            flg = "wb" if binary else "w"
+            ext = ".nwz" if binary else ".nwl"
+            if os.path.splitext(fnm)[1] != ext:
+                fnm = fnm + ext
+            with open(fnm, flg) as f:
+                fileio.writecastcollection(f, self, binary=binary)
         return
 
 
@@ -606,8 +611,13 @@ def read(fnm):
     """ Convenience function for reading JSON-formatted measurement data from
     `fnm::string`.
     """
-    with open(fnm, "r") as f:
-        d = json.load(f)
+    try:
+        with open(fnm, "r") as f:
+            d = json.load(f)
+    except UnicodeDecodeError as e:
+        with open(fnm, "rb") as f:
+            sz = f.read()
+            d = json.loads(gzip.decompress(sz))
     return _fromjson(d)
 
 def _fromjson(d):

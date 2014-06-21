@@ -2,6 +2,7 @@
 objects to persistent files. """
 
 import json
+import gzip
 import copy
 import datetime
 import dateutil.parser
@@ -51,17 +52,27 @@ def dictascastcollection(d, castobj):
     casts = [dictascast(cast, castobj) for cast in d["casts"]]
     return casts
 
-def writecast(f, cast):
+def writecast(f, cast, binary=True):
     """ Write Cast data to a file-like stream. """
     d = castasdict(cast)
-    json.dump(d, f)
+    if binary:
+        s = json.dumps(d, indent=2)
+        szip = gzip.compress(bytes(s, "utf-8"))
+        f.write(szip)
+    else:
+        json.dump(d, f, indent=2)
     return
 
-def writecastcollection(f, cc):
+def writecastcollection(f, cc, binary=True):
     """ Write CastCollection to a file-like stream. """
     casts = [castasdict(cast) for cast in cc]
     d = dict(type="castcollection", casts=casts)
-    json.dump(d, f)
+    if binary:
+        s = json.dumps(d, indent=2)
+        szip = gzip.compress(bytes(s, "utf-8"))
+        f.write(szip)
+    else:
+        json.dump(d, f, indent=2)
     return
 
 def castcollection_as_geojson(cc):

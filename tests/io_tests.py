@@ -7,10 +7,7 @@ import narwhal
 from narwhal.cast import Cast, CTDCast, XBTCast, LADCP
 from narwhal.cast import CastCollection
 
-if sys.version_info[0] < 3:
-    from cStringIO import StringIO
-else:
-    from io import StringIO
+from io import StringIO, BytesIO
 
 directory = os.path.dirname(__file__)
 DATADIR = os.path.join(directory, "data")
@@ -42,33 +39,57 @@ class IOTests(unittest.TestCase):
         self.assertEqual(s1, s2)
         return
 
-    def test_save(self):
-        #fnm = os.path.join(DATADIR, "cast_test.nwl")
+    def test_save_text(self):
         try:
             f = StringIO()
+            self.cast.save(f, binary=False)
+        finally:
+            f.close()
+
+        try:
+            f = StringIO()
+            self.ctd.save(f, binary=False)
+        finally:
+            f.close()
+
+        try:
+            f = StringIO()
+            self.xbt.save(f, binary=False)
+        finally:
+            f.close()
+        return
+
+    def test_save_binary(self):
+        try:
+            f = BytesIO()
             self.cast.save(f)
         finally:
             f.close()
 
-        #fnm = os.path.join(DATADIR, "ctd_test.nwl")
         try:
-            f = StringIO()
+            f = BytesIO()
             self.ctd.save(f)
         finally:
             f.close()
 
-        #fnm = os.path.join(DATADIR, "xbt_test.nwl")
         try:
-            f = StringIO()
+            f = BytesIO()
             self.xbt.save(f)
         finally:
             f.close()
         return
 
-    def test_save_collection(self):
-        #fnm = os.path.join(DATADIR, "coll_test.nwl")
+    def test_save_collection_text(self):
         try:
             f = StringIO()
+            self.collection.save(f, binary=False)
+        finally:
+            f.close()
+        return
+
+    def test_save_collection_binary(self):
+        try:
+            f = BytesIO()
             self.collection.save(f)
         finally:
             f.close()
@@ -77,7 +98,7 @@ class IOTests(unittest.TestCase):
     def test_save_zprimarykey(self):
         cast = Cast(np.arange(len(self.p)), temp=self.temp, sal=self.sal,
                     primarykey="z", properties={})
-        f = StringIO()
+        f = BytesIO()
         try:
             cast.save(f)
         finally:
