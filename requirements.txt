@@ -2,6 +2,7 @@ narwhal
 karta>=0.1
 numpy>=1.5
 scipy>=0.12
+six>=1.7
 python-dateutil>=2.2
 requests>=2.2.1
 mpld3>=0.2

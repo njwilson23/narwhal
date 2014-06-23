@@ -1,6 +1,7 @@
 """ Module for handling the serialization of Cast- and CastCollection-like
 objects to persistent files. """
 
+import six
 import json
 import gzip
 import copy
@@ -57,8 +58,8 @@ def writecast(f, cast, binary=True):
     d = castasdict(cast)
     if binary:
         s = json.dumps(d, indent=2)
-        szip = gzip.compress(bytes(s, "utf-8"))
-        f.write(szip)
+        # f.write(bytes(s, "utf-8"))
+        f.write(six.b(s))
     else:
         json.dump(d, f, indent=2)
     return
@@ -69,8 +70,8 @@ def writecastcollection(f, cc, binary=True):
     d = dict(type="castcollection", casts=casts)
     if binary:
         s = json.dumps(d, indent=2)
-        szip = gzip.compress(bytes(s, "utf-8"))
-        f.write(szip)
+        # f.write(bytes(s, "utf-8"))
+        f.write(six.b(s))
     else:
         json.dump(d, f, indent=2)
     return

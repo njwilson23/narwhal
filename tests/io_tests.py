@@ -7,7 +7,11 @@ import narwhal
 from narwhal.cast import Cast, CTDCast, XBTCast, LADCP
 from narwhal.cast import CastCollection
 
-from io import StringIO, BytesIO
+from io import BytesIO
+if sys.version_info[0] < 3:
+    from cStringIO import StringIO
+else:
+    from io import StringIO
 
 directory = os.path.dirname(__file__)
 DATADIR = os.path.join(directory, "data")

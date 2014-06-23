@@ -6,8 +6,8 @@ import install_gsw
 
 try:
     print("Fetching GSW v3.02", end="")
-    install_gsw.download_zip("http://www.teos-10.org/software/gsw_c_v3.02.zip",
-                             fnm="temp_gsw_c.zip")
+    #install_gsw.download_zip("http://www.teos-10.org/software/gsw_c_v3.02.zip",
+    #                         fnm="temp_gsw_c.zip")
 
     if install_gsw.compare_md5("temp_gsw_c.zip", 
                                "6360ec9cff432f7bc01032fbecf48422"):
@@ -20,7 +20,7 @@ try:
     else:
         raise Exception("MD5 for downloaded GSW source doesn't match "
                         "expected digest. GSW will not be installed.")
-    os.remove("temp_gsw_c.zip")
+    #os.remove("temp_gsw_c.zip")
     print("...done")
 
 except Exception as e:
@@ -30,7 +30,7 @@ except Exception as e:
 
 setup(
     name = "narwhal",
-    version = "0.2.0",
+    version = "0.2.1",
     author = "Nat Wilson",
     #package_dir = {"narwhal": "src"},
     packages = ["narwhal"],
