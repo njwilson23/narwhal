@@ -202,12 +202,16 @@ class Cast(object):
         if hasattr(fnm, "write"):
             fileio.writecast(fnm, self, binary=binary)
         else:
-            flg = "wb" if binary else "w"
-            ext = ".nwz" if binary else ".nwl"
-            if os.path.splitext(fnm)[1] != ext:
-                fnm = fnm + ext
-            with open(fnm, flg) as f:
-                fileio.writecast(f, self, binary=binary)
+            if binary:
+                if os.path.splitext(fnm)[1] != ".nwz":
+                    fnm = fnm + ".nwz"
+                with gzip.open(fnm, "wb") as f:
+                    fileio.writecast(f, self, binary=True)
+            else:
+                if os.path.splitext(fnm)[1] != ".nwl":
+                    fnm = fnm + ".nwl"
+                with open(fnm, "w") as f:
+                    fileio.writecast(f, self, binary=False)
         return
 
 
@@ -598,12 +602,16 @@ class CastCollection(collections.Sequence):
         if hasattr(fnm, "write"):
             fileio.writecastcollection(fnm, self, binary=binary)
         else:
-            flg = "wb" if binary else "w"
-            ext = ".nwz" if binary else ".nwl"
-            if os.path.splitext(fnm)[1] != ext:
-                fnm = fnm + ext
-            with open(fnm, flg) as f:
-                fileio.writecastcollection(f, self, binary=binary)
+            if binary:
+                if os.path.splitext(fnm)[1] != ".nwz":
+                    fnm = fnm + ".nwz"
+                with gzip.open(fnm, "wb") as f:
+                    fileio.writecastcollection(f, self, binary=True)
+            else:
+                if os.path.splitext(fnm)[1] != ".nwl":
+                    fnm = fnm + ".nwl"
+                with open(fnm, "w") as f:
+                    fileio.writecastcollection(f, self, binary=False)
         return
 
 
@@ -617,7 +625,8 @@ def read(fnm):
     except UnicodeDecodeError as e:
         with open(fnm, "rb") as f:
             sz = f.read()
-            d = json.loads(gzip.decompress(sz))
+            s = gzip.decompress(sz).decode("utf-8")
+            d = json.loads(s)
     return _fromjson(d)
 
 def _fromjson(d):
