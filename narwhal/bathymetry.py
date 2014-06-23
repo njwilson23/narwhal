@@ -5,19 +5,19 @@ plotted.
 
 from karta import Point, Line, LONLAT
 
-class Bathymetry2d(object):
+class Bathymetry2d(Line):
 
     def __init__(self, x, y, z):
         if len(x) != len(y) != len(z):
             raise ValueError("x, y, z must all have the same length")
-        self.line = Line(zip(x,y), data={"depth":z}, crs=LONLAT)
+        super(Line, self).__init__(zip(x, y), data={"depth":z}, crs=LONLAT)
         self.depth = z
         return
 
     def atxy(self, x, y):
         """ Interpolate bottom depth at a point. """
         pt = Point((x, y), crs=LONLAT)
-        segments = tuple(self.line.segments())
+        segments = tuple(self.segments())
         distances = [seg.shortest_distance_to(pt) for seg in segments]
         ii = distances.index(min(distances))
         a = segments[ii][0]
@@ -28,7 +28,7 @@ class Bathymetry2d(object):
                 + a.data["depth"]
 
     def projdist(self, reverse=False):
-        distances = [seg[0].greatcircle(seg[1]) for seg in self.line.segments()]
+        distances = [seg[0].greatcircle(seg[1]) for seg in self.segments()]
         cumulative = [0]
         for val in distances:
             cumulative.append(cumulative[-1] + val)

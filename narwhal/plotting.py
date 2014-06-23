@@ -8,7 +8,7 @@ import brewer2mpl
 from scipy.interpolate import griddata
 from scipy import ndimage
 from scipy import stats
-from karta import Point, Line, LONLAT, CARTESIAN
+from karta import Point, Line, LONLAT_WGS84, CARTESIAN
 from narwhal.cast import CastCollection
 from . import plotutil
 from . import gsw
@@ -216,7 +216,7 @@ DEFAULT_CONTOURF = {"cmap":     plt.cm.gist_ncar,
                     "extend":   "both"}
 
 def _interpolate_section_grid(cc, prop, bottomkey, ninterp, interp_method):
-    ccline = Line([c.coords for c in cc], crs=LONLAT)
+    ccline = Line([c.coords for c in cc], crs=LONLAT_WGS84)
     cx = np.array(ccline.cumlength())
     y = cc[0][cc[0].primarykey]
     obsx, obspres = np.meshgrid(cx, y)
@@ -255,7 +255,7 @@ def _interpolate_section_grid(cc, prop, bottomkey, ninterp, interp_method):
     return intx, intpres, intdata, cx
 
 def _interpolate_section_tri(cc, prop, bottomkey):
-    ccline = Line([c.coords for c in cc], crs=LONLAT)
+    ccline = Line([c.coords for c in cc], crs=LONLAT_WGS84)
     cx = np.array(ccline.cumlength())
 
     # interpolate over NaNs in a way that assumes horizontal correlation
@@ -413,7 +413,8 @@ def plot_section_properties_tri(cc, prop="temp", ax=None,
     ax.clabel(cl, fmt=clabelfmt, manual=clabelmanual)
     return cm
 
-def plot_section_bathymetry(bathymetry, vertices=None, ax=None, maxdistance=0.01, crs=LONLAT):
+def plot_section_bathymetry(bathymetry, vertices=None, ax=None, maxdistance=200.0,
+                            crs=LONLAT_WGS84):
     """ Add bathymetry from a Bathymetry object to a section plot.
     
     Keyword arguments:
@@ -431,12 +432,12 @@ def plot_section_bathymetry(bathymetry, vertices=None, ax=None, maxdistance=0.01
         bx = []
         segdist = [0.0]
         depth = []
-        bathpts = [pt for pt in bathymetry.line]
+        bathpts = [pt for pt in bathymetry]
         for a,b in zip(vertices[:-1], vertices[1:]):
             # find all bathymetry within a threshold
             seg = Line((a,b), crs=crs)
             bcoords = [v for v in zip(bathpts, bathymetry.depth)
-                         if seg.within_distance(v[0], 200.0)]
+                         if seg.within_distance(v[0], maxdistance)]
 
             # project each point in bbox onto the segment, and record
             # the distance from the origin as bx
@@ -452,7 +453,7 @@ def plot_section_bathymetry(bathymetry, vertices=None, ax=None, maxdistance=0.01
         bx.sort()
         
     else:
-        bx = np.array(bathymetry.line.cumlength())
+        bx = np.array(bathymetry.cumlength())
         depth = bathymetry.depth
     
     ymax = bathymetry.depth.max()
