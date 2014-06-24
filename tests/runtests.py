@@ -144,7 +144,7 @@ class BathymetryTests(unittest.TestCase):
              80.10895   ,  80.11108333,  80.11398333,  80.12305   ,
              80.12928333,  80.1431    ,  80.1534    ,  80.16636667,  80.16741667]
         depth = [102,  95,  90, 100, 110, 120, 130, 140, 150, 170, 160, 140, 130]
-        self.bathymetry = Bathymetry(x, y, depth)
+        self.bathymetry = Bathymetry(zip(x, y), depth=depth)
         return
 
     def test_add_to_castcollection(self):

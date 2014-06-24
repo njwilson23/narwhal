@@ -6,12 +6,18 @@ plotted.
 from karta import Point, Line, LONLAT
 
 class Bathymetry2d(Line):
+    """ Bathymetric line
+    Bathymetry2d(lon, lat, depth)
+    """
 
-    def __init__(self, x, y, z):
-        if len(x) != len(y) != len(z):
-            raise ValueError("x, y, z must all have the same length")
-        super(Line, self).__init__(zip(x, y), data={"depth":z}, crs=LONLAT)
-        self.depth = z
+    def __init__(self, vertices, depth=None, crs=LONLAT, **kw):
+        kw.setdefault("crs", crs)
+        if depth is not None:
+            kw.update({"data": {"depth": depth}})
+        else:
+            depth = kw["data"]["depth"]
+        super(Line, self).__init__(vertices, **kw)
+        self.depth = depth
         return
 
     def atxy(self, x, y):
