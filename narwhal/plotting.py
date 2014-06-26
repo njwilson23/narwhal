@@ -32,11 +32,12 @@ def _getiterable(kw, name, default):
     """ Equivalent to dict.get except that it ensures the result is an iterable. """
     return _ensureiterable(kw.get(name, default))
 
-def plot_ts(*castlikes, xkey="sal", ykey="theta", ax=None,
+def plot_ts(castlikes, xkey="sal", ykey="theta", ax=None,
             drawlegend=True, contourint=None, **kwargs):
     """ Plot a T-S diagram from Casts or CastCollections 
     
-    Arguments may be one or more Cast or CastCollection instances.
+    Takes a Cast/CastCollection or an iterable of Cast/CastCollection instances
+    as an argument.
 
     Keyword arguments:
     ------------------
@@ -61,8 +62,16 @@ def plot_ts(*castlikes, xkey="sal", ykey="theta", ax=None,
 
     Additional keyword arguments are passed to `plot`
     """
+    # xkey = kwargs.pop("xkey", "sal")
+    # ykey = kwargs.pop("ykey", "theta")
+    # ax = kwargs.pop("ax", plt.gca())
+    # drawlegend = kwargs.pop("drawlegend", True)
+    # contourint = kwargs.pop("contourint", None)
     if ax is None:
         ax = plt.gca()
+
+    if not hasattr(castlikes, "__iter__"):
+        castlikes = (castlikes,)
     
     labels = _getiterable(kwargs, "labels", ["Cast "+str(i+1) 
                                                 for i in range(len(castlikes))])
@@ -135,12 +144,15 @@ def plot_ts_average(*casts, **kwargs):
     plot_ts(*avgcasts, **kwargs)
     return
 
-def plot_ts_kde(*casts, xkey="sal", ykey="theta", ax=None, bw_method=0.2,
+def plot_ts_kde(casts, xkey="sal", ykey="theta", ax=None, bw_method=0.2,
                 tres=0.2, sres=0.2):
     """ Plot a kernel density estimate T-S diagram """
     if ax is None:
         ax = plt.gca()
     
+    if not hasattr(casts, "__iter__"):
+        casts = (casts,)
+
     temp = np.hstack([c[ykey] for c in casts])
     sal = np.hstack([c[xkey] for c in casts])
     nm = np.hstack([c.nanmask() for c in casts])
@@ -470,7 +482,7 @@ def plot_section(cc, bathymetry, ax=None, **kw):
     plot_section_bathymetry(bathymetry, vertices=vertices, ax=ax)
     return
 
-def plot_profiles(*castlikes, key="temp", ax=None, **kw):
+def plot_profiles(castlikes, key="temp", ax=None, **kw):
     """ Plot vertical profiles from casts """
     def _plot_profile(ax, cast):
         if hasattr(cast, "_type"):
@@ -486,13 +498,15 @@ def plot_profiles(*castlikes, key="temp", ax=None, **kw):
 
     if ax is None:
         ax = plt.gca()
+    if not hasattr(castlikes, "__iter__"):
+        castlikes = (castlikes,)
     for castlike in castlikes:
         _plot_profile(ax, castlike)
     if not ax.yaxis_inverted():
         ax.invert_yaxis()
     return ax
 
-def plot_map(*castlikes, ax=None, **kw):
+def plot_map(castlikes, ax=None, **kw):
     """ Plot a simple map of cast locations. """
     def _plot_coords(ax, cast):
         if hasattr(cast, "_type"):
@@ -507,6 +521,8 @@ def plot_map(*castlikes, ax=None, **kw):
 
     if ax is None:
         ax = plt.gca()
+    if not hasattr(castlikes, "__iter__"):
+        castlikes = (castlikes,)
     for castlike in castlikes:
         _plot_coords(ax, castlike)
     return ax
