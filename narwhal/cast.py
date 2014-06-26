@@ -28,8 +28,8 @@ class Cast(object):
     """ A Cast is a set of referenced measurements associated with a single
     coordinate.
     
-    Water properties are provided as keyword arguments. There are several
-    reserved keywords:
+    Vector water properties are provided as keyword arguments. There are
+    several reserved keywords:
 
     coords::iterable[2]     the geographic coordinates of the observation
 
@@ -53,14 +53,8 @@ class Cast(object):
 
         self.primarykey = primarykey
         self.coords = coords
-        self.data = collections.OrderedDict()
+        self.data = dict()
         self.data[primarykey] = np.asarray(p)
-
-        def _fieldmaker(n, arg):
-            if arg is not None:
-                return np.asarray(arg)
-            else:
-                return np.nan * np.empty(n)
 
         # Python 3 workaround
         try:
@@ -68,8 +62,14 @@ class Cast(object):
         except AttributeError:
             items = kwargs.items()
 
+        # Populate vector and scalar data fields
         for (kw, val) in items:
-            self.data[kw] = _fieldmaker(len(p), val)
+            if val is None:
+                self.data[kw] = np.nan * np.empty(len(p))
+            elif hasattr(val, "__len__") and len(val) == len(p):
+                self.data[kw] = np.asarray(val)
+            else:
+                self.properties[kw] = val
 
         self._len = len(p)
         self._fields = [primarykey] + [a for a in kwargs]
