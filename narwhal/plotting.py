@@ -62,11 +62,6 @@ def plot_ts(castlikes, xkey="sal", ykey="theta", ax=None,
 
     Additional keyword arguments are passed to `plot`
     """
-    # xkey = kwargs.pop("xkey", "sal")
-    # ykey = kwargs.pop("ykey", "theta")
-    # ax = kwargs.pop("ax", plt.gca())
-    # drawlegend = kwargs.pop("drawlegend", True)
-    # contourint = kwargs.pop("contourint", None)
     if ax is None:
         ax = plt.gca()
 
@@ -132,7 +127,7 @@ def add_sigma_contours(contourint, ax=None):
     levels = np.arange(lev0, SIGMA.max(), contourint)
     cc = ax.contour(SA, CT, SIGMA, levels=levels, colors="0.4")
     prec = 0
-    while prec < 3 and round(contourint, prec) != prec:
+    while prec < 3 and round(contourint, prec) != contourint:
         prec += 1
     plt.clabel(cc, fmt="%.{0}f".format(prec))
     return
