@@ -23,10 +23,10 @@ ccmeans = plotutil.ccmeans
 
 def _ensureiterable(item):
     """ Turn *item* into an infinite lazy iterable. """
-    if hasattr(item, "__iter__"):
-        return itertools.cycle(item)
-    else:
+    if not hasattr(item, "__iter__") or isinstance(item, str):
         return itertools.repeat(item)
+    else:
+        return itertools.cycle(item)
 
 def _getiterable(kw, name, default):
     """ Equivalent to dict.get except that it ensures the result is an iterable. """
@@ -73,28 +73,34 @@ def plot_ts(castlikes, xkey="sal", ykey="theta", ax=None,
     if not hasattr(castlikes, "__iter__"):
         castlikes = (castlikes,)
     
-    labels = _getiterable(kwargs, "labels", ["Cast "+str(i+1) 
-                                                for i in range(len(castlikes))])
-    styles = _getiterable(kwargs, "styles", ["ok", "sr", "db", "^g"])
+    label = _getiterable(kwargs, "label",
+                         ["Cast "+str(i+1) for i in range(len(castlikes))])
+    style = _getiterable(kwargs, "style", ["ok", "sr", "db", "^g"])
 
     n = min(8, max(3, len(castlikes)))
     defaultcolors = brewer2mpl.get_map("Dark2", "Qualitative", n).hex_colors
-    colors = _getiterable(kwargs, "colors", defaultcolors)
-    markersizes = _getiterable(kwargs, "ms", 6)
+    color = _getiterable(kwargs, "color", defaultcolors)
+    markersize = _getiterable(kwargs, "ms", 6)
 
     plotkws = {"ms": itertools.repeat(6)}
     for key in kwargs:
-        if key not in ("labels", "styles", "colors"):
+        if key not in ("label", "style", "color"):
             plotkws[key] = _ensureiterable(kwargs[key])
 
+    oldlabels = []
     for i, cast in enumerate(castlikes):
-        sty = next(styles)
         plotkw = {}
         for key in plotkws:
             plotkw[key] = next(plotkws[key])
-        plotkw["label"] = next(labels)
-        plotkw["color"] = next(colors)
-        plotkw["ms"] = next(markersizes)
+
+        sty = next(style)
+        lbl = next(label)
+        plotkw["color"] = next(color)
+        plotkw["ms"] = next(markersize)
+        if lbl not in oldlabels:
+            plotkw["label"] = lbl
+            oldlabels.append(lbl)
+
         if hasattr(cast, "_type") and cast._type == "castcollection":
             x = np.hstack([np.hstack([subcast[xkey], np.nan]) for subcast in cast])
             y = np.hstack([np.hstack([subcast[ykey], np.nan]) for subcast in cast])
