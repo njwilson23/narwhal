@@ -131,7 +131,9 @@ def add_sigma_contours(contourint, ax=None):
     lev0 = np.sign(SIGMA.min()) * ((abs(SIGMA.min()) // contourint) + 1) * contourint
     levels = np.arange(lev0, SIGMA.max(), contourint)
     cc = ax.contour(SA, CT, SIGMA, levels=levels, colors="0.4")
-    prec = max(0, int(-np.floor(np.log10(contourint))))
+    prec = 0
+    while prec < 3 and round(contourint, prec) != prec:
+        prec += 1
     plt.clabel(cc, fmt="%.{0}f".format(prec))
     return
 
