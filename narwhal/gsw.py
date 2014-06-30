@@ -36,6 +36,7 @@ extern double gsw_dynamic_enthalpy(double sa, double ct, double p);
 extern double gsw_enthalpy(double sa, double ct, double p);
 extern double gsw_enthalpy_sso_0_p(double p);
 extern double gsw_enthalpy_t_exact(double sa, double t, double p);
+extern double gsw_cp_t_exact(double sa, double t, double p);
 extern double gsw_entropy_from_t(double sa, double t, double p);
 extern double gsw_entropy_part(double sa, double t, double p);
 extern double gsw_entropy_part_zerop(double sa, double pt0);

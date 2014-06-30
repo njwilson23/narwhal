@@ -22,7 +22,7 @@ try:
     print("...done")
 
 except Exception as e:
-    print("Failed to download and install Gibbs Seawater Toolbox")
+    print("\nFailed to download and install Gibbs Seawater Toolbox")
     print(e)
     ext = []
 
