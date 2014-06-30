@@ -113,14 +113,14 @@ def plot_ts(castlikes, xkey="sal", ykey="theta", ax=None,
     ax.set_ylabel(u"Potential temperature (\u00b0C)")
     return ax
 
-def add_sigma_contours(contourint, ax=None):
+def add_sigma_contours(contourint, ax=None, pres=0.0):
     """ Add density contours to a T-S plot """
     ax = ax if ax is not None else plt.gca()
     sl = ax.get_xlim()
     tl = ax.get_ylim()
     SA = np.linspace(sl[0], sl[1])
     CT = np.linspace(tl[0], tl[1])
-    SIGMA = np.reshape([gsw.rho(sa, ct, 0)-1000 for ct in CT for sa in SA],
+    SIGMA = np.reshape([gsw.rho(sa, ct, pres)-1000 for ct in CT for sa in SA],
                        (50, 50))
 
     lev0 = np.sign(SIGMA.min()) * ((abs(SIGMA.min()) // contourint) + 1) * contourint
@@ -389,8 +389,8 @@ def plot_section_properties(cc, prop="temp", ax=None,
     cl = ax.contour(intx, intpres, intdata, **cntrrc)
 
     _set_section_bounds(ax, cc, cx, prop)
-    ax.clabel(cl, fmt=clabelfmt, manual=clabelmanual)
-    return cm
+    #ax.clabel(cl, fmt=clabelfmt, manual=clabelmanual)
+    return cm, cl
 
 def plot_section_properties_tri(cc, prop="temp", ax=None,
                                 cntrrc=None,
@@ -425,8 +425,8 @@ def plot_section_properties_tri(cc, prop="temp", ax=None,
     cl = ax.tricontour(tri, Z, **cntrrc)
 
     _set_section_bounds(ax, cc, cx, prop)
-    ax.clabel(cl, fmt=clabelfmt, manual=clabelmanual)
-    return cm
+    #ax.clabel(cl, fmt=clabelfmt, manual=clabelmanual)
+    return cm, cl
 
 def plot_section_bathymetry(bathymetry, vertices=None, ax=None, maxdistance=200.0,
                             crs=LONLAT_WGS84):
@@ -487,24 +487,34 @@ def plot_section(cc, bathymetry, ax=None, **kw):
 
 def plot_profiles(castlikes, key="temp", ax=None, **kw):
     """ Plot vertical profiles from casts """
-    def _plot_profile(ax, cast):
+    # guess the number of casts - in the future, get this properly
+    n = min(8, max(3, len(castlikes)))
+    defaultcolors = brewer2mpl.get_map("Dark2", "Qualitative", n).hex_colors
+    colors = _getiterable(kw, "color", defaultcolors)
+    def _plot_profile(num, cast):
         if hasattr(cast, "_type"):
             if cast._type == "castcollection":
                 for cast_ in cast:
-                    _plot_profile(ax, cast_)
+                    num = _plot_profile(num, cast_)
             else:
                 z = cast[cast.primarykey]
-                ax.plot(cast[key], z, **kw)
+                color = next(colors)
+                plotkw = dict(color=color)
+                for k, val in kw.items():
+                    plotkw[k] = val
+                ax.plot(cast[key], z, label="Cast {0}".format(num), **plotkw)
+                num += 1
         else:
             raise TypeError("Argument not Cast or CastCollection-like")
-        return
+        return num
 
     if ax is None:
         ax = plt.gca()
+    num = 0
     if not hasattr(castlikes, "__iter__"):
         castlikes = (castlikes,)
     for castlike in castlikes:
-        _plot_profile(ax, castlike)
+        num = _plot_profile(num, castlike)
     if not ax.yaxis_inverted():
         ax.invert_yaxis()
     return ax
