@@ -275,7 +275,7 @@ class CTDCast(Cast):
                        [         1.0,          1.0,          1.0]])
         As = sprs.kron(I, A_, "csr")
         b = np.empty(3*n)
-        msk = self.nanmask()
+        msk = self.nanmask(tracers)
         b[::3] = self[tracers[0]][~msk]
         b[1::3] = self[tracers[1]][~msk]
         b[2::3] = 1.0               # lagrange multiplier
