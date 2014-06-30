@@ -9,8 +9,7 @@ try:
     install_gsw.download_zip("http://www.teos-10.org/software/gsw_c_v3.03.zip",
                              fnm="temp_gsw_c.zip")
 
-    if install_gsw.compare_md5("temp_gsw_c.zip", 
-                               "6360ec9cff432f7bc01032fbecf48422"):
+    if install_gsw.compare_md5("temp_gsw_c.zip", "1317c63c36bb4ee4f438c573d5bea2db"):
         install_gsw.unzip("temp_gsw_c.zip", "deps/")
         ext = [Extension("narwhal.cgsw",
                          sources=["deps/gsw_c_v3.03/gsw_oceanographic_toolbox.c",
@@ -20,13 +19,16 @@ try:
     else:
         raise Exception("MD5 for downloaded GSW source doesn't match "
                         "expected digest. GSW will not be installed.")
-    os.remove("temp_gsw_c.zip")
     print("...done")
 
 except Exception as e:
     print("Failed to download and install Gibbs Seawater Toolbox")
     print(e)
     ext = []
+
+finally:
+    if os.path.isfile("temp_gsw_c.zip"):
+        os.remove("temp_gsw_c.zip")
 
 setup(
     name = "narwhal",
