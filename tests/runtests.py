@@ -1,7 +1,6 @@
 import unittest
 import os
 import datetime
-import itertools
 import numpy as np
 import narwhal
 from narwhal import gsw
@@ -75,9 +74,11 @@ class CastTests(unittest.TestCase):
         p = np.arange(10)
         t = 20.0 * 0.2 * p
         s = 30.0 * 0.25 * p
-        sa = np.asarray(gsw.sa_from_sp(s, p, itertools.repeat(-20), itertools.repeat(50)))
-        ct = np.asarray(gsw.ct_from_t(sa, t, p))
-        rho = np.asarray(gsw.rho(sa, ct, p))
+        x = [-20.0 for _ in p]
+        y = [50.0 for _ in p]
+        sa = gsw.sa_from_sp(s, p, x, y)
+        ct = gsw.ct_from_t(sa, t, p)
+        rho = gsw.rho(sa, ct, p)
 
         cast = CTDCast(p, s, t, coords=(-20, 50))
         cast.add_density()

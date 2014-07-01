@@ -5,7 +5,6 @@ Cast and CastCollection classes for managing CTD observations
 
 import os
 import sys
-import itertools
 import collections
 import json
 import gzip
@@ -229,8 +228,8 @@ class CTDCast(Cast):
     def add_density(self):
         """ Add in-situ density to fields, and return the field name. """
         SA = gsw.sa_from_sp(self["sal"], self["pres"],
-                            itertools.repeat(self.coords[0]),
-                            itertools.repeat(self.coords[1]))
+                            [self.coords[0] for _ in self["sal"]],
+                            [self.coords[1] for _ in self["sal"]])
         CT = gsw.ct_from_t(SA, self["temp"], self["pres"])
         rho = gsw.rho(SA, CT, self["pres"])
         return self._addkeydata("rho", np.asarray(rho))
