@@ -622,10 +622,10 @@ def read(fnm):
     try:
         with open(fnm, "r") as f:
             d = json.load(f)
-    except UnicodeDecodeError as e:
-        with open(fnm, "rb") as f:
-            sz = f.read()
-            s = gzip.decompress(sz).decode("utf-8")
+    except (UnicodeDecodeError,ValueError) as e:
+        with gzip.open(fnm, "rb") as f:
+            s = f.read().decode("utf-8")
+            # s = gzip.decompress(sz).decode("utf-8")
             d = json.loads(s)
     return _fromjson(d)
 
