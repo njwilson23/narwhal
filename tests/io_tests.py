@@ -109,7 +109,7 @@ class IOTests(unittest.TestCase):
             f.close()
         return
 
-    def test_load(self):
+    def test_load_text(self):
         cast = narwhal.read(os.path.join(DATADIR, "reference_cast_test.nwl"))
         ctd = narwhal.read(os.path.join(DATADIR, "reference_ctd_test.nwl"))
         xbt = narwhal.read(os.path.join(DATADIR, "reference_xbt_test.nwl"))
@@ -118,14 +118,28 @@ class IOTests(unittest.TestCase):
         self.assertEqual(xbt, self.xbt)
         return
 
-    def test_load_collection(self):
+    def test_load_binary(self):
+        cast = narwhal.read(os.path.join(DATADIR, "reference_cast_test.nwz"))
+        ctd = narwhal.read(os.path.join(DATADIR, "reference_ctd_test.nwz"))
+        xbt = narwhal.read(os.path.join(DATADIR, "reference_xbt_test.nwz"))
+        self.assertEqual(cast, self.cast)
+        self.assertEqual(ctd, self.ctd)
+        self.assertEqual(xbt, self.xbt)
+        return
+
+    def test_load_collection_text(self):
         coll = narwhal.read(os.path.join(DATADIR, "reference_coll_test.nwl"))
+        self.assertEqual(coll, self.collection)
+        return
+
+    def test_load_collection_binary(self):
+        coll = narwhal.read(os.path.join(DATADIR, "reference_coll_test.nwz"))
         self.assertEqual(coll, self.collection)
         return
 
     def test_load_zprimarykey(self):
         castl = narwhal.read(os.path.join(DATADIR, "reference_ctdz_test.nwl"))
-        cast = Cast(np.arange(len(self.p)), temp=self.temp, sal=self.sal,
-                    primarykey="z", properties={})
+        cast = CTDCast(self.p, temp=self.temp, sal=self.sal,
+                       primarykey="z", properties={})
         self.assertEqual(cast, castl)
 
