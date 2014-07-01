@@ -1,4 +1,5 @@
 import copy
+from functools import reduce
 import numpy as np
 from narwhal.cast import Cast
 

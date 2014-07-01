@@ -1,15 +1,8 @@
 import unittest
 import os
-import sys
 import numpy as np
 import narwhal
 from narwhal.cast import CTDCast
-from narwhal.cast import CastCollection
-
-if sys.version_info[0] < 3:
-    from cStringIO import StringIO
-else:
-    from io import StringIO
 
 directory = os.path.dirname(__file__)
 DATADIR = os.path.join(directory, "data")

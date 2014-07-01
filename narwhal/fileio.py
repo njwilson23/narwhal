@@ -3,7 +3,6 @@ objects to persistent files. """
 
 import six
 import json
-import gzip
 import copy
 import datetime
 import dateutil.parser
