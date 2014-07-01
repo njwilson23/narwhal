@@ -168,12 +168,13 @@ importnames = ["gsw_adiabatic_lapse_rate_from_ct",
 lines = header.split("\n")
 lines = filter(lambda s: s.startswith("extern double") and s.endswith(";"), lines)
 
-def vectorize(fn):
+def vectorize(fn, docstring=None):
     def wrapper(*args):
         if all(hasattr(a, "__iter__") for a in args):
             return list(map(fn, *args))
         else:
             return fn(*args)
+    wrapper.__doc__ = fn.__doc__
     return wrapper
 
 def cname(line):
