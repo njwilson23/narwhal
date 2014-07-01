@@ -168,6 +168,14 @@ importnames = ["gsw_adiabatic_lapse_rate_from_ct",
 lines = header.split("\n")
 lines = filter(lambda s: s.startswith("extern double") and s.endswith(";"), lines)
 
+def vectorize(fn):
+    def wrapper(*args):
+        if all(hasattr(a, "__iter__") for a in args):
+            return list(map(fn, *args))
+        else:
+            return fn(*args)
+    return wrapper
+
 def cname(line):
     return line.split(" ", 2)[2].split("(", 1)[0]
 
@@ -198,9 +206,10 @@ def restype(line):
         return ctypes.c_double
 
 def addname(line):
+    """ Pull a function from the cgsw namespace into the gsw namespace """
     name = line.split(" ", 2)[2].split("(", 1)[0]
     if name[:4] == "gsw_":
-        exec("{0} = cgsw.{1}".format(name[4:], name), addname.__globals__)
+        exec("{0} = vectorize(cgsw.{1})".format(name[4:], name), addname.__globals__)
     return
 
 for line in lines:

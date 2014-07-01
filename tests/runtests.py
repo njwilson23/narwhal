@@ -1,6 +1,7 @@
 import unittest
 import os
 import datetime
+import itertools
 import numpy as np
 import narwhal
 from narwhal import gsw
@@ -9,7 +10,9 @@ from narwhal.cast import CastCollection
 from narwhal.bathymetry import Bathymetry
 from narwhal.util import force_monotonic, diff2, uintegrate, diff2_inner
 from narwhal import util
+
 from io_tests import *
+# from fraction_tests import *
 
 directory = os.path.dirname(__file__)
 DATADIR = os.path.join(directory, "data")
@@ -72,10 +75,11 @@ class CastTests(unittest.TestCase):
         p = np.arange(10)
         t = 20.0 * 0.2 * p
         s = 30.0 * 0.25 * p
+        sa = np.asarray(gsw.sa_from_sp(s, p, itertools.repeat(-20), itertools.repeat(50)))
+        ct = np.asarray(gsw.ct_from_t(sa, t, p))
+        rho = np.asarray(gsw.rho(sa, ct, p))
+
         cast = CTDCast(p, s, t, coords=(-20, 50))
-        sa = np.array([gsw.sa_from_sp(s_, p_, -20, 50) for (s_, p_) in zip(s, p)])
-        ct = np.array([gsw.ct_from_t(s_, t_, p_) for (s_,t_,p_) in zip(sa, t, p)])
-        rho = np.array([gsw.rho(s_, ct_, p_) for (s_,ct_,p_) in zip(sa, ct, p)])
         cast.add_density()
         self.assertTrue(np.allclose(rho, cast["rho"]))
         return

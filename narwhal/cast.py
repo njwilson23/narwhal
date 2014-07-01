@@ -228,10 +228,11 @@ class CTDCast(Cast):
 
     def add_density(self):
         """ Add in-situ density to fields, and return the field name. """
-        SA = [gsw.sa_from_sp(sp, p, self.coords[0], self.coords[1])
-                    for (sp, p) in zip(self["sal"], self["pres"])]
-        CT = (gsw.ct_from_t(sa, t, p) for (sa, t, p) in zip(SA, self["temp"], self["pres"]))
-        rho = [gsw.rho(sa, ct, p) for (sa, ct, p) in zip(SA, CT, self["pres"])]
+        SA = gsw.sa_from_sp(self["sal"], self["pres"],
+                            itertools.repeat(self.coords[0]),
+                            itertools.repeat(self.coords[1]))
+        CT = gsw.ct_from_t(SA, self["temp"], self["pres"])
+        rho = gsw.rho(SA, CT, self["pres"])
         return self._addkeydata("rho", np.asarray(rho))
 
     def add_depth(self, rhokey=None):
