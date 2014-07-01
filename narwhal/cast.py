@@ -6,12 +6,14 @@ Cast and CastCollection classes for managing CTD observations
 import os
 import sys
 import collections
+import itertools
 import json
 import gzip
 from functools import reduce
 import numpy as np
 from scipy import ndimage
 from scipy import sparse as sprs
+from scipy.io import netcdf_file
 from karta import Point, LONLAT
 from . import fileio
 from . import gsw
@@ -648,4 +650,30 @@ def _fromjson(d):
         raise AttributeError("couldn't read data type - file may be corrupt")
     else:
         raise LookupError("Invalid type: {0}".format(typ))
+
+def read_woce_netcdf(fnm):
+    """ Read a CTD cast from a WOCE NetCDF file. """
+
+    def getvariable(nc, key):
+        return nc.variables[key].data.copy()
+
+    nc = netcdf_file(fnm)
+    coords = (getvariable(nc, "longitude"), getvariable(nc, "latitude"))
+    
+    pres = getvariable(nc, "pressure")
+    sal = getvariable(nc, "salinity")
+    salqc = getvariable(nc, "salinity_QC")
+    sal[salqc!=2] = np.nan
+    temp = getvariable(nc, "temperature")
+    # tempqc = getvariable(nc, "temperature_QC")
+    # temp[tempqc!=2] = np.nan
+    oxy = getvariable(nc, "oxygen")
+    oxyqc = getvariable(nc, "oxygen_QC")
+    oxy[oxyqc!=2] = np.nan
+    
+    date = getvariable(nc, "woce_date")
+    time = getvariable(nc, "woce_time")
+    return narwhal.CTDCast(pres, sal, temp, oxygen=oxy,
+                           coords=coords,
+                           properties={"woce_time":time, "woce_date":date})
 
