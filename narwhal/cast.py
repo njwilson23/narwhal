@@ -28,7 +28,7 @@ OMEGA = 2*np.pi / 86400.0
 class Cast(object):
     """ A Cast is a set of referenced measurements associated with a single
     coordinate.
-    
+
     Vector water properties are provided as keyword arguments. There are
     several reserved keywords:
 
@@ -120,7 +120,7 @@ class Cast(object):
         elif hasattr(other, "_type") and (other._type == "castcollection"):
             return CastCollection(self, *[a for a in other])
         else:
-            raise TypeError("No rule to add {0} to {1}".format(type(self), 
+            raise TypeError("No rule to add {0} to {1}".format(type(self),
                                                                type(other)))
 
     def __eq__(self, other):
@@ -264,7 +264,7 @@ class CTDCast(Cast):
         """ Compute water mass fractions based on conservative tracers.
         `sources::[tuple, tuple, ...]` is a list of tuples giving the prototype water
         masses.
-        
+
         tracers::[string, string]       must be fields in the CTDCast to use as
                                         conservative tracers
                                         [default: ("sal", "temp")].
@@ -336,7 +336,7 @@ class XBTCast(Cast):
 
 class CastCollection(collections.Sequence):
     """ A CastCollection is an indexable collection of Cast instances.
-   
+
     Create from casts or an iterable ordered sequence of casts:
 
         CastCollection(cast1, cast2, cast3...)
@@ -418,7 +418,7 @@ class CastCollection(collections.Sequence):
 
     @property
     def coords(self):
-        return karta.Multipoint([c.coords for c in self], crs=LONLAT)
+        return Multipoint([c.coords for c in self], crs=LONLAT)
 
     def add_bathymetry(self, bathymetry):
         """ Reference Bathymetry instance `bathymetry` to CastCollection.
@@ -482,7 +482,7 @@ class CastCollection(collections.Sequence):
         Adds a U field and a ∂U/∂z field to each cast in the collection. As a
         side-effect, if casts have no "depth" field, one is added and populated
         from temperature and salinity fields.
-        
+
         Parameters
         ----------
 
@@ -532,7 +532,7 @@ class CastCollection(collections.Sequence):
                            overwrite=False):
         """ Alternative implementation that creates a new cast collection
         consistng of points between the observation casts.
-        
+
         Compute profile-orthagonal velocity shear using hydrostatic thermal
         wind. In-situ density is computed from temperature and salinity unless
         *rhokey* is provided.
@@ -540,7 +540,7 @@ class CastCollection(collections.Sequence):
         Adds a U field and a ∂U/∂z field to each cast in the collection. As a
         side-effect, if casts have no "depth" field, one is added and populated
         from temperature and salinity fields.
-        
+
         Parameters
         ----------
 
@@ -665,7 +665,7 @@ def read_woce_netcdf(fnm):
 
     nc = netcdf_file(fnm)
     coords = (getvariable(nc, "longitude"), getvariable(nc, "latitude"))
-    
+
     pres = getvariable(nc, "pressure")
     sal = getvariable(nc, "salinity")
     salqc = getvariable(nc, "salinity_QC")
@@ -676,7 +676,7 @@ def read_woce_netcdf(fnm):
     oxy = getvariable(nc, "oxygen")
     oxyqc = getvariable(nc, "oxygen_QC")
     oxy[oxyqc!=2] = np.nan
-    
+
     date = getvariable(nc, "woce_date")
     time = getvariable(nc, "woce_time")
     return narwhal.CTDCast(pres, sal, temp, oxygen=oxy,
