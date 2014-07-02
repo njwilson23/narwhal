@@ -2,7 +2,7 @@
 Bathymetry class that can be referenced to a CastCollection and automatically
 plotted.
 """
-
+import numpy as np
 from karta import Point, Line, LONLAT
 
 class Bathymetry2d(Line):
@@ -17,7 +17,7 @@ class Bathymetry2d(Line):
         else:
             depth = kw["data"]["depth"]
         super(Line, self).__init__(vertices, **kw)
-        self.depth = depth
+        self.depth = np.asarray(depth)
         return
 
     def atxy(self, x, y):
@@ -42,6 +42,32 @@ class Bathymetry2d(Line):
             cumulative.reverse()
         return cumulative
 
+    def project_along_cruise(self, cruiseline):
+        """ Project depth locations to a cruise line.
+
+        Returns:
+        
+        p       a vector of distances along the cruise
+        q       a vector of distances from the cruise line
+
+        """
+        if self._crs != cruiseline._crs:
+            raise karta.CRSError("CRS mismatch")
+
+        P, Q = [], []
+        for pt in self:
+            npt = cruiseline.nearest_on_boundary(pt)
+            p = 0.0
+            for i, seg in enumerate(cruiseline.segments()):
+                if npt == seg.nearest_on_boundary(pt):
+                    p += npt.distance(seg[0])
+                    q = seg.shortest_distance_to(pt)
+                    break
+                else:
+                    p += seg.length()
+            P.append(p)
+            Q.append(q)
+        return np.asarray(P), np.asarray(Q)
 
 Bathymetry = Bathymetry2d
 
