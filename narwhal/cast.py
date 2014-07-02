@@ -14,7 +14,7 @@ import numpy as np
 from scipy import ndimage
 from scipy import sparse as sprs
 from scipy.io import netcdf_file
-from karta import Point, LONLAT
+from karta import Point, Multipoint, LONLAT
 from . import fileio
 from . import gsw
 from . import util
@@ -51,9 +51,9 @@ class Cast(object):
             self.properties = properties
         else:
             raise TypeError("properties must be a dictionary")
+        self.properties["coordinates"] = coords
 
         self.primarykey = primarykey
-        self.coords = coords
         self.data = dict()
         self.data[primarykey] = np.asarray(p)
 
@@ -127,8 +127,7 @@ class Cast(object):
         if self._fields != other._fields or \
                 self.properties != other.properties or \
                 self.coords != other.coords or \
-                False in (np.all(self.data[k] == other.data[k])
-                                for k in self._fields):
+                any(np.any(self.data[k] != other.data[k]) for k in self._fields):
             return False
         else:
             return True
@@ -153,6 +152,10 @@ class Cast(object):
             self._fields.append(key_)
         self.data[key_] = data
         return key_
+
+    @property
+    def coords(self):
+        return self.properties["coordinates"]
 
     def nanmask(self, fields=None):
         """ Return a mask for observations containing at least one NaN. """
@@ -349,8 +352,7 @@ class CastCollection(collections.Sequence):
             self.casts = []
         elif isinstance(args[0], Cast):
             self.casts = list(args)
-        elif (len(args) == 1) and \
-                (False not in (isinstance(a, Cast) for a in args[0])):
+        elif (len(args) == 1) and all(isinstance(a, Cast) for a in args[0]):
             self.casts = args[0]
         else:
             raise TypeError("Arguments must be either Cast types or an "
@@ -365,7 +367,7 @@ class CastCollection(collections.Sequence):
             return self.casts.__getitem__(key)
         elif isinstance(key, slice):
             return type(self)(self.casts.__getitem__(key))
-        elif False not in (key in cast.data for cast in self.casts):
+        elif all(key in cast.data for cast in self.casts):
             return np.vstack([a[key] for a in self.casts]).T
         else:
             raise KeyError("Key {0} not found in all casts".format(key))
@@ -413,6 +415,10 @@ class CastCollection(collections.Sequence):
         if len(self.casts) > 10:
             s += "\n  (...)"
         return s
+
+    @property
+    def coords(self):
+        return karta.Multipoint([c.coords for c in self], crs=LONLAT)
 
     def add_bathymetry(self, bathymetry):
         """ Reference Bathymetry instance `bathymetry` to CastCollection.
@@ -498,7 +504,7 @@ class CastCollection(collections.Sequence):
             rhokeys = []
             for cast in self.casts:
                 rhokeys.append(cast.add_density())
-            if False in (r == rhokeys[0] for r in rhokeys[1:]):
+            if any(r != rhokeys[0] for r in rhokeys[1:]):
                 raise NameError("Tried to add density field, but ended up with "
                                 "different keys - aborting")
             else:
@@ -556,7 +562,7 @@ class CastCollection(collections.Sequence):
             rhokeys = []
             for cast in self.casts:
                 rhokeys.append(cast.add_density())
-            if False in (r == rhokeys[0] for r in rhokeys[1:]):
+            if any(r != rhokeys[0] for r in rhokeys[1:]):
                 raise NameError("Tried to add density field, but ended up with "
                                 "different keys - aborting")
             else:
