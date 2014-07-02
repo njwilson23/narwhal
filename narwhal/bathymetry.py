@@ -46,10 +46,9 @@ class Bathymetry2d(Line):
         """ Project depth locations to a cruise line.
 
         Returns:
-        
+        --------
         p       a vector of distances along the cruise
         q       a vector of distances from the cruise line
-
         """
         if self._crs != cruiseline._crs:
             raise karta.CRSError("CRS mismatch")

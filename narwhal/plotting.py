@@ -8,7 +8,7 @@ import brewer2mpl
 from scipy.interpolate import griddata
 from scipy import ndimage
 from scipy import stats
-from karta import Point, Line, LONLAT_WGS84, CARTESIAN
+from karta import Point, Multipoint, Line, LONLAT_WGS84, CARTESIAN
 from narwhal.cast import CastCollection
 from . import plotutil
 from . import gsw
@@ -32,10 +32,12 @@ def _getiterable(kw, name, default):
     """ Equivalent to dict.get except that it ensures the result is an iterable. """
     return _ensureiterable(kw.get(name, default))
 
-def plot_ts(castlikes, xkey="sal", ykey="theta", ax=None,
+def plot_ts(castlikes, ax=None,
+            xkey="sal", xlabel="Salinity",
+            ykey="theta", ylabel=u"Potential temperature (\u00b0C)",
             drawlegend=True, contourint=None, **kwargs):
-    """ Plot a T-S diagram from Casts or CastCollections 
-    
+    """ Plot a T-S diagram from Casts or CastCollections
+
     Takes a Cast/CastCollection or an iterable of Cast/CastCollection instances
     as an argument.
 
@@ -67,7 +69,7 @@ def plot_ts(castlikes, xkey="sal", ykey="theta", ax=None,
 
     if not hasattr(castlikes, "__iter__"):
         castlikes = (castlikes,)
-    
+
     label = _getiterable(kwargs, "label",
                          ["Cast "+str(i+1) for i in range(len(castlikes))])
     style = _getiterable(kwargs, "style", ["ok", "sr", "db", "^g"])
@@ -109,8 +111,8 @@ def plot_ts(castlikes, xkey="sal", ykey="theta", ax=None,
     if contourint is not None:
         add_sigma_contours(contourint, ax)
 
-    ax.set_xlabel("Salinity")
-    ax.set_ylabel(u"Potential temperature (\u00b0C)")
+    ax.set_xlabel(xlabel)
+    ax.set_ylabel(ylabel)
     return ax
 
 def add_sigma_contours(contourint, ax=None, pres=0.0):
@@ -152,7 +154,7 @@ def plot_ts_kde(casts, xkey="sal", ykey="theta", ax=None, bw_method=0.2,
     """ Plot a kernel density estimate T-S diagram """
     if ax is None:
         ax = plt.gca()
-    
+
     if not hasattr(casts, "__iter__"):
         casts = (casts,)
 
@@ -194,7 +196,7 @@ def add_mixing_line(ptA, ptB, ax=None, **kw):
 def add_meltwater_line(origin, ax=None, icetheta=-10, **kw):
     """ Draw a line on a TS plot representing the mixing line between a source
     water at `origin::(sal0, theta0)` and meltwater from an ice mass with
-    temperature `icetheta`. 
+    temperature `icetheta`.
 
     The effective potential temperature of ice at potential temperature
     `icetheta` is used as given by *Jenkins, 1999*.
@@ -350,7 +352,7 @@ def plot_section_properties(cc, prop="temp", ax=None,
                             clabelmanual=False,
                             **kw):
     """ Add water properties from a CastCollection to a section plot.
-    
+
     Keyword arguments:
     ------------------
     ax                  specific Axes instance to plot on
@@ -389,7 +391,7 @@ def plot_section_properties(cc, prop="temp", ax=None,
     cl = ax.contour(intx, intpres, intdata, **cntrrc)
 
     _set_section_bounds(ax, cc, cx, prop)
-    #ax.clabel(cl, fmt=clabelfmt, manual=clabelmanual)
+    # ax.clabel(cl, fmt=clabelfmt, manual=clabelmanual)
     return cm, cl
 
 def plot_section_properties_tri(cc, prop="temp", ax=None,
@@ -403,7 +405,7 @@ def plot_section_properties_tri(cc, prop="temp", ax=None,
     """ Add water properties from a CastCollection to a section plot and show
     using tricontourf. Does not indicate no data, so consider using
     `plot_section_properties` instead.
-    
+
     Keyword arguments:
     ------------------
     ax                  specific Axes instance to plot on
@@ -425,54 +427,48 @@ def plot_section_properties_tri(cc, prop="temp", ax=None,
     cl = ax.tricontour(tri, Z, **cntrrc)
 
     _set_section_bounds(ax, cc, cx, prop)
-    #ax.clabel(cl, fmt=clabelfmt, manual=clabelmanual)
+    # ax.clabel(cl, fmt=clabelfmt, manual=clabelmanual)
     return cm, cl
 
-def plot_section_bathymetry(bathymetry, vertices=None, ax=None, maxdistance=200.0,
-                            crs=LONLAT_WGS84):
+def plot_section_bathymetry(bathymetry, vertices, ax=None,
+                            maxdistance=200.0, 
+                            maxdepth=None,
+                            **kw):
     """ Add bathymetry from a Bathymetry object to a section plot.
-    
+
+    Arguments:
+    ----------
+    bathymetry      a Bathymetry2d instance
+    vertices        a CastCollection, karta.Line, or list of points defining a path
+
     Keyword arguments:
     ------------------
-    ax                  specific Axes to use
-    vertices            a list of points defining a cruise path
-    maxdistance         the maximum distance a bathymetric observation
-                        may be from a point in `vertices` to be plotted
+    ax              specific Axes to use
+    maxdistance     the maximum distance a bathymetric observation
+                    may be from a point in `vertices` to be plotted
+
+    Additional keyword arguments are sent to `plt.fill_between`
     """
     if ax is None:
         ax = plt.gca()
-    
-    # The bathymetry x should be plotted with respect to CTD line
-    if vertices:
-        bx = []
-        segdist = [0.0]
-        depth = []
-        bathpts = [pt for pt in bathymetry]
-        for a,b in zip(vertices[:-1], vertices[1:]):
-            # find all bathymetry within a threshold
-            seg = Line((a,b), crs=crs)
-            bcoords = [v for v in zip(bathpts, bathymetry.depth)
-                         if seg.within_distance(v[0], maxdistance)]
 
-            # project each point in bbox onto the segment, and record
-            # the distance from the origin as bx
-            pta = Point(a, crs=crs)
-            for pt, z in bcoords:
-                p = seg.nearest_on_boundary(pt)
-                bx.append(segdist[-1] + p.distance(pta))
-                depth.append(z)
+    if isinstance(vertices, Multipoint):
+        vertices = vertices.get_vertices()
+    elif isinstance(vertices, CastCollection):
+        vertices = vertices.coords.get_vertices()
 
-            segdist.append(seg.length() + segdist[-1])
-        
-        depth = sorted(depth, key=lambda i: operator.getitem(bx, depth.index(i)))
-        bx.sort()
-        
-    else:
-        bx = np.array(bathymetry.cumlength())
-        depth = bathymetry.depth
-    
-    ymax = bathymetry.depth.max()
-    ax.fill_between(bx, depth, ymax*np.ones_like(depth), color="0.0", zorder=8)
+    cruiseline = Line(vertices, crs=LONLAT_WGS84)
+    xalong, xacross = bathymetry.project_along_cruise(cruiseline)
+    depth_ = bathymetry.depth
+    mask = ~np.isnan(depth_) * (xacross < maxdistance)
+    depth = depth_[mask]
+    xalong = xalong[mask]
+    xacross = xacross[mask]
+
+    if maxdepth is None:
+        maxdepth = np.nanmax(depth)
+    kw.setdefault("color", "0.0")
+    ax.fill_between(xalong, depth, maxdepth*np.ones_like(depth), zorder=8, **kw)
     return
 
 def plot_section(cc, bathymetry, ax=None, **kw):
