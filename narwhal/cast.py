@@ -11,6 +11,7 @@ import itertools
 import json
 import gzip
 from functools import reduce
+import six
 import numpy as np
 from scipy import ndimage
 from scipy import sparse as sprs
@@ -683,10 +684,10 @@ def read_woce_netcdf(fnm):
                            coords=coords,
                            properties={"woce_time":time, "woce_date":date})
 
-class AbstractCast(metaclass=abc.ABCMeta):
+class AbstractCast(six.with_metaclass(abc.ABCMeta)):
     pass
 
-class AbstractCastCollection(metaclass=abc.ABCMeta):
+class AbstractCastCollection(six.with_metaclass(abc.ABCMeta)):
     pass
 
 AbstractCast.register(Cast)
