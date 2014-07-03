@@ -13,6 +13,14 @@ from narwhal.cast import CastCollection
 from . import plotutil
 from . import gsw
 
+try:
+    import pandas
+except ImportError:
+    # Fake a dataframe
+    class DummyPandas(object):
+        DataFrame = type(None)
+    pandas = DummyPandas
+
 import warnings
 warnings.filterwarnings("ignore", category=DeprecationWarning)
 
@@ -67,7 +75,7 @@ def plot_ts(castlikes, ax=None,
     if ax is None:
         ax = plt.gca()
 
-    if not hasattr(castlikes, "__iter__"):
+    if not hasattr(castlikes, "__iter__") or isinstance(castlikes, pandas.DataFrame):
         castlikes = (castlikes,)
 
     label = _getiterable(kwargs, "label",
@@ -155,7 +163,7 @@ def plot_ts_kde(casts, xkey="sal", ykey="theta", ax=None, bw_method=0.2,
     if ax is None:
         ax = plt.gca()
 
-    if not hasattr(casts, "__iter__"):
+    if not hasattr(casts, "__iter__") or isinstance(casts, pandas.DataFrame):
         casts = (casts,)
 
     temp = np.hstack([c[ykey] for c in casts])
