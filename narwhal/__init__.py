@@ -1,4 +1,5 @@
 
+from .cast import AbstractCast, AbstractCastCollection
 from .cast import Cast, CTDCast, XBTCast, LADCP
 from .cast import CastCollection, read
 from .bathymetry import Bathymetry

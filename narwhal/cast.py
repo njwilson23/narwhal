@@ -5,6 +5,7 @@ Cast and CastCollection classes for managing CTD observations
 
 import os
 import sys
+import abc
 import collections
 import itertools
 import json
@@ -115,9 +116,9 @@ class Cast(object):
         return
 
     def __add__(self, other):
-        if hasattr(other, "_type") and (other._type[-4:] == "cast"):
+        if isinstance(other, AbstractCast):
             return CastCollection(self, other)
-        elif hasattr(other, "_type") and (other._type == "castcollection"):
+        elif isinstance(other, AbstractCastCollection):
             return CastCollection(self, *[a for a in other])
         else:
             raise TypeError("No rule to add {0} to {1}".format(type(self),
@@ -373,7 +374,7 @@ class CastCollection(collections.Sequence):
             raise KeyError("Key {0} not found in all casts".format(key))
 
     def __eq__(self, other):
-        if not hasattr(other, "_type") or (self._type != other._type):
+        if not isinstance(self, type(other)):
             return False
         if len(self) != len(other):
             return False
@@ -392,9 +393,9 @@ class CastCollection(collections.Sequence):
         return (a for a in self.casts)
 
     def __add__(self, other):
-        if hasattr(other, "_type") and (other._type == "castcollection"):
+        if isinstance(other, AbstractCastCollection):
             return CastCollection(list(a for a in itertools.chain(self.casts, other.casts)))
-        elif hasattr(other, "_type") and (other._type[-4:] == "cast"):
+        elif isinstance(other, AbstractCast):
             return CastCollection(self.casts + [other])
         else:
             raise TypeError("Can only add castcollection and *cast types to "
@@ -633,7 +634,6 @@ def read(fnm):
     except (UnicodeDecodeError,ValueError) as e:
         with gzip.open(fnm, "rb") as f:
             s = f.read().decode("utf-8")
-            # s = gzip.decompress(sz).decode("utf-8")
             d = json.loads(s)
     return _fromjson(d)
 
@@ -682,4 +682,17 @@ def read_woce_netcdf(fnm):
     return narwhal.CTDCast(pres, sal, temp, oxygen=oxy,
                            coords=coords,
                            properties={"woce_time":time, "woce_date":date})
+
+class AbstractCast(metaclass=abc.ABCMeta):
+    pass
+
+class AbstractCastCollection(metaclass=abc.ABCMeta):
+    pass
+
+AbstractCast.register(Cast)
+AbstractCast.register(CTDCast)
+AbstractCast.register(XBTCast)
+AbstractCast.register(LADCP)
+
+AbstractCastCollection.register(CastCollection)
 

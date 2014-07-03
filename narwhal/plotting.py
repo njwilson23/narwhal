@@ -9,7 +9,8 @@ from scipy.interpolate import griddata
 from scipy import ndimage
 from scipy import stats
 from karta import Point, Multipoint, Line, LONLAT_WGS84, CARTESIAN
-from narwhal.cast import CastCollection
+import narwhal
+from narwhal import CastCollection
 from . import plotutil
 from . import gsw
 
@@ -106,7 +107,7 @@ def plot_ts(castlikes, ax=None,
             plotkw["label"] = lbl
             oldlabels.append(lbl)
 
-        if hasattr(cast, "_type") and cast._type == "castcollection":
+        if isinstance(cast, narwhal.AbstractCastCollection):
             x = np.hstack([np.hstack([subcast[xkey], np.nan]) for subcast in cast])
             y = np.hstack([np.hstack([subcast[ykey], np.nan]) for subcast in cast])
             ax.plot(x, y, sty, **plotkw)
@@ -143,17 +144,17 @@ def add_sigma_contours(contourint, ax=None, pres=0.0):
     return
 
 def plot_ts_average(*casts, **kwargs):
-    if False not in map(lambda c: c._type == "cast", casts):
+    if all(isinstance(c, narwhal.AbstractCast) for c in casts):
         avgcasts = [ccmeanp(casts)]
     else:
         avgcasts = []
         for cast in casts:
-            if cast._type == "cast":
+            if isinstance(cast, narwhal.AbstractCast):
                 avgcasts.append(cast)
-            elif cast._type == "ctd_collection":
+            elif isinstance(cast, narwhal.AbstractCastCollection):
                 avgcasts.append(ccmeanp(cast))
             else:
-                raise TypeError("argument is neither a cast nor a castcollection")
+                raise TypeError("argument type must be Cast or CastCollection")
     plot_ts(*avgcasts, **kwargs)
     return
 
@@ -496,20 +497,19 @@ def plot_profiles(castlikes, key="temp", ax=None, **kw):
     defaultcolors = brewer2mpl.get_map("Dark2", "Qualitative", n).hex_colors
     colors = _getiterable(kw, "color", defaultcolors)
     def _plot_profile(num, cast):
-        if hasattr(cast, "_type"):
-            if cast._type == "castcollection":
-                for cast_ in cast:
-                    num = _plot_profile(num, cast_)
-            else:
-                z = cast[cast.primarykey]
-                color = next(colors)
-                plotkw = dict(color=color)
-                for k, val in kw.items():
-                    plotkw[k] = val
-                ax.plot(cast[key], z, label="Cast {0}".format(num), **plotkw)
-                num += 1
+        if isinstance(cast, narwhal.AbstractCastCollection):
+            for cast_ in cast:
+                num = _plot_profile(num, cast_)
+        elif isinstance(cast, narwhal.AbstractCast):
+            z = cast[cast.primarykey]
+            color = next(colors)
+            plotkw = dict(color=color)
+            for k, val in kw.items():
+                plotkw[k] = val
+            ax.plot(cast[key], z, label="Cast {0}".format(num), **plotkw)
+            num += 1
         else:
-            raise TypeError("Argument not Cast or CastCollection-like")
+            raise TypeError("Argument not a Cast or CastCollection")
         return num
 
     if ax is None:
@@ -526,12 +526,11 @@ def plot_profiles(castlikes, key="temp", ax=None, **kw):
 def plot_map(castlikes, ax=None, **kw):
     """ Plot a simple map of cast locations. """
     def _plot_coords(ax, cast):
-        if hasattr(cast, "_type"):
-            if cast._type == "castcollection":
-                for cast_ in cast:
-                    _plot_coords(ax, cast_)
-            else:
-                ax.plot(cast.coords[0], cast.coords[1], "ok")
+        if isinstance(cast, narwhal.AbstractCastCollection):
+            for cast_ in cast:
+                _plot_coords(ax, cast_)
+        elif isinstance(cast, narwhal.AbstractCast):
+            ax.plot(cast.coords[0], cast.coords[1], "ok")
         else:
             raise TypeError("Argument not Cast or CastCollection-like")
         return
