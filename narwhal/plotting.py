@@ -41,6 +41,12 @@ def _getiterable(kw, name, default):
     """ Equivalent to dict.get except that it ensures the result is an iterable. """
     return _ensureiterable(kw.get(name, default))
 
+def _castlabeliter():
+    i = 0
+    while True:
+        i += 1
+        yield "Cast " + str(i)
+
 def plot_ts(castlikes, ax=None,
             xkey="sal", xlabel="Salinity",
             ykey="theta", ylabel=u"Potential temperature (\u00b0C)",
@@ -79,8 +85,7 @@ def plot_ts(castlikes, ax=None,
     if not hasattr(castlikes, "__iter__") or isinstance(castlikes, pandas.DataFrame):
         castlikes = (castlikes,)
 
-    label = _getiterable(kwargs, "label",
-                         ["Cast "+str(i+1) for i in range(len(castlikes))])
+    label = _castlabeliter()
     style = _getiterable(kwargs, "style", ["ok", "sr", "db", "^g"])
 
     n = min(8, max(3, len(castlikes)))
@@ -495,18 +500,19 @@ def plot_profiles(castlikes, key="temp", ax=None, **kw):
     # guess the number of casts - in the future, get this properly
     n = min(8, max(3, len(castlikes)))
     defaultcolors = brewer2mpl.get_map("Dark2", "Qualitative", n).hex_colors
-    colors = _getiterable(kw, "color", defaultcolors)
+
+    plotkw = dict((k, _ensureiterable(v)) for k,v in kw.items())
+    plotkw.setdefault("color", _ensureiterable(defaultcolors))
+    plotkw.setdefault("label", _castlabeliter())
+
     def _plot_profile(num, cast):
         if isinstance(cast, narwhal.AbstractCastCollection):
             for cast_ in cast:
                 num = _plot_profile(num, cast_)
         elif isinstance(cast, narwhal.AbstractCast):
             z = cast[cast.primarykey]
-            color = next(colors)
-            plotkw = dict(color=color)
-            for k, val in kw.items():
-                plotkw[k] = val
-            ax.plot(cast[key], z, label="Cast {0}".format(num), **plotkw)
+            _kw = dict((k, next(v)) for k, v in plotkw.items())
+            ax.plot(cast[key], z, **_kw)
             num += 1
         else:
             raise TypeError("Argument not a Cast or CastCollection")
