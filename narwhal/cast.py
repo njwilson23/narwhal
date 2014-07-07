@@ -16,7 +16,8 @@ import numpy as np
 from scipy import ndimage
 from scipy import sparse as sprs
 from scipy.io import netcdf_file
-from karta import Point, Multipoint, LONLAT
+from karta import Point, Multipoint
+from karta.crs import crsreg
 from . import fileio
 from . import gsw
 from . import util
@@ -420,7 +421,7 @@ class CastCollection(collections.Sequence):
 
     @property
     def coords(self):
-        return Multipoint([c.coords for c in self], crs=LONLAT)
+        return Multipoint([c.coords for c in self], crs=crsreg.LONLAT)
 
     def add_bathymetry(self, bathymetry):
         """ Reference Bathymetry instance `bathymetry` to CastCollection.
@@ -468,9 +469,9 @@ class CastCollection(collections.Sequence):
         """ Return the cumulative distances from the cast to cast.
         """
         cumulative = [0]
-        a = Point(self.casts[0].coords, crs=LONLAT)
+        a = Point(self.casts[0].coords, crs=crsreg.LONLAT)
         for cast in self.casts[1:]:
-            b = Point(cast.coords, crs=LONLAT)
+            b = Point(cast.coords, crs=crsreg.LONLAT)
             cumulative.append(cumulative[-1] + a.distance(b))
             a = b
         return np.asarray(cumulative, dtype=np.float64)
@@ -694,6 +695,5 @@ AbstractCast.register(Cast)
 AbstractCast.register(CTDCast)
 AbstractCast.register(XBTCast)
 AbstractCast.register(LADCP)
-
 AbstractCastCollection.register(CastCollection)
 

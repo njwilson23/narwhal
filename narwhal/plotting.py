@@ -8,11 +8,15 @@ import brewer2mpl
 from scipy.interpolate import griddata
 from scipy import ndimage
 from scipy import stats
-from karta import Point, Multipoint, Line, LONLAT_WGS84, CARTESIAN
+from karta import Point, Multipoint, Line
+from karta.crs import crsreg
 import narwhal
 from narwhal import CastCollection
 from . import plotutil
 from . import gsw
+
+LONLAT_WGS84 = crsreg.LONLAT_WGS84
+CARTESIAN = crsreg.CARTESIAN
 
 try:
     import pandas
@@ -85,12 +89,11 @@ def plot_ts(castlikes, ax=None,
     if not hasattr(castlikes, "__iter__") or isinstance(castlikes, pandas.DataFrame):
         castlikes = (castlikes,)
 
-    label = _castlabeliter()
-    style = _getiterable(kwargs, "style", ["ok", "sr", "db", "^g"])
-
     n = min(8, max(3, len(castlikes)))
     defaultcolors = brewer2mpl.get_map("Dark2", "Qualitative", n).hex_colors
     color = _getiterable(kwargs, "color", defaultcolors)
+    style = _getiterable(kwargs, "style", ["ok", "sr", "db", "^g"])
+    label = _getiterable(kwargs, "label", _castlabeliter())
     markersize = _getiterable(kwargs, "ms", 6)
 
     plotkws = {"ms": itertools.repeat(6)}
