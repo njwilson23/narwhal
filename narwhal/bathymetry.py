@@ -5,14 +5,21 @@ plotted.
 import numpy as np
 import karta
 from karta import Point, Line
-from karta.crs import crsreg
+
+try:
+    from karta.crs import crsreg
+except ImportError:
+    import karta as crsreg
+LONLAT = crsreg.LONLAT
+CARTESIAN = crsreg.CARTESIAN
+
 
 class Bathymetry2d(Line):
     """ Bathymetric line
     Bathymetry2d(lon, lat, depth)
     """
 
-    def __init__(self, vertices, depth=None, crs=crsreg.LONLAT, **kw):
+    def __init__(self, vertices, depth=None, crs=LONLAT, **kw):
         kw.setdefault("crs", crs)
         if depth is not None:
             kw.update({"data": {"depth": depth}})
@@ -24,7 +31,7 @@ class Bathymetry2d(Line):
 
     def atxy(self, x, y):
         """ Interpolate bottom depth at a point. """
-        pt = Point((x, y), crs=crsreg.LONLAT)
+        pt = Point((x, y), crs=LONLAT)
         segments = tuple(self.segments())
         distances = [seg.shortest_distance_to(pt) for seg in segments]
         ii = distances.index(min(distances))

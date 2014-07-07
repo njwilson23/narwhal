@@ -9,12 +9,15 @@ from scipy.interpolate import griddata
 from scipy import ndimage
 from scipy import stats
 from karta import Point, Multipoint, Line
-from karta.crs import crsreg
 import narwhal
 from narwhal import CastCollection
 from . import plotutil
 from . import gsw
 
+try:
+    from karta.crs import crsreg
+except ImportError:
+    import karta as crsreg
 LONLAT_WGS84 = crsreg.LONLAT_WGS84
 CARTESIAN = crsreg.CARTESIAN
 

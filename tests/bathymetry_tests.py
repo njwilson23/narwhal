@@ -3,6 +3,11 @@ from narwhal import Bathymetry, Cast, CastCollection
 import karta
 import numpy as np
 
+try:
+    LONLAT_WGS84 = karta.crs.crsreg.LONLAT_WGS84
+except AttributeError:
+    LONLAT_WGS84 = karta.LONLAT_WGS84
+
 class BathymetryTests(unittest.TestCase):
 
     def setUp(self):
@@ -32,7 +37,7 @@ class BathymetryTests(unittest.TestCase):
         return
 
     def test_project_along_cruise(self):
-        cruiseline = karta.Line([(0,0), (4,3), (6,2), (6,5)], crs=karta.LONLAT_WGS84)
+        cruiseline = karta.Line([(0,0), (4,3), (6,2), (6,5)], crs=LONLAT_WGS84)
         bath = Bathymetry([(0,0), (2,1), (3,3), (5,3), (7,3), (5,4), (7,4.5)],
                           depth=[100, 120, 130, 135, 115, 127, 119])
 
