@@ -172,9 +172,11 @@ class Cast(object):
         vectors = [v for (k,v) in self.data.items() if k in fields]
         return np.isnan(np.vstack(vectors).sum(axis=0))
 
-    def nvalid(self):
+    def nvalid(self, fields=None):
         """ Return the number of complete (non-NaN) observations. """
-        vectors = [a for a in self.data.values() if hasattr(a, "__iter__")]
+        if fields is None:
+            fields = self._fields
+        vectors = [self.data[k] for k in fields]
         nv = sum(reduce(lambda a,b: (~np.isnan(a))&(~np.isnan(b)), vectors))
         return nv
 
@@ -281,7 +283,7 @@ class CTDCast(Cast):
         if len(sources) != 3:
             raise ValueError("Three potential source waters must be given "
                              "(not {0})".format(len(sources)))
-        n = self.nvalid()
+        n = self.nvalid(tracers)
         I = sprs.eye(n)
         A_ = np.array([[sources[0][0], sources[1][0], sources[2][0]],
                        [sources[0][1], sources[1][1], sources[2][1]],
