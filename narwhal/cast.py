@@ -15,6 +15,7 @@ import six
 import numpy as np
 from scipy import ndimage
 from scipy import sparse as sprs
+from scipy.interpolate import UnivariateSpline
 from scipy.io import netcdf_file
 from karta import Point, Multipoint
 from . import fileio
@@ -248,6 +249,22 @@ class CTDCast(Cast):
         CT = gsw.ct_from_t(SA, self["temp"], self["pres"])
         rho = gsw.rho(SA, CT, self["pres"])
         return self._addkeydata("rho", np.asarray(rho))
+
+    def add_Nsquared(self, rhokey=None, s=0.2):
+        """ Calculate the squared buoyancy frequency, based on density given by
+        `rhokey::string`. Uses a smoothing spline with smoothing factor
+        `s::float` (smaller values of `s` give a noisier result). """
+        if rhokey is None:
+            rhokey = self.add_density()
+        msk = self.nanmask((rhokey, "pres"))
+        rho = self[rhokey][~msk]
+        pres = self["pres"][~msk]
+        rhospl = UnivariateSpline(pres, rho, s=s)
+        drhodz = np.asarray([-rhospl.derivatives(p)[1] for p in pres])
+        N2 = np.empty(len(self), dtype=np.float64)
+        N2[msk] = np.nan
+        N2[~msk] = -G / rho * drhodz
+        return self._addkeydata("N2", N2)
 
     def add_depth(self, rhokey=None):
         """ Use temperature, salinity, and pressure to calculate depth. If

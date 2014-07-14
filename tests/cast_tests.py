@@ -81,6 +81,30 @@ class CastTests(unittest.TestCase):
         self.assertTrue(np.allclose(rho, cast["rho"]))
         return
 
+    def test_add_buoyancy_freq_squared(self):
+        # This is a fairly lousy test, merely ensuring that an N^2 field was
+        # calculated, and that it's not wildly different than the direct
+        # calculation.
+        p = np.arange(10)
+        t = 20.0 * 0.2 * p
+        s = 30.0 * 0.25 * p
+        x = [-20.0 for _ in p]
+        y = [50.0 for _ in p]
+        sa = gsw.sa_from_sp(s, p, x, y)
+        ct = gsw.ct_from_t(sa, t, p)
+        rho = np.asarray(gsw.rho(sa, ct, p))
+
+        drhodz = -np.r_[rho[1]-rho[0], rho[2:]-rho[:-2], rho[-1]-rho[-2]] / \
+                  np.r_[p[1]-p[0], p[2:]-p[:-2], p[-1]-p[-2]]
+        N2_direct = -9.81 / rho * drhodz
+        #N2_direct = np.convolve(N2_direct, 0.2*np.ones(5), mode="valid")
+
+        cast = CTDCast(p, s, t, coords=(-20, 50), rho=rho)
+        cast.add_Nsquared(rhokey="rho")
+        #print(np.mean(np.abs(cast["N2"] - N2_direct)))
+        self.assertTrue(np.mean(np.abs(cast["N2"] - N2_direct)) < 0.0003)
+        return
+
     def test_LADCP_shear(self):
         z = np.arange(0, 300)
         u = z**1.01 - z
