@@ -31,6 +31,14 @@ class BaseSectionAxes(plt.Axes):
         return
 
     @staticmethod
+    def _smooth_field(d, sk):
+        msk = np.isnan(d)
+        d[msk] = 0.0
+        d_ = ndimage.filters.gaussian_filter(d, sk)
+        d_[msk] = np.nan
+        return d_
+
+    @staticmethod
     def _computemask(cc, Xi, Yi, Zi, bottomkey):
         depth = [cast.properties[bottomkey] for cast in cc]
         cx = cc.projdist()
@@ -47,7 +55,7 @@ class BaseSectionAxes(plt.Axes):
         (Xi, Yi, Zi) = self._interpolate_section(cc, prop, ninterp, interp_scheme)
 
         if sk is not None:
-            Zi = ndimage.filters.gaussian_filter(Zi, sk)
+            Zi = self._smooth_field(Zi, sk)
 
         if mask:
             msk = self._computemask(cc, Xi, Yi, Zi, bottomkey)
@@ -65,7 +73,7 @@ class BaseSectionAxes(plt.Axes):
         (Xi, Yi, Zi) = self._interpolate_section(cc, prop, ninterp, interp_scheme)
 
         if sk is not None:
-            Zi = ndimage.filters.gaussian_filter(Zi, sk)
+            Zi = self._smooth_field(Zi, sk)
 
         if mask:
             msk = self._computemask(cc, Xi, Yi, Zi, bottomkey)
@@ -82,7 +90,7 @@ class BaseSectionAxes(plt.Axes):
         (Xi, Yi, Zi) = self._interpolate_section(cc, prop, ninterp, interp_scheme)
 
         if sk is not None:
-            Zi = ndimage.filters.gaussian_filter(Zi, sk)
+            Zi = self._smooth_field(Zi, sk)
 
         if mask:
             msk = self._computemask(cc, Xi, Yi, Zi, bottomkey)
@@ -184,42 +192,49 @@ class SectionAxes(BaseSectionAxes):
             Zi = Zi.reshape(Xi.shape)
 
         elif scheme == "zero_base":
-            raise NotImplementedError()
-            # Yo = np.vstack([cast[cast.primarykey] for cast in cc]).T
-            # Xo = np.tile(cc.projdist(), (len(Yo), 1))
-            # Zo = cc.asarray(prop)
 
-            # # Add zero boundary condition
-            # def _find_idepth(arr):
-            #     idepth = []
-            #     for col in arr.T:
-            #         _inonnan = np.arange(len(col))[~np.isnan(col)]
-            #         idepth.append(_inonnan[-1])
-            #     return idepth
+            Yo = np.vstack([cast[cast.primarykey] for cast in cc]).T
+            Xo = np.tile(cc.projdist(), (len(Yo), 1))
+            Zo = cc.asarray(prop)
 
-            # xi = np.linspace(Xo[0,0], Xo[0,-1], ninterp)
-            # yi = cc[0][cc[0].primarykey]
+            # Add zero boundary condition
+            def _find_idepth(arr):
+                idepth = []
+                for col in arr.T:
+                    _inonnan = np.arange(len(col))[~np.isnan(col)]
+                    idepth.append(_inonnan[-1])
+                return idepth
 
-            # idepth = _find_idepth(Zo)
-            # idepth = np.round(np.interp(xi, Xo[0], idepth)).astype(int)
+            xi = np.linspace(Xo[0,0], Xo[0,-1], ninterp)
+            yi = cc[0][cc[0].primarykey]
 
-            # xbc, ybc, zbc = [], [], []
-            # for j, i in enumerate(idepth):
-            #     xbc.append(xi[j])
-            #     ybc.append(yi[i])
-            #     zbc.append(0.0)
+            idxdepth = _find_idepth(Zo)
+            idepth = np.round(np.interp(xi, Xo[0], idxdepth)).astype(int)
 
-            # Xi, Yi = np.meshgrid(xi, yi)
-            # msk = ~np.isnan(Xo + Yo + Zo)
+            xbc, ybc, zbc = [], [], []
+            for j, i in enumerate(idepth):
+                xbc.append(xi[j])
+                ybc.append(yi[i]+2)
+                zbc.append(0.0)
 
-            # Xo_bc = np.r_[Xo[msk], xbc]
-            # Yo_bc = np.r_[Yo[msk], ybc]
-            # Zo_bc = np.r_[Zo[msk], zbc]
+            msk = ~np.isnan(Xo + Yo + Zo)
 
-            # Zi = griddata(np.c_[Xo_bc, 1e4*Yo_bc], Zo_bc,
-            #               np.c_[Xi.ravel(), 1e4*Yi.ravel()], method="linear")
-            # Zi = Zi.reshape(Xi.shape)
-            # # Zi[~msk] = np.nan
+            Xo_bc = np.r_[Xo[msk], xbc]
+            Yo_bc = np.r_[Yo[msk], ybc]
+            Zo_bc = np.r_[Zo[msk], zbc]
+
+            Xi, Yi = np.meshgrid(xi, yi)
+
+            alpha = 1e4
+            Zi = griddata(np.c_[Xo_bc, alpha*Yo_bc], Zo_bc,
+                          np.c_[Xi.ravel(), alpha*Yi.ravel()], method="cubic")
+
+            # alpha = 1e2
+            # rbfi = interpolate.Rbf(Xo_bc, alpha*Yo_bc, Zo_bc, function="thin_plate")
+            # Zi = rbfi(Xi.ravel(), alpha*Yi.ravel())
+            # Zi_check = rbfi(Xo.ravel(), alpha*Yo.ravel())
+
+            Zi = Zi.reshape(Xi.shape)
 
         else:
             raise NotImplementedError("No scheme '{0}' implemented".format(scheme))

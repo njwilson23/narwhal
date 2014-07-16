@@ -10,10 +10,8 @@ from scipy import stats
 from karta import Multipoint, Line
 import narwhal
 from narwhal import CastCollection
-from . import property_plot
-from . import section_plot
 from . import plotutil
-from . import gsw
+from .. import gsw
 
 try:
     from karta.crs import crsreg
@@ -538,12 +536,12 @@ def plot_section_properties_tri(cc, prop="temp", ax=None,
     if ax is None:
         ax = plt.gca()
     cntrrc, cntrfrc = _handle_contour_options(cntrrc, cntrfrc, kw)
-    (tri, Z, cx) = _interpolate_section_tri(cc, prop, bottomkey)
+    (tri, Z) = _interpolate_section_tri(cc, prop, bottomkey)
 
     cm = ax.tricontourf(tri, Z, **cntrfrc)
     cl = ax.tricontour(tri, Z, **cntrrc)
 
-    _set_section_bounds(ax, cc, cx, prop)
+    _set_section_bounds(ax, cc, prop)
     # ax.clabel(cl, fmt=clabelfmt, manual=clabelmanual)
     return cm, cl
 

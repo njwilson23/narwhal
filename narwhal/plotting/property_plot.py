@@ -4,7 +4,7 @@ import numpy as np
 import matplotlib
 import matplotlib.pyplot as plt
 from narwhal import AbstractCastCollection
-from . import gsw
+from .. import gsw
 
 try:
     import pandas
