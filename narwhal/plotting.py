@@ -1,5 +1,4 @@
 import itertools
-import operator
 import copy
 import numpy as np
 import matplotlib.pyplot as plt
@@ -8,9 +7,10 @@ import brewer2mpl
 from scipy.interpolate import griddata, CloughTocher2DInterpolator
 from scipy import ndimage
 from scipy import stats
-from karta import Point, Multipoint, Line
+from karta import Multipoint, Line
 import narwhal
 from narwhal import CastCollection
+from . import property_plot
 from . import section_plot
 from . import plotutil
 from . import gsw
@@ -35,6 +35,63 @@ warnings.filterwarnings("ignore", category=DeprecationWarning)
 
 ccmeanp = plotutil.ccmeanp
 ccmeans = plotutil.ccmeans
+
+def plot_profiles(castlikes, key="temp", ax=None, **kw):
+    """ Plot vertical profiles from casts """
+    # guess the number of casts - in the future, get this properly
+    n = min(8, max(3, len(castlikes)))
+    defaultcolors = brewer2mpl.get_map("Dark2", "Qualitative", n).hex_colors
+
+    plotkw = dict((k, _ensureiterable(v)) for k,v in kw.items())
+    plotkw.setdefault("color", _ensureiterable(defaultcolors))
+    plotkw.setdefault("label", _castlabeliter())
+
+    def _plot_profile(num, cast):
+        if isinstance(cast, narwhal.AbstractCastCollection):
+            for cast_ in cast:
+                num = _plot_profile(num, cast_)
+        elif isinstance(cast, narwhal.AbstractCast):
+            z = cast[cast.primarykey]
+            _kw = dict((k, next(v)) for k, v in plotkw.items())
+            ax.plot(cast[key], z, **_kw)
+            num += 1
+        else:
+            raise TypeError("Argument not a Cast or CastCollection")
+        return num
+
+    if ax is None:
+        ax = plt.gca()
+    num = 0
+    if not hasattr(castlikes, "__iter__"):
+        castlikes = (castlikes,)
+    for castlike in castlikes:
+        num = _plot_profile(num, castlike)
+    if not ax.yaxis_inverted():
+        ax.invert_yaxis()
+    return ax
+
+def plot_map(castlikes, ax=None, **kw):
+    """ Plot a simple map of cast locations. """
+    def _plot_coords(ax, cast):
+        if isinstance(cast, narwhal.AbstractCastCollection):
+            for cast_ in cast:
+                _plot_coords(ax, cast_)
+        elif isinstance(cast, narwhal.AbstractCast):
+            ax.plot(cast.coords[0], cast.coords[1], "ok")
+        else:
+            raise TypeError("Argument not Cast or CastCollection-like")
+        return
+
+    if ax is None:
+        ax = plt.gca()
+    if not hasattr(castlikes, "__iter__"):
+        castlikes = (castlikes,)
+    for castlike in castlikes:
+        _plot_coords(ax, castlike)
+    return ax
+
+###### Deprecated APIs ######
+
 
 ###### T-S plots #######
 
@@ -541,56 +598,3 @@ def plot_section(cc, bathymetry, ax=None, **kw):
     plot_section_bathymetry(bathymetry, vertices=vertices, ax=ax)
     return
 
-def plot_profiles(castlikes, key="temp", ax=None, **kw):
-    """ Plot vertical profiles from casts """
-    # guess the number of casts - in the future, get this properly
-    n = min(8, max(3, len(castlikes)))
-    defaultcolors = brewer2mpl.get_map("Dark2", "Qualitative", n).hex_colors
-
-    plotkw = dict((k, _ensureiterable(v)) for k,v in kw.items())
-    plotkw.setdefault("color", _ensureiterable(defaultcolors))
-    plotkw.setdefault("label", _castlabeliter())
-
-    def _plot_profile(num, cast):
-        if isinstance(cast, narwhal.AbstractCastCollection):
-            for cast_ in cast:
-                num = _plot_profile(num, cast_)
-        elif isinstance(cast, narwhal.AbstractCast):
-            z = cast[cast.primarykey]
-            _kw = dict((k, next(v)) for k, v in plotkw.items())
-            ax.plot(cast[key], z, **_kw)
-            num += 1
-        else:
-            raise TypeError("Argument not a Cast or CastCollection")
-        return num
-
-    if ax is None:
-        ax = plt.gca()
-    num = 0
-    if not hasattr(castlikes, "__iter__"):
-        castlikes = (castlikes,)
-    for castlike in castlikes:
-        num = _plot_profile(num, castlike)
-    if not ax.yaxis_inverted():
-        ax.invert_yaxis()
-    return ax
-
-def plot_map(castlikes, ax=None, **kw):
-    """ Plot a simple map of cast locations. """
-    def _plot_coords(ax, cast):
-        if isinstance(cast, narwhal.AbstractCastCollection):
-            for cast_ in cast:
-                _plot_coords(ax, cast_)
-        elif isinstance(cast, narwhal.AbstractCast):
-            ax.plot(cast.coords[0], cast.coords[1], "ok")
-        else:
-            raise TypeError("Argument not Cast or CastCollection-like")
-        return
-
-    if ax is None:
-        ax = plt.gca()
-    if not hasattr(castlikes, "__iter__"):
-        castlikes = (castlikes,)
-    for castlike in castlikes:
-        _plot_coords(ax, castlike)
-    return ax

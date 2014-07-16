@@ -186,4 +186,4 @@ def plot_ts(*args, **kwargs):
     ax = plt.axes(projection="propertyplot")
     return ax.plot_ts(*args, **kwargs)
 
-matplotlib.projections.register_projection(SectionAxes)
+matplotlib.projections.register_projection(PropertyPropertyAxes)
