@@ -30,7 +30,8 @@ class BaseSectionAxes(plt.Axes):
         zmask = Yi > np.tile(base, (Xi.shape[0], 1))
         return zmask
 
-    def contour(self, cc, prop, ninterp=30, sk=None, mask=True, bottomkey="depth", **kwargs):
+    def contour(self, cc, prop, ninterp=30, sk=None, mask=True,
+                bottomkey="depth", **kwargs):
 
         if not isinstance(cc, AbstractCastCollection):
             raise TypeError("first argument must be a CastCollection type")
@@ -44,11 +45,11 @@ class BaseSectionAxes(plt.Axes):
             msk = self._computemask(cc, Xi, Yi, Zi, bottomkey)
             Zi[msk] = np.nan
 
-        cl = super(BaseSectionAxes, self).contour(Xi, Yi, Zi, **kwargs)
         self._set_section_bounds(cc, prop)
-        return cl
+        return super(BaseSectionAxes, self).contour(Xi, Yi, Zi, **kwargs)
 
-    def contourf(self, cc, prop, ninterp=30, sk=None, mask=True, bottomkey="depth", **kwargs):
+    def contourf(self, cc, prop, ninterp=30, sk=None, mask=True,
+                 bottomkey="depth", **kwargs):
 
         if not isinstance(cc, AbstractCastCollection):
             raise TypeError("first argument must be a CastCollection type")
@@ -62,12 +63,11 @@ class BaseSectionAxes(plt.Axes):
             msk = self._computemask(cc, Xi, Yi, Zi, bottomkey)
             Zi[msk] = np.nan
 
-        cl = super(BaseSectionAxes, self).contourf(Xi, Yi, Zi, **kwargs)
         self._set_section_bounds(cc, prop)
-        return cl
+        return super(BaseSectionAxes, self).contourf(Xi, Yi, Zi, **kwargs)
 
-    def pcolormesh(self, cc, prop, ninterp=30, sk=None, mask=True, bottomkey="depth", **kwargs):
-
+    def pcolormesh(self, cc, prop, ninterp=30, sk=None, mask=True,
+                   bottomkey="depth", **kwargs):
         if not isinstance(cc, AbstractCastCollection):
             raise TypeError("first argument must be a CastCollection type")
 
@@ -80,13 +80,13 @@ class BaseSectionAxes(plt.Axes):
             msk = self._computemask(cc, Xi, Yi, Zi, bottomkey)
             Zi[msk] = np.nan
 
-        cl = super(BaseSectionAxes, self).pcolormesh(Xi, Yi, Zi, **kwargs)
         self._set_section_bounds(cc, prop)
-        return cl
+        kwargs.setdefault("vmin", np.nanmin(Zi))
+        kwargs.setdefault("vmax", np.nanmax(Zi))
+        return super(BaseSectionAxes, self).pcolormesh(Xi, Yi, Zi, **kwargs)
 
 class SectionAxes(BaseSectionAxes):
-    """ SectionAxes where properties are assumed to be horizontally correlated
-    over NaNs. """
+    """ Basic class for plotting an oceanographic section """
     name = "section"
 
     @staticmethod
