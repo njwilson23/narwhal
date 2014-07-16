@@ -5,12 +5,13 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.tri as mtri
 import brewer2mpl
-from scipy.interpolate import griddata
+from scipy.interpolate import griddata, CloughTocher2DInterpolator
 from scipy import ndimage
 from scipy import stats
 from karta import Point, Multipoint, Line
 import narwhal
 from narwhal import CastCollection
+from . import section_plot
 from . import plotutil
 from . import gsw
 
@@ -253,15 +254,14 @@ DEFAULT_CONTOURF = {"cmap":     plt.cm.gist_ncar,
                     "extend":   "both"}
 
 def _interpolate_section_grid(cc, prop, bottomkey, ninterp, interp_method):
-    ccline = Line([c.coords for c in cc], crs=LONLAT_WGS84)
-    cx = np.array(ccline.cumlength())
+    cx = cc.projdist()
     y = cc[0][cc[0].primarykey]
-    obsx, obspres = np.meshgrid(cx, y)
-    intpres, intx = np.meshgrid(y, np.linspace(cx[0], cx[-1], ninterp))
-    rawdata = cc.asarray(prop)
+    Xo, Yo = np.meshgrid(cx, y)
+    Yi, Xi = np.meshgrid(y, np.linspace(cx[0], cx[-1], ninterp))
+    Zo = cc.asarray(prop)
 
     # interpolate over NaNs in a way that assumes horizontal correlation
-    for (i, row) in enumerate(rawdata):
+    for (i, row) in enumerate(Zo):
         if np.any(np.isnan(row)):
             if np.any(~np.isnan(row)):
                 # find groups of NaNs
@@ -274,26 +274,25 @@ def _interpolate_section_grid(cc, prop, bottomkey, ninterp, interp_method):
                             meanval = val
                         else:
                             meanval = 0.5 * (val + row[start-1])
-                        rawdata[i,start:idx] = meanval
+                        Zo[i,start:idx] = meanval
                         start = -1
                 if start != -1:
-                    rawdata[i,start:] = row[start-1]
+                    Zo[i,start:] = row[start-1]
             else:
                 if i != 0:
-                    rawdata[i] = rawdata[i-1]  # Extrapolate down
+                    Zo[i] = Zo[i-1]  # Extrapolate down
                 else:
-                    rawdata[i] = rawdata[i+1]  # Extrapolate to surface
+                    Zo[i] = Zo[i+1]  # Extrapolate to surface
 
-    intdata = griddata(np.c_[obsx.flatten(), obspres.flatten()],
-                           rawdata.flatten(),
-                           np.c_[intx.flatten(), intpres.flatten()],
+    Zi = griddata(np.c_[Xo.flatten(), Yo.flatten()],
+                           Zo.flatten(),
+                           np.c_[Xi.flatten(), Yi.flatten()],
                            method=interp_method)
-    intdata = intdata.reshape(intx.shape)
-    return intx, intpres, intdata, cx
+    Zi = Zi.reshape(Xi.shape)
+    return Xi, Yi, Zi
 
 def _interpolate_section_tri(cc, prop, bottomkey):
-    ccline = Line([c.coords for c in cc], crs=LONLAT_WGS84)
-    cx = np.array(ccline.cumlength())
+    cx = cc.projdist()
 
     # interpolate over NaNs in a way that assumes horizontal correlation
     rawdata = cc.asarray(prop)
@@ -335,12 +334,50 @@ def _interpolate_section_tri(cc, prop, bottomkey):
         print("NaNs remaining")
         rawdata[np.isnan(rawdata)] = 999.0
 
-    return tri, Z, cx
+    return tri, Z
 
-def _set_section_bounds(ax, cc, cx, prop):
+def _interpolate_section_cloughtocher(cc, prop, bottomkey, ninterp):
+    yo = np.vstack([cast[cast.primarykey] for cast in cc]).T
+    xo = np.tile(cc.projdist(), (len(yo), 1))
+    zo = cc.asarray(prop)
+    msk = ~np.isnan(xo + yo + zo)
+
+    ct2i = CloughTocher2DInterpolator(np.c_[xo[msk], yo[msk]], zo[msk])
+
+    Xi, Yi = np.meshgrid(np.linspace(xo[0,0], xo[0,-1], ninterp),
+                         cc[0][cc[0].primarykey])
+    Zi = ct2i(Xi, Yi)
+
+    # interpolate over NaNs in a way that assumes horizontal correlation
+    for (i, row) in enumerate(Zi):
+        if np.any(np.isnan(row)):
+            if np.any(~np.isnan(row)):
+                # find groups of NaNs
+                start = -1
+                for (idx, val) in enumerate(row):
+                    if start == -1 and np.isnan(val):
+                        start = idx
+                    elif start != -1 and not np.isnan(val):
+                        if start == 0:
+                            meanval = val
+                        else:
+                            meanval = 0.5 * (val + row[start-1])
+                        Zi[i,start:idx] = meanval
+                        start = -1
+                if start != -1:
+                    Zi[i,start:] = row[start-1]
+            else:
+                if i != 0:
+                    Zi[i] = Zi[i-1]  # Extrapolate down
+                else:
+                    Zi[i] = Zi[i+1]  # Extrapolate to surface
+    return Xi, Yi, Zi
+
+def _set_section_bounds(ax, cc, prop):
     zgen = (np.array(c[c.primarykey]) for c in cc)
     validmsk = (~np.isnan(c[prop]) for c in cc)
     ymax = max(p[msk][-1] for p,msk in zip(zgen, validmsk))
+    cx = cc.projdist()
     for x_ in cx:
         ax.plot((x_, x_), (ymax, 0), "--", color="0.3")
     ax.set_ylim((ymax, 0))
@@ -394,23 +431,26 @@ def plot_section_properties(cc, prop="temp", ax=None,
     if ax is None:
         ax = plt.gca()
     cntrrc, cntrfrc = _handle_contour_options(cntrrc, cntrfrc, kw)
-    (intx, intpres, intdata, cx) = _interpolate_section_grid(cc, prop,
-                                        bottomkey, ninterp, interp_method)
+    (Xi, Yi, Zi) = _interpolate_section_cloughtocher(cc, prop,
+                                        bottomkey, ninterp)
+    #(Xi, Yi, Zi) = _interpolate_section_grid(cc, prop,
+    #                                    bottomkey, ninterp, interp_method)
 
     if kernelsize is not None:
-        intdata = ndimage.filters.gaussian_filter(intdata, kernelsize)
+        Zi = ndimage.filters.gaussian_filter(Zi, kernelsize)
 
     if mask:
         depth = [cast.properties[bottomkey] for cast in cc]
-        zmask1 = np.interp(intx[:,0], cx, depth)
-        zmask = intpres.T > np.tile(zmask1, (intx.shape[1], 1))
-        zmask = zmask.T
-        intdata[zmask] = np.nan
+        cx = cc.projdist()
+        base = np.interp(Xi[0,:], cx, depth)
+        zmask = Yi > np.tile(base, (Xi.shape[0], 1))
+        Zi[zmask] = np.nan
 
-    cm = ax.contourf(intx, intpres, intdata, **cntrfrc)
-    cl = ax.contour(intx, intpres, intdata, **cntrrc)
+    #cm = ax.contourf(Xi, Yi, Zi, **cntrfrc)
+    cm = ax.pcolormesh(Xi, Yi, Zi, vmin=np.nanmin(Zi), vmax=np.nanmax(Zi))
+    cl = ax.contour(Xi, Yi, Zi, **cntrrc)
 
-    _set_section_bounds(ax, cc, cx, prop)
+    _set_section_bounds(ax, cc, prop)
     # ax.clabel(cl, fmt=clabelfmt, manual=clabelmanual)
     return cm, cl
 
