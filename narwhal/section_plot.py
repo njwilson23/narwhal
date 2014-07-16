@@ -1,10 +1,18 @@
 import numpy as np
 import matplotlib
 import matplotlib.pyplot as plt
-import matplotlib.tri as mtri
+# import matplotlib.tri as mtri
 from scipy.interpolate import griddata, CloughTocher2DInterpolator
 from scipy import ndimage
+from karta import Line
 from narwhal import AbstractCast, AbstractCastCollection
+
+try:
+    from karta.crs import crsreg
+except ImportError:
+    import karta as crsreg
+LONLAT_WGS84 = crsreg.LONLAT_WGS84
+CARTESIAN = crsreg.CARTESIAN
 
 class BaseSectionAxes(plt.Axes):
 
@@ -84,6 +92,45 @@ class BaseSectionAxes(plt.Axes):
         kwargs.setdefault("vmin", np.nanmin(Zi))
         kwargs.setdefault("vmax", np.nanmax(Zi))
         return super(BaseSectionAxes, self).pcolormesh(Xi, Yi, Zi, **kwargs)
+
+    def add_bathymetry(self, bathymetry, vertices, maxdistance=200.0,
+                       maxdepth=None, **kwargs):
+        """ Add bathymetry from a Bathymetry object to a section plot.
+
+        Arguments:
+        ----------
+        bathymetry      a Bathymetry2d instance
+        vertices        a CastCollection, karta.Line, or list of points
+                        defining a path
+
+        Keyword arguments:
+        ------------------
+        ax              specific Axes to use
+        maxdistance     the maximum distance a bathymetric observation
+                        may be from a point in `vertices` to be plotted
+
+        Additional keyword arguments are sent to `plt.fill_between`
+        """
+        if hasattr(vertices, "get_vertices"):
+            vertices = vertices.get_vertices()
+        elif hasattr(vertices, "coords"):
+            vertices = vertices.coords.get_vertices()
+
+        cruiseline = Line(vertices, crs=LONLAT_WGS84)
+        xalong, xacross = bathymetry.project_along_cruise(cruiseline)
+        depth_ = bathymetry.depth
+        mask = ~np.isnan(depth_) * (xacross < maxdistance)
+        depth = depth_[mask]
+        xalong = xalong[mask]
+        xacross = xacross[mask]
+
+        if maxdepth is None:
+            maxdepth = np.nanmax(depth)
+        plotbase = maxdepth*np.ones_like(depth)
+
+        kwargs.setdefault("color", "0.0")
+        kwargs.setdefault("zorder", 8)
+        return self.fill_between(xalong, depth, plotbase, **kwargs)
 
 class SectionAxes(BaseSectionAxes):
     """ Basic class for plotting an oceanographic section """
