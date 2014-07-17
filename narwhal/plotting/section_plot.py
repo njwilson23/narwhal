@@ -159,8 +159,8 @@ class BaseSectionAxes(plt.Axes):
         texts = []
         kwargs.setdefault("ha", "center")
         kwargs.setdefault("size", plt.rcParams["font.size"]-2)
-        for x, c in zip(cx, cc):
-            txt = self.text(x, -vert_offset, c.properties[key], **kwargs)
+        for x, c, label in zip(cx, cc, labels):
+            txt = self.text(x, -vert_offset, label, **kwargs)
             texts.append(txt)
         return texts
 
