@@ -163,6 +163,10 @@ class Cast(object):
         return key_
 
     @property
+    def fields(self):
+        return self._fields
+
+    @property
     def coords(self):
         return self.properties["coordinates"]
 
