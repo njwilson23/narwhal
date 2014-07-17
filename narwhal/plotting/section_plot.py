@@ -140,6 +140,31 @@ class BaseSectionAxes(plt.Axes):
         kwargs.setdefault("zorder", 8)
         return self.fill_between(xalong, depth, plotbase, **kwargs)
 
+    def label_stations(self, cc, labels, vert_offset=20, **kwargs):
+        """ Add labels for each station in the section at the top of the plot.
+
+        Arguments
+        ---------
+        cc              CastCollection used to draw section
+        labels          either a list of labels where `len(labels) == len(cc)`
+                        or a key (string) referring to an item in Cast
+                        properties
+        vert_offset     sets the vertical position of each label
+
+        Keyword arguments are passed to `self.text`
+        """
+        if isinstance(labels, str):
+            labels = [c.properties[labels] for c in cc]
+        cx = cc.projdist()
+        texts = []
+        kwargs.setdefault("ha", "center")
+        kwargs.setdefault("size", plt.rcParams["font.size"]-2)
+        for x, c in zip(cx, cc):
+            txt = self.text(x, -vert_offset, c.properties[key], **kwargs)
+            texts.append(txt)
+        return texts
+
+
 class SectionAxes(BaseSectionAxes):
     """ Basic class for plotting an oceanographic section """
     name = "section"
