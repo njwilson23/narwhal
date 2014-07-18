@@ -73,16 +73,18 @@ class Cast(object):
             items = kwargs.items()
 
         # Populate vector and scalar data fields
+        self._fields = [primarykey]
         for (kw, val) in items:
             if val is None:
                 self.data[kw] = np.nan * np.empty(len(p))
+                self._fields.append(kw)
             elif hasattr(val, "__len__") and len(val) == len(p):
                 self.data[kw] = np.asarray(val)
+                self._fields.append(kw)
             else:
                 self.properties[kw] = val
 
         self._len = len(p)
-        self._fields = [primarykey] + [a for a in kwargs]
         return
 
     def __len__(self):
@@ -473,13 +475,16 @@ class CastCollection(collections.Sequence):
             if cast.properties.get(key, None) == value:
                 return cast
 
-    def castswhere(self, key, value):
-        """ Return all casts where cast.properties[key] == value """
+    def castswhere(self, key, values):
+        """ Return all casts with a property key that is in `values::Container`
+        """
+        if not isinstance(values, collections.Container) or isinstance(values, str):
+            values = (values,)
         casts = []
         for cast in self.casts:
-            if cast.properties.get(key, None) == value:
+            if cast.properties.get(key, None) in values:
                 casts.append(cast)
-        return casts
+        return CastCollection(casts)
 
     def asarray(self, key):
         """ Naively return values as an array, assuming that all casts are indexed

@@ -132,7 +132,8 @@ class CastCollectionTests(unittest.TestCase):
         p = np.linspace(1, 999, 500)
         casts = []
         for i in range(10):
-            cast = Cast(p, temp=2*np.ones_like(p), sal=30*np.ones_like(p))
+            cast = Cast(p, temp=2*np.ones_like(p), sal=30*np.ones_like(p),
+                        station=i, val=abs(i-5))
             casts.append(cast)
         self.cc = CastCollection(casts)
         return
@@ -157,7 +158,25 @@ class CastCollectionTests(unittest.TestCase):
         self.assertTrue(isinstance(subcc, CastCollection))
         return
 
-    pass
+    def test_castwhere(self):
+        cc = self.cc
+        self.assertEqual(cc.castwhere("station", 5), cc[5])
+        return
+
+    def test_castswhere(self):
+        cc = self.cc
+        self.assertEqual(cc.castswhere("station", (3,5,6,7)), cc[3]+cc[5:8])
+        return
+
+    def test_castswhere_onearg(self):
+        cc = self.cc
+        self.assertEqual(cc.castswhere("station", 5), CastCollection(cc[5]))
+        return
+
+    def test_castswhere_multiple_results(self):
+        cc = self.cc
+        self.assertEqual(cc.castswhere("val", (1, 2)), cc[3:5] + cc[6:8])
+        return
 
 class MiscTests(unittest.TestCase):
 
