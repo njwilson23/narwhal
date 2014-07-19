@@ -409,6 +409,8 @@ class CastCollection(collections.Sequence):
             return type(self)(self.casts.__getitem__(key))
         elif all(key in cast.data for cast in self.casts):
             return np.vstack([a[key] for a in self.casts]).T
+        elif all(key in cast.properties for cast in self.casts):
+            return [cast.properties[key] for cast in self.casts]
         else:
             raise KeyError("Key {0} not found in all casts".format(key))
 
