@@ -47,6 +47,11 @@ class CastTests(unittest.TestCase):
         self.assertTrue(np.all(self.cast1["temp"] == self.temp))
         return
 
+    def test_kw_property_indexing(self):
+        cast = Cast(self.p, temp=self.temp, sal=self.sal, name="Cruise station 7")
+        self.assertEqual(cast["name"], "Cruise station 7")
+        return
+
     def test_concatenation(self):
         p = np.arange(1, 1001, 2)
         temp = 12. * np.exp(-.007*p) - 14. * np.exp(-0.005*(p+100)) + 1.8
@@ -156,6 +161,11 @@ class CastCollectionTests(unittest.TestCase):
     def test_slicing(self):
         subcc = self.cc[2:7]
         self.assertTrue(isinstance(subcc, CastCollection))
+        return
+
+    def test_get_properties(self):
+        self.assertEqual(self.cc["station"],
+                         [c.properties["station"] for c in self.cc])
         return
 
     def test_castwhere(self):
