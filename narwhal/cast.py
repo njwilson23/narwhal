@@ -75,10 +75,9 @@ class Cast(object):
         # Populate vector and scalar data fields
         self._fields = [primarykey]
         for (kw, val) in items:
-            if val is None:
-                self.data[kw] = np.nan * np.empty(len(p))
-                self._fields.append(kw)
-            elif hasattr(val, "__len__") and len(val) == len(p):
+            if isinstance(val, collections.Container) and \
+                    not isinstance(val, str) and \
+                    len(val) == len(p):
                 self.data[kw] = np.asarray(val)
                 self._fields.append(kw)
             else:
@@ -110,15 +109,23 @@ class Cast(object):
                                  "({1})".format(key, self._len))
         elif key in self.data:
             return self.data[key]
+        elif key in self.properties:
+            return self.properties[key]
         else:
             raise KeyError("No item {0}".format(key))
         return
 
     def __setitem__(self, key, val):
         if isinstance(key, str):
-            self.data[key] = val
-            if key not in self._fields:
-                self._fields.append(key)
+            if isinstance(val, collections.Sequence) and \
+                    not isinstance(val, str) and \
+                    len(val) == len(p):
+                self.data[key] = val
+                if key not in self._fields:
+                    self._fields.append(key)
+            else:
+                self.properties[key] = val
+
         elif isinstance(key, int):
             raise KeyError("Cast object profiles are not mutable")
         else:
