@@ -117,9 +117,9 @@ class Cast(object):
 
     def __setitem__(self, key, val):
         if isinstance(key, str):
-            if isinstance(val, collections.Sequence) and \
+            if isinstance(val, collections.Container) and \
                     not isinstance(val, str) and \
-                    len(val) == len(p):
+                    len(val) == len(self[self.primarykey]):
                 self.data[key] = val
                 if key not in self._fields:
                     self._fields.append(key)
