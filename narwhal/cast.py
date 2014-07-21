@@ -263,22 +263,6 @@ class CTDCast(Cast):
         rho = gsw.rho(SA, CT, self["pres"])
         return self._addkeydata("rho", np.asarray(rho))
 
-    def add_Nsquared(self, rhokey=None, s=0.2):
-        """ Calculate the squared buoyancy frequency, based on density given by
-        `rhokey::string`. Uses a smoothing spline with smoothing factor
-        `s::float` (smaller values of `s` give a noisier result). """
-        if rhokey is None:
-            rhokey = self.add_density()
-        msk = self.nanmask((rhokey, "pres"))
-        rho = self[rhokey][~msk]
-        pres = self["pres"][~msk]
-        rhospl = UnivariateSpline(pres, rho, s=s)
-        drhodz = np.asarray([-rhospl.derivatives(p)[1] for p in pres])
-        N2 = np.empty(len(self), dtype=np.float64)
-        N2[msk] = np.nan
-        N2[~msk] = -G / rho * drhodz
-        return self._addkeydata("N2", N2)
-
     def add_depth(self, rhokey=None):
         """ Use temperature, salinity, and pressure to calculate depth. If
         in-situ density is already in a field, `rhokey::string` can be provided to
@@ -299,6 +283,64 @@ class CTDCast(Cast):
         dz = dp / (rho * G) * 1e4
         depth = np.cumsum(dz)
         return self._addkeydata("depth", depth)
+
+    def add_Nsquared(self, rhokey=None, s=0.2):
+        """ Calculate the squared buoyancy frequency, based on density given by
+        `rhokey::string`. Uses a smoothing spline with smoothing factor
+        `s::float` (smaller values of `s` give a noisier result). """
+        if rhokey is None:
+            rhokey = self.add_density()
+        msk = self.nanmask((rhokey, "pres"))
+        rho = self[rhokey][~msk]
+        pres = self["pres"][~msk]
+        rhospl = UnivariateSpline(pres, rho, s=s)
+        drhodz = np.asarray([-rhospl.derivatives(p)[1] for p in pres])
+        N2 = np.empty(len(self), dtype=np.float64)
+        N2[msk] = np.nan
+        N2[~msk] = -G / rho * drhodz
+        return self._addkeydata("N2", N2)
+
+    def baroclinic_modes(self, nmodes, ztop=10):
+        """ Calculate the baroclinic normal modes based on linear
+        quasigeostrophy and the vertical stratification. Return the first
+        `nmodes::int` deformation radii and their associated eigenfunctions.
+
+        Additional arguments
+        --------------------
+
+        ztop            the depth at which to cut off the profile, to avoid
+                        surface effects
+        """
+        if "N2" not in self.fields:
+            self.add_Nsquared()
+        if "depth" not in self.fields:
+            self.add_depth()
+
+        igood = ~self.nanmask(("N2", "depth"))
+        N2 = self["N2"][igood]
+        dep = self["depth"][igood]
+
+        itop = np.argwhere(dep > ztop)[0]
+        N2 = N2[itop:]
+        dep = dep[itop:]
+
+        h = np.diff(dep)
+        assert all(h == h_ for h_ in h[1:])     # requires uniform gridding for now
+
+        f = 4*OMEGA * math.sin(self.coords[1])
+        F = f**2/N2
+        F[0] = 0.0
+        F[-1] = 0.0
+        F = sprs.diags(F, 0)
+
+        D1 = util.sparse_diffmat(1, h)
+        D2 = util.sparse_diffmat(2, h)
+
+        T = sparse.diags(D1 * F.diagonal(), 0)
+        M = T*D1 + F*D2
+        lamda, V = sprs.linalg.eigs(M.tocsc(), k=nmodes+1, sigma=1e-8)
+        Ld = 1.0 / np.sqrt(np.abs(np.real(lamda[1:])))
+        return Ld, V[:,1:]
 
     def water_fractions(self, sources, tracers=("sal", "temp")):
         """ Compute water mass fractions based on conservative tracers.
