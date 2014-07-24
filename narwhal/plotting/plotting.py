@@ -70,12 +70,12 @@ def plot_profiles(castlikes, key="temp", ax=None, **kw):
 
 def plot_map(castlikes, ax=None, **kw):
     """ Plot a simple map of cast locations. """
-    def _plot_coords(ax, cast):
+    def _plot_coords(ax, cast, **kw):
         if isinstance(cast, narwhal.AbstractCastCollection):
             for cast_ in cast:
-                _plot_coords(ax, cast_)
+                _plot_coords(ax, cast_, **kw)
         elif isinstance(cast, narwhal.AbstractCast):
-            ax.plot(cast.coords[0], cast.coords[1], "ok")
+            ax.plot(cast.coords[0], cast.coords[1], **kw)
         else:
             raise TypeError("Argument not Cast or CastCollection-like")
         return
@@ -84,8 +84,10 @@ def plot_map(castlikes, ax=None, **kw):
         ax = plt.gca()
     if not hasattr(castlikes, "__iter__"):
         castlikes = (castlikes,)
+    kw.setdefault("marker", "o")
+    kw.setdefault("color", "k")
     for castlike in castlikes:
-        _plot_coords(ax, castlike)
+        _plot_coords(ax, castlike, **kw)
     return ax
 
 ###### Deprecated APIs ######
