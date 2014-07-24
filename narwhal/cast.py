@@ -722,7 +722,7 @@ def read_woce_netcdf(fnm):
         return nc.variables[key].data.copy()
 
     nc = netcdf_file(fnm)
-    coords = (getvariable(nc, "longitude"), getvariable(nc, "latitude"))
+    coords = (getvariable(nc, "longitude")[0], getvariable(nc, "latitude")[0])
 
     pres = getvariable(nc, "pressure")
     sal = getvariable(nc, "salinity")
