@@ -194,6 +194,20 @@ class Cast(object):
         nv = sum(reduce(lambda a,b: (~np.isnan(a))&(~np.isnan(b)), vectors))
         return nv
 
+    def extend(self, n):
+        """ Add `n::int` NaN depth levels to cast. """
+        if n == 0:
+            raise ValueError("Cast already has length {0}".format(n))
+        elif n < 0:
+            raise ValueError("Cast is longer than length {0}".format(n))
+        else:
+            empty_array = np.nan * np.empty(n, dtype=np.float64)
+        for key in self.data:
+            arr = np.hstack([self.data[key], empty_array])
+            self.data[key] = arr
+        self._len = len(self) + n
+        return
+
     def interpolate(self, y, x, v, force=False):
         """ Interpolate property y as a function of property x at values given
         by vector x=v.
