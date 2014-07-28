@@ -4,7 +4,7 @@ import karta
 import numpy as np
 
 try:
-    LONLAT_WGS84 = karta.crs.crsreg.LONLAT_WGS84
+    LONLAT_WGS84 = karta.crsreg.LONLAT_WGS84
 except AttributeError:
     LONLAT_WGS84 = karta.LONLAT_WGS84
 
