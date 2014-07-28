@@ -24,8 +24,6 @@ class BaseSectionAxes(plt.Axes):
         validmsk = (~np.isnan(c[prop]) for c in cc)
         ymax = max(p[msk][-1] for p,msk in zip(zgen, validmsk))
         cx = cc.projdist()
-        for x_ in cx:
-            self.plot((x_, x_), (ymax, 0), "--", color="0.3")
         self.set_ylim((ymax, 0))
         self.set_xlim((cx[0], cx[-1]))
         return
@@ -139,6 +137,15 @@ class BaseSectionAxes(plt.Axes):
         kwargs.setdefault("color", "0.0")
         kwargs.setdefault("zorder", 8)
         return self.fill_between(xalong, depth, plotbase, **kwargs)
+
+    def mark_stations(self, cc, **kwargs):
+        """ Draw a vertical line at each station position along the section.
+        Keyword arguments are passed to `self.plot` """
+        ymax = max(np.nanmax(np.array(c[c.primarykey])) for c in cc)
+        kwargs.setdefault("color", "0.3")
+        kwargs.setdefault("linestyle", "--")
+        lines = [self.plot((x_, x_), (ymax, 0), **kwargs) for x_ in cc.projdist()]
+        return lines
 
     def label_stations(self, cc, labels, vert_offset=20, **kwargs):
         """ Add labels for each station in the section at the top of the plot.
