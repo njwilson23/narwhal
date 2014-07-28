@@ -48,13 +48,17 @@ themselves as zipped JSON objects for data storage and sharing. WOCE CTD casts
 in NetCDF format can be read directly.</p>
 
 <p>The <code>narwhal.plotting</code> submodule contains convenience methods for
-creating attractive T-S diagrams, cast plots, and section plots.</p>
+creating attractive T-S diagrams, cast plots, and section plots. Here's some
+data from the <a href="http://cchdo.ucsd.edu/cruise/325021_1">WOCE P17N
+line,</a> collected on a cruise by the Thomas G. Thomson.</p>
 
-<p class="image"><img src="https://rawgit.com/njwilson23/narwhal/master/ts-demo.png" alt="P17N T-S diagram"></p>
+<p class="image"><img src="https://rawgit.com/njwilson23/narwhal/gh-pages/ts-demo.png" alt="P17N T-S diagram"></p>
+<p class="image"><img src="https://rawgit.com/njwilson23/narwhal/gh-pages/section-demo.png" alt="P17N section diagram"></p>
 
 <p>Narwhal provides a wrapper for the
 <a href="http://www.teos-10.org/pubs/gsw/html/gsw_contents.html">Gibbs Seawater Toolbox</a>
-in the <code>narwhal.gsw</code> submodule.</p>
+in the <code>narwhal.gsw</code> submodule, making things like the following possible:</p>
+<pre><code>density = narwhal.gsw.rho(cast["abssal"], cast["constemp"], cast["pres"])</code></pre>
 
 <h2>
 <a name="installation" class="anchor" href="#installation"><span class="octicon octicon-link"></span></a>Installation</h2>
