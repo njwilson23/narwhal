@@ -188,6 +188,21 @@ class CastCollectionTests(unittest.TestCase):
         self.assertEqual(cc.castswhere("val", (1, 2)), cc[3:5] + cc[6:8])
         return
 
+    def test_defray(self):
+        lengths = np.arange(50, 71)
+        casts = []
+        for n in lengths:
+            p = np.r_[np.arange(0, 250, 5), np.arange(250, 250 + 5*(n-50), 5)]
+            t = np.ones(n) * 10.0
+            s = np.ones(n) * 34.0
+            cast = Cast(p, temp=t, sal=s)
+            casts.append(cast)
+        defrayed_casts = CastCollection(casts).defray()
+        for cast in defrayed_casts:
+            self.assertEqual(len(cast), 70)
+        return
+
+
 class MiscTests(unittest.TestCase):
 
     def test_force_monotonic(self):

@@ -10,6 +10,7 @@ import collections
 import itertools
 import json
 import gzip
+import copy
 from functools import reduce
 import six
 import numpy as np
@@ -194,14 +195,14 @@ class Cast(object):
         nv = sum(reduce(lambda a,b: (~np.isnan(a))&(~np.isnan(b)), vectors))
         return nv
 
-    def extend(self, n):
+    def extend(self, n, padvalue=np.nan):
         """ Add `n::int` NaN depth levels to cast. """
         if n == 0:
             raise ValueError("Cast already has length {0}".format(n))
         elif n < 0:
             raise ValueError("Cast is longer than length {0}".format(n))
         else:
-            empty_array = np.nan * np.empty(n, dtype=np.float64)
+            empty_array = padvalue * np.empty(n, dtype=np.float64)
         for key in self.data:
             arr = np.hstack([self.data[key], empty_array])
             self.data[key] = arr
@@ -506,6 +507,21 @@ class CastCollection(collections.Sequence):
         casts = []
         for cast in self.casts:
             if cast.properties.get(key, None) in values:
+                casts.append(cast)
+        return CastCollection(casts)
+
+    def defray(self, padvalue=np.nan):
+        """ Pad casts to all have the same length. Warning: does not correct
+        differing pressure bins, which require explicit interpolation. """
+        n = max(len(c) for c in self)
+        casts = []
+        for cast_ in self:
+            cast = copy.deepcopy(cast_)
+            if len(cast) < n:
+                dif = n - len(cast)
+                cast.extend(dif, padvalue=padvalue)
+                casts.append(cast)
+            else:
                 casts.append(cast)
         return CastCollection(casts)
 
