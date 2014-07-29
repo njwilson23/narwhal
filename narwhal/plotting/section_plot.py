@@ -44,6 +44,18 @@ class BaseSectionAxes(plt.Axes):
         zmask = Yi > np.tile(base, (Xi.shape[0], 1))
         return zmask
 
+    def hatch(self, hatch="/"):
+        """ Add a hatch pattern begin section to represent NaNs. """
+        x0, x1 = self.get_xlim()
+        y0, y1 = self.get_ylim()
+        xy = (x0, y0)
+        width = x1 - x0
+        height = y1 - y0
+        bg = matplotlib.patches.Rectangle(xy, width, height, hatch=hatch,
+                fill=False, zorder=-1)
+        self.add_patch(bg)
+        return bg
+
     def contour(self, cc, prop, ninterp=30, sk=None, mask=True,
                 bottomkey="depth", interp_scheme="standard", **kwargs):
 
