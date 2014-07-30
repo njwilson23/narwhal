@@ -14,4 +14,5 @@ digraph classmap {
     CastCollection;
 
     Bathymetry2d;
+    bgcolor="transparent";
 }
