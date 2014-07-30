@@ -44,8 +44,32 @@ class BaseSectionAxes(plt.Axes):
         zmask = Yi > np.tile(base, (Xi.shape[0], 1))
         return zmask
 
-    def hatch(self, hatch="/"):
-        """ Add a hatch pattern begin section to represent NaNs. """
+    def hatch(self, nx=20, ny=10, **kw):
+        """ Add a hatch pattern to section to represent NaNs. """
+        x0, x1 = self.get_xlim()
+        y0, y1 = self.get_ylim()
+        dx = (x1-x0) / nx
+        dy = (y1-y0) / ny
+        m = (nx/ny) * abs((y1-y0)/(x1-x0))
+
+        LXb = np.linspace(x0 - abs(y1-y0)/m, x1-dx, nx)
+        LXt = LXb + abs(y1-y0)/m
+        LX = np.empty(3*nx, dtype=np.float64)
+        LY = np.empty(3*nx, dtype=np.float64)
+        LX[0::3] = LXb
+        LX[1::3] = LXt
+        LX[2::3] = np.nan
+        LY[0::3] = y0
+        LY[1::3] = y1
+        LY[2::3] = np.nan
+        kw.setdefault("color", "black")
+        kw.setdefault("lw", 0.4)
+        kw.setdefault("zorder", -1)
+        self.plot(LX, LY, **kw)
+        return
+
+    def hatch_(self, hatch="/"):
+        """ Add a hatch pattern to section to represent NaNs. """
         x0, x1 = self.get_xlim()
         y0, y1 = self.get_ylim()
         xy = (x0, y0)
