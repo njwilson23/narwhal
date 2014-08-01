@@ -348,8 +348,8 @@ class CTDCast(Cast):
         F[-1] = 0.0
         F = sprs.diags(F, 0)
 
-        D1 = util.sparse_diffmat(1, h)
-        D2 = util.sparse_diffmat(2, h)
+        D1 = util.sparse_diffmat(len(self), 1, h)
+        D2 = util.sparse_diffmat(len(self), 2, h)
 
         T = sparse.diags(D1 * F.diagonal(), 0)
         M = T*D1 + F*D2

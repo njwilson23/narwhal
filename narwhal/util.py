@@ -3,28 +3,29 @@ import numbers
 import numpy as np
 import scipy.integrate as scint
 from scipy.ndimage.morphology import binary_dilation
+from scipy import sparse
 
-def sparse_diffmat(deriv, h, order=2):
-    """ Return a sparse difference matrix to approximate a `deriv::int`
-    derivative with spacing `h::float` to `order::int`-order accuracy.
-    """
-    if deriv == 1:
-        if order == 2:
-            I = np.ones(n)
-            I_ = np.ones(n-1)
-            D = sparse.diags((0.5*I_, -0.5*I_), (1, -1)) / h
-            D = D1.tolil()
-            D[0,:3] = np.asarray([-1.5, 2, -0.5]) / h
-            D[-1,-3:] = np.asarray([-0.5, 2, -1.5]) / h
+def sparse_diffmat(n, deriv, h, order=2):
+    """ Return an `n::Int` by `n` sparse difference matrix to approximate a
+    `deriv::int` derivative with spacing `h::float` to `order::int`-order
+    accuracy. """
+    if hasattr(h, "__len__"):
+        raise NotImplementedError("only evenly spaced data are supported right now")
+    if deriv == 1 and order == 2:
+        I = np.ones(n)
+        I_ = np.ones(n-1)
+        D = sparse.diags((0.5*I_, -0.5*I_), (1, -1)) / h
+        D = D.tolil()
+        D[0,:3] = np.asarray([-1.5, 2, -0.5]) / h
+        D[-1,-3:] = np.asarray([-0.5, 2, -1.5]) / h
 
-    elif deriv == 2:
-        if order == 2:
-            I = np.ones(n)
-            I_ = np.ones(n-1)
-            D = sparse.diags((I_, -2*I, I_), (1, 0, -1)) / h**2
-            D = D2.tolil()
-            D[0,:4] = np.asarray([2, -5, 4, -1]) / h**2
-            D[-1,-4:] = np.asarray([-1, 4, -5, 2]) / h**2
+    elif deriv == 2 and order == 2:
+        I = np.ones(n)
+        I_ = np.ones(n-1)
+        D = sparse.diags((I_, -2*I, I_), (1, 0, -1)) / h**2
+        D = D2.tolil()
+        D[0,:4] = np.asarray([2, -5, 4, -1]) / h**2
+        D[-1,-4:] = np.asarray([-1, 4, -5, 2]) / h**2
     else:
         raise NotImplementedError("{0} order {1}-derivative".format(order, deriv))
     return D
