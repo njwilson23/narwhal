@@ -44,12 +44,12 @@ class BaseSectionAxes(plt.Axes):
         zmask = Yi > np.tile(base, (Xi.shape[0], 1))
         return zmask
 
-    def hatch(self, nx=20, ny=10, **kw):
+    def hatch(self, nx=20, **kw):
         """ Add a hatch pattern to section to represent NaNs. """
+        ny = nx * self.bbox.height / self.bbox.width
         x0, x1 = self.get_xlim()
         y0, y1 = self.get_ylim()
         dx = (x1-x0) / nx
-        dy = (y1-y0) / ny
         m = (nx/ny) * abs((y1-y0)/(x1-x0))
 
         LXb = np.linspace(x0 - abs(y1-y0)/m, x1-dx, nx)
