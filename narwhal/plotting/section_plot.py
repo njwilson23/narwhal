@@ -221,21 +221,32 @@ class SectionAxes(BaseSectionAxes):
     @staticmethod
     def _interpolate_section(cc, prop, ninterp, scheme="standard"):
         """ Scheme may be one of "standard", "horizontal_corr", or "zero_base" """
+
+        def _longest_cast(cc):
+            """ Return the longest cast in a cast collection """
+            max_y = max(np.nanmax(c[c.primarykey]) for c in cc)
+            for cast in cc:
+                if max_y in cast[cast.primarykey]:
+                    return cast
+
         Yo = np.vstack([cast[cast.primarykey] for cast in cc]).T
         Xo = np.tile(cc.projdist(), (len(Yo), 1))
         Zo = cc.asarray(prop)
 
         if scheme == "standard":
             msk = ~np.isnan(Xo+Yo+Zo)
-            Xi, Yi = np.meshgrid(np.linspace(Xo[0,0], Xo[0,-1], ninterp),
-                                 cc[0][cc[0].primarykey])
+            c = _longest_cast(cc)
+            longest_z = c[c.primarykey]
+
+            Xi, Yi = np.meshgrid(np.linspace(Xo[0,0], Xo[0,-1], ninterp), longest_z)
             Zi = griddata(np.c_[Xo[msk], Yo[msk]], Zo[msk],
                           np.c_[Xi.ravel(), Yi.ravel()], method="cubic")
             Zi = Zi.reshape(Xi.shape)
 
         elif scheme == "horizontal_corr":
-            Xi, Yi = np.meshgrid(np.linspace(Xo[0,0], Xo[0,-1], ninterp),
-                                 cc[0][cc[0].primarykey])
+            c = _longest_cast(cc)
+            longest_z = c[c.primarykey]
+            Xi, Yi = np.meshgrid(np.linspace(Xo[0,0], Xo[0,-1], ninterp), longest_z)
 
             # interpolate over NaNs in a way that assumes horizontal correlation
             for (i, row) in enumerate(Zo):
@@ -280,7 +291,8 @@ class SectionAxes(BaseSectionAxes):
                 return idepth
 
             xi = np.linspace(Xo[0,0], Xo[0,-1], ninterp)
-            yi = cc[0][cc[0].primarykey]
+            c = _longest_cast(cc)
+            yi = c[c.primarykey]
 
             idxdepth = _find_idepth(Zo)
             idepth = np.round(np.interp(xi, Xo[0], idxdepth)).astype(int)
