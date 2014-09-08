@@ -38,7 +38,13 @@ class BaseSectionAxes(plt.Axes):
 
     @staticmethod
     def _computemask(cc, Xi, Yi, Zi, bottomkey):
-        depth = [cast.properties[bottomkey] for cast in cc]
+        if bottomkey is not None:
+            depth = [cast.properties[bottomkey] for cast in cc]
+        else:
+            def _last(arr):
+                msk = ~np.isnan(arr)
+                return arr[np.max(np.argwhere(msk))]
+            depth = [_last(cast[cast.primarykey]) for cast in cc]
         cx = cc.projdist()
         base = np.interp(Xi[0,:], cx, depth)
         zmask = Yi > np.tile(base, (Xi.shape[0], 1))
