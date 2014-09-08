@@ -553,8 +553,11 @@ class CastCollection(collections.Sequence):
         return CastCollection(casts)
 
     def defray(self, padvalue=np.nan):
-        """ Pad casts to all have the same length. Warning: does not correct
-        differing pressure bins, which require explicit interpolation. """
+        """ Pad casts to all have the same length, and return a copy.
+        
+        Warning: does not correct differing pressure bins, which require
+        explicit interpolation.
+        """
         n = max(len(c) for c in self)
         casts = []
         for cast_ in self:
