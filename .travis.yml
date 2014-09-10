@@ -22,7 +22,8 @@ install:
   - sudo apt-get install python-numpy   # needed to get numpy C-headers, which aren't being shown for the travis install
   - conda create --yes -n test-environment python=$TRAVIS_PYTHON_VERSION numpy scipy pip
   - source activate test-environment
-  - pip install karta pyshp pyproj requests python-dateutil six
+  - pip install pyshp pyproj requests python-dateutil six
+  - pip install --pre karta
   - pip install . -v
 
 script:
