@@ -32,7 +32,7 @@ class Bathymetry2d(Line):
     def atxy(self, x, y):
         """ Interpolate bottom depth at a point. """
         pt = Point((x, y), crs=LONLAT)
-        segments = tuple(self.segments())
+        segments = tuple(self.segments)
         distances = [seg.shortest_distance_to(pt) for seg in segments]
         ii = distances.index(min(distances))
         a = segments[ii][0]
@@ -66,13 +66,13 @@ class Bathymetry2d(Line):
         for pt in self:
             npt = cruiseline.nearest_on_boundary(pt)
             p = 0.0
-            for i, seg in enumerate(cruiseline.segments()):
+            for i, seg in enumerate(cruiseline.segments):
                 if npt == seg.nearest_on_boundary(pt):
                     p += npt.distance(seg[0])
                     q = seg.shortest_distance_to(pt)
                     break
                 else:
-                    p += seg.length()
+                    p += seg.length
             P.append(p)
             Q.append(q)
         return np.asarray(P), np.asarray(Q)
