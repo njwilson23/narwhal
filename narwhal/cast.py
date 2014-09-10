@@ -425,9 +425,11 @@ class XBTCast(Cast):
     """ Specialization of Cast with temperature field. """
     _type = "xbtcast"
 
-    def __init__(self, p, temp, coords=None, properties=None, **kwargs):
+    def __init__(self, z, temp, coords=None, properties=None,
+                 primarykey="z", **kwargs):
         super(XBTCast, self).__init__(p, temp=temp, coords=coords,
-                                      properties=properties, **kwargs)
+                                      properties=properties, primarykey=primarykey,
+                                      **kwargs)
         return
 
 
