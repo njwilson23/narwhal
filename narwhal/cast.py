@@ -427,7 +427,7 @@ class XBTCast(Cast):
 
     def __init__(self, z, temp, coords=None, properties=None,
                  primarykey="z", **kwargs):
-        super(XBTCast, self).__init__(p, temp=temp, coords=coords,
+        super(XBTCast, self).__init__(z, temp=temp, coords=coords,
                                       properties=properties, primarykey=primarykey,
                                       **kwargs)
         return
