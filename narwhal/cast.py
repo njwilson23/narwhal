@@ -239,6 +239,18 @@ class Cast(object):
         else:
             raise ValueError("x is not monotonic")
 
+    def regrid(self, levels):
+        """ Re-interpolate Cast at specified grid levels. Returns a new Cast. """
+        # some low level voodoo
+        ret = copy.deepcopy(self)
+        ret._len = len(levels)
+        for key in self.data:
+            if key is not self.primarykey:
+                ret.data[key] = np.interp(levels, self[self.primarykey], self[key],
+                                          left=np.nan, right=np.nan)
+        ret.data[self.primarykey] = levels
+        return ret
+
     def save(self, fnm, binary=True):
         """ Save a JSON-formatted representation to a file at `fnm::string`.
         """
