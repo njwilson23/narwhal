@@ -191,8 +191,13 @@ class Cast(object):
         """ Return the number of complete (non-NaN) observations. """
         if fields is None:
             fields = self._fields
+        elif isinstance(fields, str):
+            fields = (fields,)
         vectors = [self.data[k] for k in fields]
-        nv = sum(reduce(lambda a,b: (~np.isnan(a))&(~np.isnan(b)), vectors))
+        if len(vectors) == 1:
+            nv = sum(~np.isnan(vectors[0]))
+        else:
+            nv = sum(reduce(lambda a,b: (~np.isnan(a))&(~np.isnan(b)), vectors))
         return nv
 
     def extend(self, n, padvalue=np.nan):
