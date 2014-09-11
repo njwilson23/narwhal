@@ -244,6 +244,61 @@ class SectionAxes(BaseSectionAxes):
             Zi = Zi.reshape(Xi.shape)
 
         elif scheme == "horizontal_corr":
+            # this version works with irregular gridding
+            X, Y = [], []
+            Z = []
+
+            distances = cc.projdist()
+            castleft, xleft = None, None
+
+            for i,x in enumerate(distances):
+                cast = cc[i]
+                if i == len(cc) - 1:
+                    castrigh = None
+                    xrigh = None
+                else:
+                    castrigh = cc[i+1]
+                    xrigh = distances[i+1]
+                    
+                # add the measured values
+                X.extend(x * np.ones(cast.nvalid(prop)))
+                Y.extend(cast[cast.primarykey][~cast.nanmask(prop)])
+                Z.extend(cast[prop][~cast.nanmask(prop)])
+                    
+                # for each non-NaN level in *cast*, check castleft and castrigh
+                # to see if they're NaN
+                # if so, add a dummy value half way between
+                msk = ~cast.nanmask(prop)
+                for lvl, v in zip(cast[cast.primarykey][msk], cast[prop][msk]):
+
+                    primarykey = cast.primarykey
+                    if castleft and \
+                            np.isnan(castleft.interpolate(prop, primarykey, lvl)):
+                        X.append(0.5 * (xleft+x))
+                        Y.append(lvl)
+                        Z.append(v)
+                
+                    if castrigh and \
+                            np.isnan(castrigh.interpolate(prop, primarykey, lvl)):
+                        X.append(0.5 * (xrigh+x))
+                        Y.append(lvl)
+                        Z.append(v)
+
+                castleft = cast
+                xleft = x
+
+            X = np.array(X)
+            Y = np.array(Y)
+
+            max_y = max(np.nanmax(c[c.primarykey]) for c in cc)
+            max_x = distances[-1]
+            y_int = int(round(min(5, max_y/100)))
+            x_int = max_x / ninterp
+            Yi, Xi = np.mgrid[0:max_y:y_int, 0:max_x:x_int]
+            ct = CloughTocher2DInterpolator(np.c_[0.0001*X,Y], Z)
+            Zi = ct(0.0001*Xi, Yi)
+
+        elif scheme == "horizontal_corr_old":
             c = _longest_cast(cc)
             longest_z = c[c.primarykey]
             Xi, Yi = np.meshgrid(np.linspace(Xo[0,0], Xo[0,-1], ninterp), longest_z)
