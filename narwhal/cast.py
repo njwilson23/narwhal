@@ -559,6 +559,7 @@ class CastCollection(collections.Sequence):
         for cast in self.casts:
             if cast.properties.get(key, None) == value:
                 return cast
+        raise LookupError("Cast not found with {0} = {1}".format(key, value))
 
     def castswhere(self, key, values):
         """ Return all casts with a property key that is in `values::Container`
@@ -569,6 +570,12 @@ class CastCollection(collections.Sequence):
         for cast in self.casts:
             if cast.properties.get(key, None) in values:
                 casts.append(cast)
+        return CastCollection(casts)
+
+    def select(self, key, values):
+        """ Return an CastCollection of Casts with selected where `key::str` equals `values::Iterable`
+        """
+        casts = [self.castwhere(key, v) for v in values]
         return CastCollection(casts)
 
     def defray(self, padvalue=np.nan):
