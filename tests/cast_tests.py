@@ -33,16 +33,16 @@ class CastTests(unittest.TestCase):
                 if item not in tup2:
                     return False
             return True
-        self.assertTrue(_has_all(self.cast1[40], (("pres", 81),
+        self.assertTrue(_has_all(self.cast1[40], (("z", 81),
             ("temp", 1.1627808544797258), ("sal", 27.771987072878822))))
-        self.assertTrue(_has_all(self.cast1[100], (("pres", 201),
+        self.assertTrue(_has_all(self.cast1[100], (("z", 201),
             ("temp", 0.67261848597249019), ("sal", 32.124158554636729))))
-        self.assertTrue(_has_all(self.cast1[400], (("pres", 801),
+        self.assertTrue(_has_all(self.cast1[400], (("z", 801),
             ("temp", 1.8506793256302907), ("sal", 33.995350253934227))))
         return
 
     def test_kw_indexing(self):
-        self.assertTrue(np.all(self.cast1["pres"] == self.p))
+        self.assertTrue(np.all(self.cast1["z"] == self.p))
         self.assertTrue(np.all(self.cast1["sal"] == self.sal))
         self.assertTrue(np.all(self.cast1["temp"] == self.temp))
         return
@@ -63,11 +63,12 @@ class CastTests(unittest.TestCase):
         return
 
     def test_interpolate(self):
-        self.assertEqual(np.round(self.cast1.interpolate("temp", "pres", 4.0), 8),
+        self.assertEqual(np.round(self.cast1.interpolate("temp", "z", 4.0), 8),
                          2.76745605)
         self.assertEqual(np.round(self.cast1.interpolate("temp", "sal", 33.0), 8),
                          0.77935861)
-        #self.assertEqual(np.round(self.cast1.interpolate("pres", "temp", 1.5), 8),
+        # temp not monotonic, which screws up the simple interpolation scheme
+        #self.assertEqual(np.round(self.cast1.interpolate("z", "temp", 1.5), 8),
         #                 2.7674560521632685)
         return
 
@@ -110,14 +111,17 @@ class CastTests(unittest.TestCase):
         ct = gsw.ct_from_t(sa, t, p)
         rho = np.asarray(gsw.rho(sa, ct, p))
 
-        drhodz = -np.r_[rho[1]-rho[0], rho[2:]-rho[:-2], rho[-1]-rho[-2]] / \
-                  np.r_[p[1]-p[0], p[2:]-p[:-2], p[-1]-p[-2]]
-        N2_direct = -9.81 / rho * drhodz
-        #N2_direct = np.convolve(N2_direct, 0.2*np.ones(5), mode="valid")
-
         cast = CTDCast(p, s, t, coords=(-20, 50), rho=rho)
-        cast.add_Nsquared(rhokey="rho")
-        #print(np.mean(np.abs(cast["N2"] - N2_direct)))
+        cast.add_depth()
+        cast.add_Nsquared(depthkey="depth")
+
+        # Calculate the buoyancy frequency directly
+        z = cast["depth"]
+        drhodz = -np.r_[rho[1]-rho[0], rho[2:]-rho[:-2], rho[-1]-rho[-2]] / \
+                  np.r_[z[1]-z[0], z[2:]-z[:-2], z[-1]-z[-2]]
+        N2_direct = -9.81 / rho * drhodz
+        # N2_direct = np.convolve(N2_direct, 0.2*np.ones(5), mode="valid")
+        # print(np.mean(np.abs(cast["N2"] - N2_direct)))
         self.assertTrue(np.mean(np.abs(cast["N2"] - N2_direct)) < 0.0003)
         return
 

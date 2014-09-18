@@ -14,14 +14,10 @@ class TestData():
         self.temp = temp
         self.sal = sal
         dt = datetime.datetime(1993, 8, 18, 14, 42, 36)
-        self.cast = Cast(self.p, temp=self.temp, sal=self.sal,
-                        properties={"date":dt})
-        self.ctd = CTDCast(self.p, temp=self.temp, sal=self.sal,
-                        properties={"date":dt})
-        self.ctdz = CTDCast(self.p, temp=self.temp, sal=self.sal,
-                        primarykey="z", properties={})
-        self.xbt = XBTCast(self.p, temp=self.temp, sal=self.sal,
-                        properties={"date":dt})
+        self.cast = Cast(self.p, temp=self.temp, sal=self.sal, date=dt)
+        self.ctd = CTDCast(self.p, temp=self.temp, sal=self.sal, date=dt)
+        self.ctdz = CTDCast(self.p, temp=self.temp, sal=self.sal, date=dt)
+        self.xbt = XBTCast(self.p, temp=self.temp, sal=self.sal, date=dt)
         self.collection = CastCollection(self.ctd, self.xbt, self.ctd)
         return
 

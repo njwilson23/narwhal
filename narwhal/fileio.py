@@ -8,6 +8,7 @@ import datetime
 import dateutil.parser
 import numpy
 from karta import Point, geojson
+from . import units
 
 def castasdict(cast):
     scalars = [key for key in cast.properties]
@@ -24,8 +25,14 @@ def castasdict(cast):
         else:
             dvector[key] = list(cast[key])
     d = dict(type=cast._type, scalars=dscalar, vectors=dvector,
-            coords=cast.coords, primarykey=cast.primarykey)
+            coords=cast.coords, zunits=str(cast.zunits))
     return d
+
+def findunit(unitname):
+    for name in units.__dict__:
+        if str(units.__dict__[name]) == unitname:
+            return units.__dict__[name]
+    raise NameError("'{0}' not recognized as a unit".format(unitname))
 
 def dictascast(d, obj):
     """ Read a file-like stream and construct an object with a Cast-like
@@ -33,8 +40,8 @@ def dictascast(d, obj):
     d_ = copy.copy(d)
     _ = d_.pop("type")
     coords = d_.pop("coords")
-    primkey = d_.pop("primarykey", "pres")
-    p = d_["vectors"].pop(primkey)
+    zunits = findunit(d_.pop("zunits", "meter"))
+    z = d_["vectors"].pop("z")
     prop = d["scalars"]
     for (key, value) in prop.items():
         if "date" in key or "time" in key and isinstance(prop[key], str):
@@ -42,7 +49,7 @@ def dictascast(d, obj):
                 prop[key] = dateutil.parser.parse(value)
             except (TypeError, ValueError):
                 pass
-    cast = obj(p, coords=coords, primarykey=primkey, properties=prop,
+    cast = obj(z, coords=coords, zunits=zunits, properties=prop,
             **d_["vectors"])
     return cast
 

@@ -19,6 +19,7 @@ from scipy import sparse as sprs
 from scipy.interpolate import UnivariateSpline
 from scipy.io import netcdf_file
 from karta import Point, Multipoint
+from . import units
 from . import fileio
 from . import gsw
 from . import util
@@ -52,20 +53,16 @@ class Cast(object):
 
     _type = "cast"
 
-    def __init__(self, p, coords=None, properties=None, primarykey="pres",
-                 **kwargs):
+    def __init__(self, z, coords=None, zunits=units.meter, **kwargs):
 
-        if properties is None:
-            self.properties = {}
-        elif isinstance(properties, dict):
-            self.properties = properties
-        else:
-            raise TypeError("properties must be a dictionary")
+        self.properties = {}
+        self.data = {}
+
+        self.zunits = zunits
         self.properties["coordinates"] = coords
-
-        self.primarykey = primarykey
-        self.data = dict()
-        self.data[primarykey] = np.asarray(p)
+        self.data["z"] = np.asarray(z)
+        self._len = len(z)
+        self.p = self.properties
 
         # Python 3 workaround
         try:
@@ -74,18 +71,15 @@ class Cast(object):
             items = kwargs.items()
 
         # Populate vector and scalar data fields
-        self._fields = [primarykey]
+        self._fields = ["z"]
         for (kw, val) in items:
             if isinstance(val, collections.Container) and \
                     not isinstance(val, str) and \
-                    len(val) == len(p):
+                    len(val) == len(z):
                 self.data[kw] = np.asarray(val)
                 self._fields.append(kw)
             else:
                 self.properties[kw] = val
-
-        self._len = len(p)
-        self.p = self.properties
         return
 
     def __len__(self):
@@ -96,18 +90,18 @@ class Cast(object):
             coords = tuple(round(c, 3) for c in self.coords)
         else:
             coords = (None, None)
-        s = "CTD cast (" + "".join([str(k)+", " for k in self._fields])
+        s = "Cast (" + "".join([str(k)+", " for k in self._fields])
         # cut off the final comma
         s = s[:-2] + ") at {0}".format(coords)
         return s
 
     def __getitem__(self, key):
         if isinstance(key, int):
-            if key < self._len:
+            if 0 <= key < self._len:
                 return tuple((a, self.data[a][key]) for a in self._fields
                              if hasattr(self.data[a], "__iter__"))
             else:
-                raise IndexError("Index ({0}) is greater than cast length "
+                raise IndexError("{0} not within cast length "
                                  "({1})".format(key, self._len))
         elif key in self.data:
             return self.data[key]
@@ -274,33 +268,28 @@ class Cast(object):
                     fileio.writecast(f, self, binary=False)
         return
 
-
-class CTDCast(Cast):
-    """ Specialization of Cast guaranteed to have salinity and temperature
-    fields. """
-    _type = "ctdcast"
-
-    def __init__(self, p, sal, temp, coords=None, properties=None,
-                 **kwargs):
-        super(CTDCast, self).__init__(p, sal=sal, temp=temp, coords=coords,
-                                      properties=properties, **kwargs)
-        return
-
-    def add_density(self):
+    def add_density(self, salkey="sal", tempkey="temp", preskey="z", rhokey="rho"):
         """ Add in-situ density to fields, and return the field name. """
-        SA = gsw.sa_from_sp(self["sal"], self["pres"],
-                            [self.coords[0] for _ in self["sal"]],
-                            [self.coords[1] for _ in self["sal"]])
-        CT = gsw.ct_from_t(SA, self["temp"], self["pres"])
-        rho = gsw.rho(SA, CT, self["pres"])
-        return self._addkeydata("rho", np.asarray(rho))
+        if salkey in self._fields and tempkey in self._fields and \
+                (self.zunits == units.decibar or preskey != "z"):
+            SA = gsw.sa_from_sp(self[salkey], self[preskey],
+                                [self.coords[0] for _ in self[salkey]],
+                                [self.coords[1] for _ in self[salkey]])
+            CT = gsw.ct_from_t(SA, self[tempkey], self[preskey])
+            rho = gsw.rho(SA, CT, self[preskey])
+            return self._addkeydata(rhokey, np.asarray(rho))
+        else:
+            raise FieldError("add_density requires salinity, temperature, and "
+                             "pressure fields")
 
-    def add_depth(self, rhokey=None):
-        """ Use temperature, salinity, and pressure to calculate depth. If
-        in-situ density is already in a field, `rhokey::string` can be provided to
-        avoid recalculating it. """
-        if rhokey is None:
-            rhokey = self.add_density()
+    def add_depth(self, preskey="z", rhokey="rho", depthkey="depth"):
+        """ Use density and pressure to calculate depth. If in-situ density is
+        already in a field, `rhokey::string` can be provided to avoid
+        recalculating it. """
+        if preskey == "z" and self.zunits != units.decibar:
+            raise FieldError("add_depth requires a pressure field")
+        if rhokey not in self._fields:
+            raise FieldError("add_depth requires a density field")
         rho = self[rhokey]
 
         # remove initial NaNs by replacing them with the first non-NaN
@@ -311,28 +300,30 @@ class CTDCast(Cast):
             r = rho[nnans]
         rho[:nnans] = rho[nnans+1]
 
-        dp = np.hstack([self["pres"][0], np.diff(self["pres"])])
+        dp = np.hstack([self[preskey][0], np.diff(self[preskey])])
         dz = dp / (rho * G) * 1e4
         depth = np.cumsum(dz)
-        return self._addkeydata("depth", depth)
+        return self._addkeydata(depthkey, depth)
 
-    def add_Nsquared(self, rhokey=None, s=0.2):
+    def add_Nsquared(self, rhokey="rho", depthkey="z", N2key="N2", s=0.2):
         """ Calculate the squared buoyancy frequency, based on density given by
         `rhokey::string`. Uses a smoothing spline with smoothing factor
         `s::float` (smaller values of `s` give a noisier result). """
-        if rhokey is None:
-            rhokey = self.add_density()
-        msk = self.nanmask((rhokey, "pres"))
+        if rhokey not in self._fields:
+            raise FieldError("add_Nsquared requires in-situ density")
+        if depthkey == "z" and self.zunits != units.meter:
+            raise FieldError("add_Nsquared requires depth in meters")
+        msk = self.nanmask((rhokey, depthkey))
         rho = self[rhokey][~msk]
-        pres = self["pres"][~msk]
-        rhospl = UnivariateSpline(pres, rho, s=s)
-        drhodz = np.asarray([-rhospl.derivatives(p)[1] for p in pres])
+        z = self[depthkey][~msk]
+        rhospl = UnivariateSpline(z, rho, s=s)
+        drhodz = np.asarray([-rhospl.derivatives(_z)[1] for _z in z])
         N2 = np.empty(len(self), dtype=np.float64)
         N2[msk] = np.nan
         N2[~msk] = -G / rho * drhodz
-        return self._addkeydata("N2", N2)
+        return self._addkeydata(N2key, N2)
 
-    def baroclinic_modes(self, nmodes, ztop=10):
+    def baroclinic_modes(self, nmodes, ztop=10, N2key="N2", depthkey="depth"):
         """ Calculate the baroclinic normal modes based on linear
         quasigeostrophy and the vertical stratification. Return the first
         `nmodes::int` deformation radii and their associated eigenfunctions.
@@ -343,14 +334,12 @@ class CTDCast(Cast):
         ztop            the depth at which to cut off the profile, to avoid
                         surface effects
         """
-        if "N2" not in self.fields:
-            self.add_Nsquared()
-        if "depth" not in self.fields:
-            self.add_depth()
+        if N2key not in self._fields or depthkey not in self._fields:
+            raise FieldError("baroclinic_modes requires buoyancy frequency and depth")
 
-        igood = ~self.nanmask(("N2", "depth"))
-        N2 = self["N2"][igood]
-        dep = self["depth"][igood]
+        igood = ~self.nanmask((N2key, depthkey))
+        N2 = self[N2key][igood]
+        dep = self[depthkey][igood]
 
         itop = np.argwhere(dep > ztop)[0]
         N2 = N2[itop:]
@@ -408,47 +397,44 @@ class CTDCast(Cast):
         mass3[~msk] = frac[2::3]
         return (mass1, mass2, mass3)
 
-
-class LADCP(Cast):
-    """ Specialization of Cast for LADCP data. Requires *u* and *v* fields. """
-    _type = "ladcpcast"
-
-    def __init__(self, z, u, v, coords=None, properties=None,
-                 primarykey="z", **kwargs):
-        super(LADCP, self).__init__(z, u=u, v=v, coords=coords,
-                                    properties=properties, primarykey=primarykey,
-                                    **kwargs)
-        return
-
-    def add_shear(self, sigma=None):
+    def add_shear(self, depthkey="z", ukey="u", vkey="v", dudzkey="dudz", dvdzkey="dvdz",
+                  sigma=None):
         """ Compute the velocity shear for *u* and *v*. If *sigma* is not None,
         smooth the data with a gaussian filter before computing the derivative.
         """
+        if ukey not in self._fields or vkey not in self._fields:
+            raise FieldError("add_shear requires u and v velocity components")
+        if depthkey == "z" and self.zunits != units.meter:
+            raise FieldError("add_shear requires depth in meters")
         if sigma is not None:
-            u = ndimage.filters.gaussian_filter1d(self["u"], sigma)
-            v = ndimage.filters.gaussian_filter1d(self["v"], sigma)
+            u = ndimage.filters.gaussian_filter1d(self[ukey], sigma)
+            v = ndimage.filters.gaussian_filter1d(self[vkey], sigma)
         else:
-            u = self["u"]
-            v = self["v"]
+            u = self[ukey]
+            v = self[vkey]
 
-        dudz = util.diff1(u, self["z"])
-        dvdz = util.diff1(v, self["z"])
-        self._addkeydata("dudz", dudz)
-        self._addkeydata("dvdz", dvdz)
+        dudz = util.diff1(u, self[depthkey])
+        dvdz = util.diff1(v, self[depthkey])
+        self._addkeydata(dudzkey, dudz)
+        self._addkeydata(dvdzkey, dvdz)
         return
 
+def CTDCast(pres, sal, temp, coords=None, **kw):
+    """ Convenience function for creating CTD profiles. """
+    kw["sal"] = sal
+    kw["temp"] = temp
+    return Cast(pres, zunits=units.decibar, coords=coords, **kw)
 
-class XBTCast(Cast):
-    """ Specialization of Cast with temperature field. """
-    _type = "xbtcast"
+def XBTCast(depth, temp, coords=None, **kw):
+    """ Convenience function for creating XBT profiles. """
+    kw["temp"] = temp
+    return Cast(depth, zunits=units.meter, coords=coords, **kw)
 
-    def __init__(self, z, temp, coords=None, properties=None,
-                 primarykey="z", **kwargs):
-        super(XBTCast, self).__init__(z, temp=temp, coords=coords,
-                                      properties=properties, primarykey=primarykey,
-                                      **kwargs)
-        return
-
+def LADCP(depth, uvel, vvel, coords=None, **kw):
+    """ Convenience function for creating LADCP profiles. """
+    kw["u"] = uvel
+    kw["v"] = vvel
+    return Cast(depth, zunits=units.meter, coords=coords, **kw)
 
 class CastCollection(collections.Sequence):
     """ A CastCollection is an indexable collection of Cast instances.
@@ -840,9 +826,12 @@ class AbstractCast(six.with_metaclass(abc.ABCMeta)):
 class AbstractCastCollection(six.with_metaclass(abc.ABCMeta)):
     pass
 
+class FieldError(TypeError):
+    pass
+
 AbstractCast.register(Cast)
-AbstractCast.register(CTDCast)
-AbstractCast.register(XBTCast)
-AbstractCast.register(LADCP)
+# AbstractCast.register(CTDCast)
+# AbstractCast.register(XBTCast)
+# AbstractCast.register(LADCP)
 AbstractCastCollection.register(CastCollection)
 
