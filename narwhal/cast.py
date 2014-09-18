@@ -237,7 +237,8 @@ class Cast(object):
             raise KeyError("Cast has no property '{0}'".format(y))
         elif x not in self.data:
             raise KeyError("Cast has no property '{0}'".format(x))
-        if np.all(np.diff(self[x]) >= 0.0):
+        dx = np.diff(self[x])
+        if np.all(dx[~np.isnan(dx)] >= 0.0):
             return np.interp(v, self[x], self[y])
         elif force:
             return np.interp(v, util.force_monotonic(self[x]), self[y])
