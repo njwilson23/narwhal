@@ -87,7 +87,7 @@ class BaseSectionAxes(plt.Axes):
         return bg
 
     def contour(self, cc, prop, ninterp=30, sk=None, mask=True,
-                bottomkey="depth", interp_scheme="standard", **kwargs):
+                bottomkey="depth", interp_scheme="horizontal_corr", **kwargs):
 
         if not isinstance(cc, AbstractCastCollection):
             raise TypeError("first argument must be a CastCollection type")
@@ -105,7 +105,7 @@ class BaseSectionAxes(plt.Axes):
         return super(BaseSectionAxes, self).contour(Xi, Yi, Zi, **kwargs)
 
     def contourf(self, cc, prop, ninterp=30, sk=None, mask=True,
-                 bottomkey="depth", interp_scheme="standard", **kwargs):
+                 bottomkey="depth", interp_scheme="horizontal_corr", **kwargs):
 
         if not isinstance(cc, AbstractCastCollection):
             raise TypeError("first argument must be a CastCollection type")
@@ -123,7 +123,7 @@ class BaseSectionAxes(plt.Axes):
         return super(BaseSectionAxes, self).contourf(Xi, Yi, Zi, **kwargs)
 
     def pcolormesh(self, cc, prop, ninterp=30, sk=None, mask=True,
-                   bottomkey="depth", interp_scheme="standard", **kwargs):
+                   bottomkey="depth", interp_scheme="horizontal_corr", **kwargs):
         if not isinstance(cc, AbstractCastCollection):
             raise TypeError("first argument must be a CastCollection type")
 
@@ -229,11 +229,11 @@ class SectionAxes(BaseSectionAxes):
                 if max_y in cast[cast.primarykey]:
                     return cast
 
-        Yo = np.vstack([cast[cast.primarykey] for cast in cc]).T
-        Xo = np.tile(cc.projdist(), (len(Yo), 1))
-        Zo = cc.asarray(prop)
+        if scheme == "cubic":
+            Yo = np.vstack([cast[cast.primarykey] for cast in cc]).T
+            Xo = np.tile(cc.projdist(), (len(Yo), 1))
+            Zo = cc.asarray(prop)
 
-        if scheme == "standard":
             msk = ~np.isnan(Xo+Yo+Zo)
             c = _longest_cast(cc)
             longest_z = c[c.primarykey]
@@ -294,11 +294,15 @@ class SectionAxes(BaseSectionAxes):
             max_x = distances[-1]
             y_int = int(round(min(5, max_y/100)))
             x_int = max_x / ninterp
-            Yi, Xi = np.mgrid[0:max_y:y_int, 0:max_x:x_int]
+            Yi, Xi = np.mgrid[0:max_y+0.1*y_int:y_int, 0:max_x+0.1*x_int:x_int]
             ct = CloughTocher2DInterpolator(np.c_[0.0001*X,Y], Z)
             Zi = ct(0.0001*Xi, Yi)
 
         elif scheme == "horizontal_corr_old":
+            Yo = np.vstack([cast[cast.primarykey] for cast in cc]).T
+            Xo = np.tile(cc.projdist(), (len(Yo), 1))
+            Zo = cc.asarray(prop)
+
             c = _longest_cast(cc)
             longest_z = c[c.primarykey]
             Xi, Yi = np.meshgrid(np.linspace(Xo[0,0], Xo[0,-1], ninterp), longest_z)
