@@ -138,7 +138,7 @@ class CastCollectionTests(unittest.TestCase):
         casts = []
         for i in range(10):
             cast = Cast(p, temp=2*np.ones_like(p), sal=30*np.ones_like(p),
-                        station=i, val=abs(i-5))
+                        station=i, val=abs(i-5), uniq_val=-i**2)
             casts.append(cast)
         self.cc = CastCollection(casts)
         return
@@ -186,6 +186,18 @@ class CastCollectionTests(unittest.TestCase):
     def test_castswhere_multiple_results(self):
         cc = self.cc
         self.assertEqual(cc.castswhere("val", (1, 2)), cc[3:5] + cc[6:8])
+        return
+
+    def test_castswhere_function(self):
+        cc = self.cc
+        casts = cc.castswhere("val", lambda x: x <=3)
+        self.assertEqual(casts, cc[2:-1])
+        return
+
+    def test_select(self):
+        cc = self.cc
+        casts = cc.select("uniq_val", (-36, -49, -16))
+        self.assertEqual(casts, cc[6:8] + cc[4])
         return
 
     def test_defray(self):

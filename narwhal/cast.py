@@ -237,7 +237,7 @@ class Cast(object):
             raise KeyError("Cast has no property '{0}'".format(y))
         elif x not in self.data:
             raise KeyError("Cast has no property '{0}'".format(x))
-        if np.all(np.diff(self[x]) > 0.0):
+        if np.all(np.diff(self[x]) >= 0.0):
             return np.interp(v, self[x], self[y])
         elif force:
             return np.interp(v, util.force_monotonic(self[x]), self[y])
@@ -564,12 +564,18 @@ class CastCollection(collections.Sequence):
     def castswhere(self, key, values):
         """ Return all casts with a property key that is in `values::Container`
         """
-        if not isinstance(values, collections.Container) or isinstance(values, str):
-            values = (values,)
         casts = []
-        for cast in self.casts:
-            if cast.properties.get(key, None) in values:
-                casts.append(cast)
+        if hasattr(values, "__call__"):
+            func = values
+            for cast in self.casts:
+                if func(cast.properties[key]):
+                    casts.append(cast)
+        else:
+            if not isinstance(values, collections.Container) or isinstance(values, str):
+                values = (values,)
+            for cast in self.casts:
+                if cast.properties.get(key, None) in values:
+                    casts.append(cast)
         return CastCollection(casts)
 
     def select(self, key, values):
