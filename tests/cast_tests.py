@@ -49,7 +49,7 @@ class CastTests(unittest.TestCase):
 
     def test_kw_property_indexing(self):
         cast = Cast(self.p, temp=self.temp, sal=self.sal, name="Cruise station 7")
-        self.assertEqual(cast["name"], "Cruise station 7")
+        self.assertEqual(cast.p["name"], "Cruise station 7")
         return
 
     def test_concatenation(self):

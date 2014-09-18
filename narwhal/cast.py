@@ -111,10 +111,8 @@ class Cast(object):
                                  "({1})".format(key, self._len))
         elif key in self.data:
             return self.data[key]
-        elif key in self.properties:
-            return self.properties[key]
         else:
-            raise KeyError("No item {0}".format(key))
+            raise KeyError("No field {0}".format(key))
         return
 
     def __setitem__(self, key, val):
@@ -175,7 +173,7 @@ class Cast(object):
 
     @property
     def fields(self):
-        return self._fields
+        return copy.copy(self._fields)
 
     @property
     def coords(self):
