@@ -85,6 +85,7 @@ class Cast(object):
                 self.properties[kw] = val
 
         self._len = len(p)
+        self.p = self.properties
         return
 
     def __len__(self):
@@ -125,7 +126,7 @@ class Cast(object):
                 if key not in self._fields:
                     self._fields.append(key)
             else:
-                self.properties[key] = val
+                raise TypeError("Fields must be set from iterables with length equal to the cast")
 
         elif isinstance(key, int):
             raise KeyError("Cast object profiles are not mutable")

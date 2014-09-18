@@ -71,6 +71,17 @@ class CastTests(unittest.TestCase):
         #                 2.7674560521632685)
         return
 
+    def test_add_property_using_alias(self):
+        cast = Cast(self.p, temp=self.temp, sal=self.sal)
+        cast.p["comment"] = "performed bottle cast #23"
+        self.assertEqual(cast.properties["comment"][-2:], "23")
+        return
+
+    def test_read_property_using_alias(self):
+        cast = Cast(self.p, temp=self.temp, sal=self.sal, time="late")
+        self.assertEqual(cast.p["time"], "late")
+        return
+
     def test_add_density(self):
         p = np.arange(10)
         t = 20.0 * 0.2 * p
