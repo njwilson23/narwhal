@@ -53,13 +53,13 @@ class Cast(object):
 
     _type = "cast"
 
-    def __init__(self, z, coords=None, zunits=units.meter, **kwargs):
+    def __init__(self, z, coords=(None, None), zunits=units.meter, **kwargs):
 
         self.properties = {}
         self.data = {}
 
         self.zunits = zunits
-        self.properties["coordinates"] = coords
+        self.properties["coordinates"] = tuple(coords)
         self.data["z"] = np.asarray(z)
         self._len = len(z)
         self.p = self.properties
@@ -136,9 +136,21 @@ class Cast(object):
                                                                type(other)))
 
     def __eq__(self, other):
+        if self._fields != other._fields:
+            print("field mismatch")
+            return False
+        if self.properties != other.properties:
+            print("properties mismatch")
+            print(self.properties)
+            print(other.properties)
+            return False
+        if any(np.any(self.data[k] != other.data[k]) for k in self._fields):
+            print("data mismatch")
+            return False
+
+
         if self._fields != other._fields or \
                 self.properties != other.properties or \
-                self.coords != other.coords or \
                 any(np.any(self.data[k] != other.data[k]) for k in self._fields):
             return False
         else:
@@ -419,18 +431,18 @@ class Cast(object):
         self._addkeydata(dvdzkey, dvdz)
         return
 
-def CTDCast(pres, sal, temp, coords=None, **kw):
+def CTDCast(pres, sal, temp, coords=(None, None), **kw):
     """ Convenience function for creating CTD profiles. """
     kw["sal"] = sal
     kw["temp"] = temp
     return Cast(pres, zunits=units.decibar, coords=coords, **kw)
 
-def XBTCast(depth, temp, coords=None, **kw):
+def XBTCast(depth, temp, coords=(None, None), **kw):
     """ Convenience function for creating XBT profiles. """
     kw["temp"] = temp
     return Cast(depth, zunits=units.meter, coords=coords, **kw)
 
-def LADCP(depth, uvel, vvel, coords=None, **kw):
+def LADCP(depth, uvel, vvel, coords=(None, None), **kw):
     """ Convenience function for creating LADCP profiles. """
     kw["u"] = uvel
     kw["v"] = vvel
@@ -508,11 +520,12 @@ class CastCollection(collections.Sequence):
         s = "CastCollection with {n} casts:".format(n=len(self.casts))
         i = 0
         while i != 10 and i != len(self.casts):
-            c = self[i]
+            c = self.casts[i]
+            lon = c.coords[0] or np.nan
+            lat = c.coords[1] or np.nan
             s +=  ("\n  {num:3g} {typestr:6s} {lon:3.3f} {lat:2.3f}    "
-                    "{keys}".format(typestr=c._type[:-4], num=i+1,
-                                    lon=c.coords[0], lat=c.coords[1],
-                                    keys=c._fields[:8]))
+                    "{keys}".format(typestr="Cast", num=i+1,
+                                    lon=lon, lat=lat, keys=c._fields[:8]))
             if len(c._fields) > 8:
                 s += " ..."
             i += 1

@@ -27,7 +27,7 @@ class IOTests(unittest.TestCase):
         self.sal = sal
         dt = datetime.datetime(1993, 8, 18, 14, 42, 36)
         self.cast = Cast(self.p, temp=self.temp, sal=self.sal, date=dt)
-        self.ctd = CTDCast(self.p, temp=self.temp, sal=self.sal, data=dt)
+        self.ctd = CTDCast(self.p, temp=self.temp, sal=self.sal, date=dt)
         self.xbt = XBTCast(self.p, temp=self.temp, sal=self.sal, date=dt)
         self.collection = CastCollection(self.ctd, self.xbt, self.ctd)
         return

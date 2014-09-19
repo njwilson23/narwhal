@@ -37,9 +37,9 @@ def findunit(unitname):
 def dictascast(d, obj):
     """ Read a file-like stream and construct an object with a Cast-like
     interface. """
-    d_ = copy.copy(d)
+    d_ = d.copy()
     _ = d_.pop("type")
-    coords = d_.pop("coords")
+    coords = d_["scalars"].pop("coordinates")
     zunits = findunit(d_.pop("zunits", "meter"))
     z = d_["vectors"].pop("z")
     prop = d["scalars"]
@@ -49,8 +49,8 @@ def dictascast(d, obj):
                 prop[key] = dateutil.parser.parse(value)
             except (TypeError, ValueError):
                 pass
-    cast = obj(z, coords=coords, zunits=zunits, properties=prop,
-            **d_["vectors"])
+    prop.update(d_["vectors"])
+    cast = obj(z, coords=coords, zunits=zunits, **prop)
     return cast
 
 def dictascastcollection(d, castobj):
