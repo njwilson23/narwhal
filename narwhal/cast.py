@@ -14,6 +14,7 @@ import copy
 from functools import reduce
 import six
 import numpy as np
+import pandas
 from scipy import ndimage
 from scipy import sparse as sprs
 from scipy.interpolate import UnivariateSpline
@@ -45,19 +46,20 @@ class Cast(object):
 
     coords::iterable[2]     the geographic coordinates of the observation
 
-    zunit::Unit             the independent vector ("z") units (e.g. meters,
-                            decibars)
+    zunit::Unit             the independent vector units [default: meter]
+
+    zname::string           name for the independent vector [default: "z"]
     """
 
     _type = "cast"
 
-    def __init__(self, z, coords=(None, None), zunits=units.meter, **kwargs):
+    def __init__(self, z, coords=(None, None), zunits=units.meter, zname="z", **kwargs):
 
         self.properties = {}
-        self.data = {}
+        data = {}
 
         self.zunits = zunits
-        self.data["z"] = np.asarray(z)
+        self.zname = zname
         self._len = len(z)
         self.p = self.properties
 
@@ -68,16 +70,16 @@ class Cast(object):
             items = kwargs.items()
 
         # Populate vector and scalar data fields
-        self._fields = ["z"]
+        data[zname] = pandas.Series(data=z, index=z, name=zname)
         for (kw, val) in items:
             if isinstance(val, collections.Container) and \
                     not isinstance(val, str) and \
                     len(val) == len(z):
-                self.data[kw] = np.asarray(val)
-                self._fields.append(kw)
+                data[kw] = pandas.Series(data=val, index=z, name=kw)
             else:
                 self.properties[kw] = val
         self.properties["coordinates"] = tuple(coords)
+        self.data = pandas.DataFrame(data)
         return
 
     def __len__(self):
@@ -88,7 +90,7 @@ class Cast(object):
             coords = tuple(round(c, 3) for c in self.coords)
         else:
             coords = (None, None)
-        s = "Cast (" + "".join([str(k)+", " for k in self._fields])
+        s = "Cast (" + "".join([str(k)+", " for k in self.fields])
         # cut off the final comma
         s = s[:-2] + ") at {0}".format(coords)
         return s
@@ -96,8 +98,7 @@ class Cast(object):
     def __getitem__(self, key):
         if isinstance(key, int):
             if 0 <= key < self._len:
-                return tuple((a, self.data[a][key]) for a in self._fields
-                             if hasattr(self.data[a], "__iter__"))
+                return self.data.irow(key)
             else:
                 raise IndexError("{0} not within cast length "
                                  "({1})".format(key, self._len))
@@ -116,8 +117,8 @@ class Cast(object):
             if isinstance(val, collections.Container) and \
                     not isinstance(val, str) and len(val) == self._len:
                 self.data[key] = val
-                if key not in self._fields:
-                    self._fields.append(key)
+                if key not in self.fields:
+                    self.fields.append(key)
             else:
                 raise TypeError("Fields must be set from iterables with length equal to the cast")
 
@@ -137,22 +138,9 @@ class Cast(object):
                                                                type(other)))
 
     def __eq__(self, other):
-        if self._fields != other._fields:
-            print("field mismatch")
-            return False
-        if self.properties != other.properties:
-            print("properties mismatch")
-            print(self.properties)
-            print(other.properties)
-            return False
-        if any(np.any(self.data[k] != other.data[k]) for k in self._fields):
-            print("data mismatch")
-            return False
-
-
-        if self._fields != other._fields or \
+        if any(self.fields != other.fields) or \
                 self.properties != other.properties or \
-                any(np.any(self.data[k] != other.data[k]) for k in self._fields):
+                any(np.any(self.data[k] != other.data[k]) for k in self.fields):
             return False
         else:
             return True
@@ -170,17 +158,16 @@ class Cast(object):
         key_ = key
         if not overwrite:
             i = 2
-            while key_ in self.data:
+            while key_ in self.fields:
                 key_ = key + "_" + str(i)
                 i += 1
-        if key_ not in self._fields:
-            self._fields.append(key_)
-        self.data[key_] = data
+        ser = pandas.Series(data=data, index=self.data.index, name=key_)
+        self.data = self.data.join(ser)
         return key_
 
     @property
     def fields(self):
-        return copy.copy(self._fields)
+        return self.data.keys()
 
     @property
     def coords(self):
@@ -189,14 +176,14 @@ class Cast(object):
     def nanmask(self, fields=None):
         """ Return a mask for observations containing at least one NaN. """
         if fields is None:
-            fields = self._fields
+            fields = self.fields
         vectors = [v for (k,v) in self.data.items() if k in fields]
         return np.isnan(np.vstack(vectors).sum(axis=0))
 
     def nvalid(self, fields=None):
         """ Return the number of complete (non-NaN) observations. """
         if fields is None:
-            fields = self._fields
+            fields = self.fields
         elif isinstance(fields, str):
             fields = (fields,)
         vectors = [self.data[k] for k in fields]
@@ -206,18 +193,14 @@ class Cast(object):
             nv = sum(reduce(lambda a,b: (~np.isnan(a))&(~np.isnan(b)), vectors))
         return nv
 
-    def extend(self, n, padvalue=np.nan):
+    def extend(self, n):
         """ Add `n::int` NaN depth levels to cast. """
-        if n == 0:
-            raise ValueError("Cast already has length {0}".format(n))
-        elif n < 0:
-            raise ValueError("Cast is longer than length {0}".format(n))
+        if n > 0:
+            empty_df = pandas.DataFrame({self.zname: np.nan * np.empty(n)})
+            self.data = pandas.concat([self.data, empty_df], ignore_index=True)
+            self._len += n
         else:
-            empty_array = padvalue * np.empty(n, dtype=np.float64)
-        for key in self.data:
-            arr = np.hstack([self.data[key], empty_array])
-            self.data[key] = arr
-        self._len = len(self) + n
+            raise ValueError("Cast must be extended with 1 or more rows")
         return
 
     def interpolate(self, y, x, v, force=False):
@@ -281,7 +264,7 @@ class Cast(object):
                     fileio.writecast(f, self, binary=False)
         return
 
-    def add_density(self, salkey="sal", tempkey="temp", preskey="z", rhokey="rho"):
+    def add_density(self, salkey="sal", tempkey="temp", preskey="pres", rhokey="rho"):
         """ Add in-situ density computed from salinity, temperature, and
         pressure to fields. Return the field name.
         
@@ -293,7 +276,7 @@ class Cast(object):
 
         rhokey::string              Data key to use for in-situ density
         """
-        if salkey in self._fields and tempkey in self._fields and \
+        if salkey in self.fields and tempkey in self.fields and \
                 (self.zunits == units.decibar or preskey != "z"):
             SA = gsw.sa_from_sp(self[salkey], self[preskey],
                                 [self.coords[0] for _ in self[salkey]],
@@ -305,7 +288,7 @@ class Cast(object):
             raise FieldError("add_density requires salinity, temperature, and "
                              "pressure fields")
 
-    def add_depth(self, preskey="z", rhokey="rho", depthkey="depth"):
+    def add_depth(self, preskey="pres", rhokey="rho", depthkey="depth"):
         """ Use density and pressure to calculate depth.
         
         preskey::string             Data key to use for pressure
@@ -316,7 +299,7 @@ class Cast(object):
         """
         if preskey == "z" and self.zunits != units.decibar:
             raise FieldError("add_depth requires a pressure field")
-        if rhokey not in self._fields:
+        if rhokey not in self.fields:
             raise FieldError("add_depth requires a density field")
         rho = self[rhokey]
 
@@ -346,7 +329,7 @@ class Cast(object):
         s::float                    Spline smoothing factor (smaller values
                                     give a noisier result)
         """
-        if rhokey not in self._fields:
+        if rhokey not in self.fields:
             raise FieldError("add_Nsquared requires in-situ density")
         if depthkey == "z" and self.zunits != units.meter:
             raise FieldError("add_Nsquared requires depth in meters")
@@ -375,7 +358,7 @@ class Cast(object):
 
         depthkey::string            Data key to use for depth
         """
-        if N2key not in self._fields or depthkey not in self._fields:
+        if N2key not in self.fields or depthkey not in self.fields:
             raise FieldError("baroclinic_modes requires buoyancy frequency and depth")
 
         igood = ~self.nanmask((N2key, depthkey))
@@ -449,7 +432,7 @@ class Cast(object):
 
         dudzkey,dvdzkey::string     Data key to use for u,v velocity shears
         """
-        if ukey not in self._fields or vkey not in self._fields:
+        if ukey not in self.fields or vkey not in self.fields:
             raise FieldError("add_shear requires u and v velocity components")
         if depthkey == "z" and self.zunits != units.meter:
             raise FieldError("add_shear requires depth in meters")
@@ -460,8 +443,8 @@ class Cast(object):
             u = self[ukey]
             v = self[vkey]
 
-        dudz = util.diff1(u, self[depthkey])
-        dvdz = util.diff1(v, self[depthkey])
+        dudz = util.diff1(u.values, self[depthkey].values)
+        dvdz = util.diff1(v.values, self[depthkey].values)
         self._addkeydata(dudzkey, dudz)
         self._addkeydata(dvdzkey, dvdz)
         return
@@ -470,7 +453,7 @@ def CTDCast(pres, sal, temp, coords=(None, None), **kw):
     """ Convenience function for creating CTD profiles. """
     kw["sal"] = sal
     kw["temp"] = temp
-    return Cast(pres, zunits=units.decibar, coords=coords, **kw)
+    return Cast(pres, zunits=units.decibar, zname="pres", coords=coords, **kw)
 
 def XBTCast(depth, temp, coords=(None, None), **kw):
     """ Convenience function for creating XBT profiles. """
@@ -560,8 +543,8 @@ class CastCollection(collections.Sequence):
             lat = c.coords[1] or np.nan
             s +=  ("\n  {num:3g} {typestr:6s} {lon:3.3f} {lat:2.3f}    "
                     "{keys}".format(typestr="Cast", num=i+1,
-                                    lon=lon, lat=lat, keys=c._fields[:8]))
-            if len(c._fields) > 8:
+                                    lon=lon, lat=lat, keys=c.fields[:8]))
+            if len(c.fields) > 8:
                 s += " ..."
             i += 1
         if len(self.casts) > 10:
@@ -616,7 +599,7 @@ class CastCollection(collections.Sequence):
         casts = [self.castwhere(key, v) for v in values]
         return CastCollection(casts)
 
-    def defray(self, padvalue=np.nan):
+    def defray(self):
         """ Pad casts to all have the same length, and return a copy.
         
         Warning: does not correct differing pressure bins, which require
@@ -628,7 +611,7 @@ class CastCollection(collections.Sequence):
             cast = copy.deepcopy(cast_)
             if len(cast) < n:
                 dif = n - len(cast)
-                cast.extend(dif, padvalue=padvalue)
+                cast.extend(dif)
                 casts.append(cast)
             else:
                 casts.append(cast)
