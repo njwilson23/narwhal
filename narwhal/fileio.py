@@ -7,12 +7,13 @@ import copy
 import datetime
 import dateutil.parser
 import numpy
+import pandas
 from karta import Point, geojson
 from . import units
 
 def castasdict(cast):
     scalars = [key for key in cast.properties]
-    vectors = [key for key in cast.data]
+    vectors = list(cast.data.keys())
     dscalar, dvector = {}, {}
     for key in scalars:
         if isinstance(cast.properties[key], datetime.datetime):
@@ -22,10 +23,12 @@ def castasdict(cast):
     for key in vectors:
         if isinstance(cast[key], numpy.ndarray):
             dvector[key] = cast[key].tolist()
+        elif isinstance(cast[key], pandas.Series):
+            dvector[key] = cast[key].values.tolist()
         else:
             dvector[key] = list(cast[key])
     d = dict(type=cast._type, scalars=dscalar, vectors=dvector,
-            coords=cast.coords, zunits=str(cast.zunits))
+            coords=cast.coords, zunits=str(cast.zunits), zname=str(cast.zname))
     return d
 
 def findunit(unitname):
@@ -41,7 +44,8 @@ def dictascast(d, obj):
     _ = d_.pop("type")
     coords = d_["scalars"].pop("coordinates")
     zunits = findunit(d_.pop("zunits", "meter"))
-    z = d_["vectors"].pop("z")
+    zname = d_.pop("zname", "z")
+    z = d_["vectors"].pop(zname)
     prop = d["scalars"]
     for (key, value) in prop.items():
         if "date" in key or "time" in key and isinstance(prop[key], str):
@@ -50,7 +54,7 @@ def dictascast(d, obj):
             except (TypeError, ValueError):
                 pass
     prop.update(d_["vectors"])
-    cast = obj(z, coords=coords, zunits=zunits, **prop)
+    cast = obj(z, coords=coords, zunits=zunits, zname=zname, **prop)
     return cast
 
 def dictascastcollection(d, castobj):
