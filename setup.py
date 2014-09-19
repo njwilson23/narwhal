@@ -32,7 +32,7 @@ finally:
 
 setup(
     name = "narwhal",
-    version = "0.2.2",
+    version = "0.3.0",
     author = "Nat Wilson",
     #package_dir = {"narwhal": "src"},
     packages = ["narwhal"],
