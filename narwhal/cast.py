@@ -40,15 +40,13 @@ class Cast(object):
     """ A Cast is a set of referenced measurements associated with a single
     coordinate.
 
-    Vector water properties are provided as keyword arguments. There are
-    several reserved keywords:
+    Vector water properties and scalar metadata are provided as keyword
+    arguments. There are several reserved keywords:
 
     coords::iterable[2]     the geographic coordinates of the observation
 
-    properties::dict        scalar metadata
-
-    primarykey::string      the name of vertical measure. Usually pressure
-                            ("pres"), but could be e.g. depth ("z")
+    zunit::Unit             the independent vector ("z") units (e.g. meters,
+                            decibars)
     """
 
     _type = "cast"
@@ -59,7 +57,6 @@ class Cast(object):
         self.data = {}
 
         self.zunits = zunits
-        self.properties["coordinates"] = tuple(coords)
         self.data["z"] = np.asarray(z)
         self._len = len(z)
         self.p = self.properties
@@ -80,6 +77,7 @@ class Cast(object):
                 self._fields.append(kw)
             else:
                 self.properties[kw] = val
+        self.properties["coordinates"] = tuple(coords)
         return
 
     def __len__(self):
@@ -105,6 +103,10 @@ class Cast(object):
                                  "({1})".format(key, self._len))
         elif key in self.data:
             return self.data[key]
+        # elif key == "depth" and self.zunit == units.meter:
+        #     return self.data["z"]
+        # elif key == "pres" and self.zunit == units.decibar:
+        #     return self.data["z"]
         else:
             raise KeyError("No field {0}".format(key))
         return
@@ -112,8 +114,7 @@ class Cast(object):
     def __setitem__(self, key, val):
         if isinstance(key, str):
             if isinstance(val, collections.Container) and \
-                    not isinstance(val, str) and \
-                    len(val) == len(self[self.primarykey]):
+                    not isinstance(val, str) and len(val) == self._len:
                 self.data[key] = val
                 if key not in self._fields:
                     self._fields.append(key)
@@ -281,7 +282,17 @@ class Cast(object):
         return
 
     def add_density(self, salkey="sal", tempkey="temp", preskey="z", rhokey="rho"):
-        """ Add in-situ density to fields, and return the field name. """
+        """ Add in-situ density computed from salinity, temperature, and
+        pressure to fields. Return the field name.
+        
+        salkey::string              Data key to use for salinity
+
+        tempkey::string             Data key to use for in-situ temperature
+
+        preskey::string             Data key to use for pressure
+
+        rhokey::string              Data key to use for in-situ density
+        """
         if salkey in self._fields and tempkey in self._fields and \
                 (self.zunits == units.decibar or preskey != "z"):
             SA = gsw.sa_from_sp(self[salkey], self[preskey],
@@ -295,9 +306,14 @@ class Cast(object):
                              "pressure fields")
 
     def add_depth(self, preskey="z", rhokey="rho", depthkey="depth"):
-        """ Use density and pressure to calculate depth. If in-situ density is
-        already in a field, `rhokey::string` can be provided to avoid
-        recalculating it. """
+        """ Use density and pressure to calculate depth.
+        
+        preskey::string             Data key to use for pressure
+
+        rhokey::string              Data key to use for in-situ density
+
+        depthkey::string            Data key to use for depth
+        """
         if preskey == "z" and self.zunits != units.decibar:
             raise FieldError("add_depth requires a pressure field")
         if rhokey not in self._fields:
@@ -318,9 +334,18 @@ class Cast(object):
         return self._addkeydata(depthkey, depth)
 
     def add_Nsquared(self, rhokey="rho", depthkey="z", N2key="N2", s=0.2):
-        """ Calculate the squared buoyancy frequency, based on density given by
-        `rhokey::string`. Uses a smoothing spline with smoothing factor
-        `s::float` (smaller values of `s` give a noisier result). """
+        """ Calculate the squared buoyancy frequency, based on in-situ density.
+        Uses a smoothing spline to compute derivatives.
+        
+        rhokey::string              Data key to use for in-situ density
+
+        depthkey::string            Data key to use for depth
+
+        N2key::string               Data key to use for N^2
+
+        s::float                    Spline smoothing factor (smaller values
+                                    give a noisier result)
+        """
         if rhokey not in self._fields:
             raise FieldError("add_Nsquared requires in-situ density")
         if depthkey == "z" and self.zunits != units.meter:
@@ -343,8 +368,12 @@ class Cast(object):
         Additional arguments
         --------------------
 
-        ztop            the depth at which to cut off the profile, to avoid
-                        surface effects
+        ztop                        the depth at which to cut off the profile,
+                                    to avoid surface effects
+
+        N2key::string               Data key to use for N^2
+
+        depthkey::string            Data key to use for depth
         """
         if N2key not in self._fields or depthkey not in self._fields:
             raise FieldError("baroclinic_modes requires buoyancy frequency and depth")
@@ -410,17 +439,23 @@ class Cast(object):
         return (mass1, mass2, mass3)
 
     def add_shear(self, depthkey="z", ukey="u", vkey="v", dudzkey="dudz", dvdzkey="dvdz",
-                  sigma=None):
-        """ Compute the velocity shear for *u* and *v*. If *sigma* is not None,
+                  s=None):
+        """ Compute the velocity shear for *u* and *v*. If *s* is not None,
         smooth the data with a gaussian filter before computing the derivative.
+
+        depthkey::string            Data key to use for depth
+
+        vkey,ukey::string           Data key to use for u,v velocity
+
+        dudzkey,dvdzkey::string     Data key to use for u,v velocity shears
         """
         if ukey not in self._fields or vkey not in self._fields:
             raise FieldError("add_shear requires u and v velocity components")
         if depthkey == "z" and self.zunits != units.meter:
             raise FieldError("add_shear requires depth in meters")
-        if sigma is not None:
-            u = ndimage.filters.gaussian_filter1d(self[ukey], sigma)
-            v = ndimage.filters.gaussian_filter1d(self[vkey], sigma)
+        if s is not None:
+            u = ndimage.filters.gaussian_filter1d(self[ukey], s)
+            v = ndimage.filters.gaussian_filter1d(self[vkey], s)
         else:
             u = self[ukey]
             v = self[vkey]
@@ -550,9 +585,6 @@ class CastCollection(collections.Sequence):
                 sys.stderr.write("Warning: cast has no coordinates")
         return
 
-    def mean(self):
-        raise NotImplementedError()
-
     def castwhere(self, key, value):
         """ Return the first cast where cast.properties[key] == value """
         for cast in self.casts:
@@ -578,7 +610,8 @@ class CastCollection(collections.Sequence):
         return CastCollection(casts)
 
     def select(self, key, values):
-        """ Return an CastCollection of Casts with selected where `key::str` equals `values::Iterable`
+        """ Return an CastCollection of Casts with selected where `key::str`
+        equals `values::Iterable`
         """
         casts = [self.castwhere(key, v) for v in values]
         return CastCollection(casts)
@@ -605,7 +638,7 @@ class CastCollection(collections.Sequence):
         """ Naively return values as an array, assuming that all casts are indexed
         with the same pressure levels.
 
-        key::string         property to return
+        key::string                     property to return
         """
         nrows = max(cast._len for cast in self.casts)
         arr = np.nan * np.empty((nrows, len(self.casts)), dtype=np.float64)
