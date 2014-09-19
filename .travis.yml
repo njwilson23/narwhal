@@ -4,11 +4,6 @@ python:
   - "3.3"
   - "3.4"
 
-branches:
-  only:
-    - master
-    - travis
-
 before_install:
   - sudo apt-get update
   - wget http://repo.continuum.io/miniconda/Miniconda-latest-Linux-x86_64.sh -O miniconda.sh
@@ -19,8 +14,10 @@ before_install:
   - conda info -a
 
 install:
-  - sudo apt-get install python-numpy   # needed to get numpy C-headers, which aren't being shown for the travis install
-  - conda create --yes -n test-environment python=$TRAVIS_PYTHON_VERSION numpy scipy pip
+  - sudo apt-get install python-numpy   # needed to get numpy C-headers, which
+                                        # aren't being shown for the travis install
+  - conda create --yes -n test-environment python=$TRAVIS_PYTHON_VERSION \
+      numpy scipy pandas pip
   - source activate test-environment
   - pip install pyshp pyproj requests python-dateutil six
   - pip install --pre karta
