@@ -2,20 +2,18 @@
 
 [![Build Status](https://travis-ci.org/njwilson23/narwhal.svg?branch=master)](https://travis-ci.org/njwilson23/narwhal)
 
-Narwhal is a Python library for manipulating and visualizing oceanographic
-survey data.
+Narwhal is a Python library built on [pandas](http://pandas.pydata.org/) and
+[matplotlib](http://matplotlib.org/) for manipulating and visualizing
+oceanographic survey data.
 
-![narwhal type hierarchy](https://rawgit.com/njwilson23/narwhal/gh-pages/classmap.svg)
-
-The `Cast` and `CastCollection` types serialize themselves as zipped JSON
-objects for data storage and sharing. WOCE CTD casts in NetCDF format can also
-be read directly.
+`Cast` and `CastCollection` classes make organizing and processing data more
+intuitive. These can also serialize themselves as zipped JSON objects for data
+storage and sharing. WOCE CTD casts in NetCDF format may be read directly.
 
 The `narwhal.plotting` submodule contains convenience methods for creating
 attractive T-S diagrams, cast plots, and section plots. Here's some
 data from the <a href="http://cchdo.ucsd.edu/cruise/325021_1">WOCE P17N
 line,</a> collected on a cruise by the Thomas G. Thomson.</p>
-
 
 ![P17N T-S diagram](https://rawgit.com/njwilson23/narwhal/gh-pages/ts-demo.png)
 
@@ -35,6 +33,7 @@ in the `narwhal.gsw` submodule, making things like the following possible:
 
 ## Dependencies
 - Python 2.7+ or Python 3.2+
+- pandas
 - numpy
 - scipy
 - requests
