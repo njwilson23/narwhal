@@ -36,16 +36,8 @@
 
         <section id="main_content">
 
-<p>Narwhal is a Python library for analysing and visualizing oceanographic
-data.</p>
-
-<p class="image"><img src="https://rawgit.com/njwilson23/narwhal/gh-pages/classmap.svg" alt="narwhal type hierarchy"></p>
-
-<p>CTD or XBT casts are handled as <code>Cast</code> objects associated in
-field notes, geographical coordinates, and derived fields such as depth and
-density. The <code>Cast</code> and <code>CastCollection</code> types serialize
-themselves as zipped JSON objects for data storage and sharing. WOCE CTD casts
-in NetCDF format can be read directly.</p>
+<p>Narwhal is a Python library built on <a href="http://pandas.pydata.org/">pandas</a> and <a href="http://matplotlib.org/">matplotlib</a> for manipulating and visualizing oceanographic survey data.</p>
+<p><code>Cast</code> and <code>CastCollection</code> classes make organizing and processing data more intuitive. These can also serialize themselves as zipped JSON objects for data storage and sharing. WOCE CTD casts in NetCDF format may be read directly.</p>
 
 <p>The <code>narwhal.plotting</code> submodule contains convenience methods for
 creating attractive T-S diagrams, cast plots, and section plots. Here's some
@@ -73,6 +65,7 @@ pip install narwhal
 
 <ul>
 <li>Python 2.7+ or Python 3.2+</li>
+<li>pandas</li>
 <li>numpy</li>
 <li>scipy</li>
 <li>requests</li>
