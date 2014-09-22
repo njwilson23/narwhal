@@ -20,7 +20,7 @@ class BaseSectionAxes(plt.Axes):
         super(plt.Axes, self).__init__(*args, **kwargs)
 
     def _set_section_bounds(self, cc, prop):
-        zgen = (np.array(c[c.primarykey]) for c in cc)
+        zgen = (np.array(c[c.zname]) for c in cc)
         validmsk = (~np.isnan(c[prop]) for c in cc)
         ymax = max(p[msk][-1] for p,msk in zip(zgen, validmsk))
         cx = cc.projdist()
@@ -44,7 +44,7 @@ class BaseSectionAxes(plt.Axes):
             def _last(arr):
                 msk = ~np.isnan(arr)
                 return arr[np.max(np.argwhere(msk))]
-            depth = [_last(cast[cast.primarykey]) for cast in cc]
+            depth = [_last(cast[cast.zname]) for cast in cc]
         cx = cc.projdist()
         base = np.interp(Xi[0,:], cx, depth)
         zmask = Yi > np.tile(base, (Xi.shape[0], 1))
@@ -183,7 +183,7 @@ class BaseSectionAxes(plt.Axes):
     def mark_stations(self, cc, **kwargs):
         """ Draw a vertical line at each station position along the section.
         Keyword arguments are passed to `self.plot` """
-        ymax = max(np.nanmax(np.array(c[c.primarykey])) for c in cc)
+        ymax = max(np.nanmax(np.array(c[c.zname])) for c in cc)
         kwargs.setdefault("color", "0.3")
         kwargs.setdefault("linestyle", "--")
         lines = [self.plot((x_, x_), (ymax, 0), **kwargs) for x_ in cc.projdist()]
@@ -224,19 +224,19 @@ class SectionAxes(BaseSectionAxes):
 
         def _longest_cast(cc):
             """ Return the longest cast in a cast collection """
-            max_y = max(np.nanmax(c[c.primarykey]) for c in cc)
+            max_y = max(np.nanmax(c[c.zname]) for c in cc)
             for cast in cc:
-                if max_y in cast[cast.primarykey]:
+                if max_y in cast[cast.zname]:
                     return cast
 
         if scheme == "cubic":
-            Yo = np.vstack([cast[cast.primarykey] for cast in cc]).T
+            Yo = np.vstack([cast[cast.zname] for cast in cc]).T
             Xo = np.tile(cc.projdist(), (len(Yo), 1))
             Zo = cc.asarray(prop)
 
             msk = ~np.isnan(Xo+Yo+Zo)
             c = _longest_cast(cc)
-            longest_z = c[c.primarykey]
+            longest_z = c[c.zname]
 
             Xi, Yi = np.meshgrid(np.linspace(Xo[0,0], Xo[0,-1], ninterp), longest_z)
             Zi = griddata(np.c_[Xo[msk], Yo[msk]], Zo[msk],
@@ -262,24 +262,24 @@ class SectionAxes(BaseSectionAxes):
                     
                 # add the measured values
                 X.extend(x * np.ones(cast.nvalid(prop)))
-                Y.extend(cast[cast.primarykey][~cast.nanmask(prop)])
+                Y.extend(cast[cast.zname][~cast.nanmask(prop)])
                 Z.extend(cast[prop][~cast.nanmask(prop)])
                     
                 # for each non-NaN level in *cast*, check castleft and castrigh
                 # to see if they're NaN
                 # if so, add a dummy value half way between
                 msk = ~cast.nanmask(prop)
-                for lvl, v in zip(cast[cast.primarykey][msk], cast[prop][msk]):
+                for lvl, v in zip(cast[cast.zname][msk], cast[prop][msk]):
 
-                    primarykey = cast.primarykey
+                    zname = cast.zname
                     if castleft and \
-                            np.isnan(castleft.interpolate(prop, primarykey, lvl)):
+                            np.isnan(castleft.interpolate(prop, zname, lvl)):
                         X.append(0.5 * (xleft+x))
                         Y.append(lvl)
                         Z.append(v)
                 
                     if castrigh and \
-                            np.isnan(castrigh.interpolate(prop, primarykey, lvl)):
+                            np.isnan(castrigh.interpolate(prop, zname, lvl)):
                         X.append(0.5 * (xrigh+x))
                         Y.append(lvl)
                         Z.append(v)
@@ -290,7 +290,7 @@ class SectionAxes(BaseSectionAxes):
             X = np.array(X)
             Y = np.array(Y)
 
-            max_y = max(np.nanmax(c[c.primarykey]) for c in cc)
+            max_y = max(np.nanmax(c[c.zname]) for c in cc)
             max_x = distances[-1]
             y_int = int(round(min(5, max_y/100)))
             x_int = max_x / ninterp
@@ -299,12 +299,12 @@ class SectionAxes(BaseSectionAxes):
             Zi = ct(0.0001*Xi, Yi)
 
         elif scheme == "horizontal_corr_old":
-            Yo = np.vstack([cast[cast.primarykey] for cast in cc]).T
+            Yo = np.vstack([cast[cast.zname] for cast in cc]).T
             Xo = np.tile(cc.projdist(), (len(Yo), 1))
             Zo = cc.asarray(prop)
 
             c = _longest_cast(cc)
-            longest_z = c[c.primarykey]
+            longest_z = c[c.zname]
             Xi, Yi = np.meshgrid(np.linspace(Xo[0,0], Xo[0,-1], ninterp), longest_z)
 
             # interpolate over NaNs in a way that assumes horizontal correlation
@@ -337,7 +337,7 @@ class SectionAxes(BaseSectionAxes):
 
         elif scheme == "zero_base":
 
-            Yo = np.vstack([cast[cast.primarykey] for cast in cc]).T
+            Yo = np.vstack([cast[cast.zname] for cast in cc]).T
             Xo = np.tile(cc.projdist(), (len(Yo), 1))
             Zo = cc.asarray(prop)
 
@@ -351,7 +351,7 @@ class SectionAxes(BaseSectionAxes):
 
             xi = np.linspace(Xo[0,0], Xo[0,-1], ninterp)
             c = _longest_cast(cc)
-            yi = c[c.primarykey]
+            yi = c[c.zname]
 
             idxdepth = _find_idepth(Zo)
             idepth = np.round(np.interp(xi, Xo[0], idxdepth)).astype(int)

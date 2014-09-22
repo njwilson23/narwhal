@@ -49,7 +49,7 @@ def plot_profiles(castlikes, key="temp", ax=None, **kw):
             for cast_ in cast:
                 num = _plot_profile(num, cast_)
         elif isinstance(cast, narwhal.AbstractCast):
-            z = cast[cast.primarykey]
+            z = cast[cast.zname]
             _kw = dict((k, next(v)) for k, v in plotkw.items())
             ax.plot(cast[key], z, **_kw)
             num += 1
@@ -312,7 +312,7 @@ DEFAULT_CONTOURF = {"cmap":     plt.cm.gist_ncar,
 
 def _interpolate_section_grid(cc, prop, bottomkey, ninterp, interp_method):
     cx = cc.projdist()
-    y = cc[0][cc[0].primarykey]
+    y = cc[0][cc[0].zname]
     Xo, Yo = np.meshgrid(cx, y)
     Yi, Xi = np.meshgrid(y, np.linspace(cx[0], cx[-1], ninterp))
     Zo = cc.asarray(prop)
@@ -379,7 +379,7 @@ def _interpolate_section_tri(cc, prop, bottomkey):
     X, Y, Z = [], [], []
     for (i, cast) in enumerate(cc):
         d = cast.properties[bottomkey]
-        pkey = cast.primarykey
+        pkey = cast.zname
         y = cast[pkey][cast[pkey] < d]      # z where z is less than maximum depth
         Y.extend(y)
         X.extend([cx[i] for _ in range(len(y))])
@@ -394,7 +394,7 @@ def _interpolate_section_tri(cc, prop, bottomkey):
     return tri, Z
 
 def _interpolate_section_cloughtocher(cc, prop, bottomkey, ninterp):
-    yo = np.vstack([cast[cast.primarykey] for cast in cc]).T
+    yo = np.vstack([cast[cast.zname] for cast in cc]).T
     xo = np.tile(cc.projdist(), (len(yo), 1))
     zo = cc.asarray(prop)
     msk = ~np.isnan(xo + yo + zo)
@@ -402,7 +402,7 @@ def _interpolate_section_cloughtocher(cc, prop, bottomkey, ninterp):
     ct2i = CloughTocher2DInterpolator(np.c_[xo[msk], yo[msk]], zo[msk])
 
     Xi, Yi = np.meshgrid(np.linspace(xo[0,0], xo[0,-1], ninterp),
-                         cc[0][cc[0].primarykey])
+                         cc[0][cc[0].zname])
     Zi = ct2i(Xi, Yi)
 
     # interpolate over NaNs in a way that assumes horizontal correlation
@@ -431,7 +431,7 @@ def _interpolate_section_cloughtocher(cc, prop, bottomkey, ninterp):
     return Xi, Yi, Zi
 
 def _set_section_bounds(ax, cc, prop):
-    zgen = (np.array(c[c.primarykey]) for c in cc)
+    zgen = (np.array(c[c.zname]) for c in cc)
     validmsk = (~np.isnan(c[prop]) for c in cc)
     ymax = max(p[msk][-1] for p,msk in zip(zgen, validmsk))
     cx = cc.projdist()
