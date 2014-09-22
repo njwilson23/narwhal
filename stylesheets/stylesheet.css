@@ -50,8 +50,8 @@ table {
 body {
   font-size: 1em;
   line-height: 1.5; 
-  background: #e7e7e7 url(../images/chart-bg.jpg) no-repeat;
-  background-size: auto 100%;
+  background-image: url(../images/chart-bg-faded.jpg);
+  background-size: cover;
   background-position: auto auto;
   background-attachment: fixed;
   font-family: 'Open Sans', sans-serif;
