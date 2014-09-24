@@ -572,10 +572,27 @@ class CastCollection(collections.Sequence):
                 return cast
         raise LookupError("Cast not found with {0} = {1}".format(key, value))
 
-    def castswhere(self, key, values):
-        """ Return all casts with a property key that is in `values::Container`
+    def castswhere(self, key, values=None):
+        """ Return all casts satisfying criteria. Criteria are specified using
+        one of the following patterns:
+
+        - f::function, in which case all casts satisfying `f(cast) == True` are
+          returned
+
+        - k::string and f::function, in which case all casts for which
+          `f(cast[key]) == True` are returned
+
+        - k::string and L::Container, in which case all casts for which
+          `cast[key] is in L == True` are returned
+
+        with a property key that is in `values::Container`
         """
         casts = []
+        if values is None:
+            if hasattr(key, "__call__"):
+                return CastCollection([c for c in self if key(c)])
+            else:
+                raise ValueError("If one argument is given, it must be a function")
         if hasattr(values, "__call__"):
             func = values
             for cast in self.casts:
