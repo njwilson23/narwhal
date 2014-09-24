@@ -20,11 +20,16 @@ class BaseSectionAxes(plt.Axes):
         super(plt.Axes, self).__init__(*args, **kwargs)
 
     def _set_section_bounds(self, cc, prop):
-        zgen = (np.array(c[c.zname]) for c in cc)
-        validmsk = (~np.isnan(c[prop]) for c in cc)
-        ymax = max(p[msk][-1] for p,msk in zip(zgen, validmsk))
-        cx = cc.projdist()
+        """ Given a CastCollection and a property name, set the axes bounds to
+        propertly show all valid data. """
+        # vertical extents
+        zgen = (c[c.zname].values for c in cc)
+        validmsk = (~np.isnan(c[prop].values) for c in cc)
+        ymax = max(z[msk][-1] for z,msk in zip(zgen, validmsk))
         self.set_ylim((ymax, 0))
+
+        # horizontal extents
+        cx = cc.projdist()
         self.set_xlim((cx[0], cx[-1]))
         return
 
@@ -44,7 +49,7 @@ class BaseSectionAxes(plt.Axes):
             def _last(arr):
                 msk = ~np.isnan(arr)
                 return arr[np.max(np.argwhere(msk))]
-            depth = [_last(cast[cast.zname]) for cast in cc]
+            depth = [_last(cast[cast.zname].values) for cast in cc]
         cx = cc.projdist()
         base = np.interp(Xi[0,:], cx, depth)
         zmask = Yi > np.tile(base, (Xi.shape[0], 1))
@@ -244,7 +249,9 @@ class SectionAxes(BaseSectionAxes):
             Zi = Zi.reshape(Xi.shape)
 
         elif scheme == "horizontal_corr":
+
             # this version works with irregular gridding
+
             X, Y = [], []
             Z = []
 
@@ -290,50 +297,13 @@ class SectionAxes(BaseSectionAxes):
             X = np.array(X)
             Y = np.array(Y)
 
-            max_y = max(np.nanmax(c[c.zname]) for c in cc)
+            max_y = max(np.nanmax(c[c.zname].values) for c in cc)
             max_x = distances[-1]
             y_int = int(round(min(5, max_y/100)))
             x_int = max_x / ninterp
             Yi, Xi = np.mgrid[0:max_y+0.1*y_int:y_int, 0:max_x+0.1*x_int:x_int]
             ct = CloughTocher2DInterpolator(np.c_[0.0001*X,Y], Z)
             Zi = ct(0.0001*Xi, Yi)
-
-        elif scheme == "horizontal_corr_old":
-            Yo = np.vstack([cast[cast.zname] for cast in cc]).T
-            Xo = np.tile(cc.projdist(), (len(Yo), 1))
-            Zo = cc.asarray(prop)
-
-            c = _longest_cast(cc)
-            longest_z = c[c.zname]
-            Xi, Yi = np.meshgrid(np.linspace(Xo[0,0], Xo[0,-1], ninterp), longest_z)
-
-            # interpolate over NaNs in a way that assumes horizontal correlation
-            for (i, row) in enumerate(Zo):
-                if np.any(np.isnan(row)):
-                    if np.any(~np.isnan(row)):
-                        # find groups of NaNs
-                        start = -1
-                        for (idx, val) in enumerate(row):
-                            if start == -1 and np.isnan(val):
-                                start = idx
-                            elif start != -1 and not np.isnan(val):
-                                if start == 0:
-                                    meanval = val
-                                else:
-                                    meanval = 0.5 * (val + row[start-1])
-                                Zo[i,start:idx] = meanval
-                                start = -1
-                        if start != -1:
-                            Zo[i,start:] = row[start-1]
-                    else:
-                        if i != 0:
-                            Zo[i] = Zo[i-1]  # Extrapolate down
-                        else:
-                            Zo[i] = Zo[i+1]  # Extrapolate to surface
-
-            Zi = griddata(np.c_[Xo.ravel(), Yo.ravel()], Zo.ravel(),
-                          np.c_[Xi.ravel(), Yi.ravel()], method="linear")
-            Zi = Zi.reshape(Xi.shape)
 
         elif scheme == "zero_base":
 
