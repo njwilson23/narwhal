@@ -1,6 +1,16 @@
 import unittest
 import numpy as np
-from narwhal import util
+from narwhal import util, gsw
+
+class GSWTests(unittest.TestCase):
+
+    def test_mixed_array_scalar_args(self):
+        s = np.linspace(30, 34, 100)
+        t = np.linspace(15, 8, 100)
+        p = np.arange(0, 200, 2)
+        p0 = 0.0
+        pt = gsw.pt_from_t(s, t, p, p0)
+        return
 
 class DerivativeTests(unittest.TestCase):
 
