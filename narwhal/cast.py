@@ -58,7 +58,6 @@ class Cast(object):
 
         self.zunits = zunits
         self.zname = zname
-        self._len = len(z)
         self.p = self.properties
 
         # Python 3 workaround
@@ -81,7 +80,7 @@ class Cast(object):
         return
 
     def __len__(self):
-        return self._len
+        return len(self.data.index)
 
     def __str__(self):
         if self.coords is not None:
@@ -95,11 +94,11 @@ class Cast(object):
 
     def __getitem__(self, key):
         if isinstance(key, int):
-            if 0 <= key < self._len:
+            if 0 <= key < len(self):
                 return self.data.irow(key)
             else:
                 raise IndexError("{0} not within cast length "
-                                 "({1})".format(key, self._len))
+                                 "({1})".format(key, len(self)))
         elif key in self.data:
             return self.data[key]
         # elif key == "depth" and self.zunit == units.meter:
@@ -113,7 +112,7 @@ class Cast(object):
     def __setitem__(self, key, val):
         if isinstance(key, str):
             if isinstance(val, collections.Container) and \
-                    not isinstance(val, str) and len(val) == self._len:
+                    not isinstance(val, str) and len(val) == len(self):
                 self.data[key] = val
                 if key not in self.fields:
                     self.fields.append(key)
@@ -196,7 +195,6 @@ class Cast(object):
         if n > 0:
             empty_df = pandas.DataFrame({self.zname: np.nan * np.empty(n)})
             self.data = pandas.concat([self.data, empty_df], ignore_index=True)
-            self._len += n
         else:
             raise ValueError("Cast must be extended with 1 or more rows")
         return
@@ -233,7 +231,6 @@ class Cast(object):
         """ Re-interpolate Cast at specified grid levels. Returns a new Cast. """
         # some low level voodoo
         ret = copy.deepcopy(self)
-        ret._len = len(levels)
         newdata = pandas.DataFrame(index=levels)
         for key in self.data:
             newdata[key] = np.interp(levels, self.data.index, self[key],
@@ -623,10 +620,10 @@ class CastCollection(collections.Sequence):
 
         key::string                     property to return
         """
-        nrows = max(cast._len for cast in self.casts)
+        nrows = max(len(cast) for cast in self.casts)
         arr = np.nan * np.empty((nrows, len(self.casts)), dtype=np.float64)
         for i, cast in enumerate(self.casts):
-            arr[:cast._len, i] = cast[key]
+            arr[:len(cast), i] = cast[key]
         return arr
 
     def projdist(self):
