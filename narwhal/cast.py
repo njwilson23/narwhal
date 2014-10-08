@@ -175,7 +175,10 @@ class Cast(object):
 
     def nanmask(self, fields=None):
         """ Return a mask for observations containing at least one NaN. """
-        return self.data.isnull().apply(lambda r: any(r), axis=1).values
+        if fields is None:
+            return self.data.isnull().apply(lambda r: any(r), axis=1).values
+        else:
+            return self.data.isnull().select(lambda n: n in fields, axis=1).apply(lambda r: any(r), axis=1).values
 
     def nvalid(self, fields=None):
         """ Return the number of complete (non-NaN) observations. """
