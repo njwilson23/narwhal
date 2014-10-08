@@ -45,9 +45,7 @@ class Cast(object):
     arguments. There are several reserved keywords:
 
     coords::iterable[2]     the geographic coordinates of the observation
-
     zunit::Unit             the independent vector units [default: meter]
-
     zname::string           name for the independent vector [default: "z"]
     """
 
@@ -208,15 +206,12 @@ class Cast(object):
         by vector x=v.
 
         y::string       name of property to interpolate
-
         x::string       name of reference property
-
         v::iterable     vector of values for x
-
         force::bool     whether to coerce x to be monotonic (defualt False)
 
-        Note: it's difficult to interpolate when x is not monotic, because this
-        makes y not a true function. However, it's resonable to want to
+        Note: it's difficult to interpolate when x is not monotonic, because
+        this makes y not a true function. However, it's resonable to want to
         interpolate using rho or sigma as x. These should be essentially
         monotonic, but might not be due to measurement noise. The keyword
         argument `force` can be provided as True, which causes nonmonotonic x
@@ -239,11 +234,11 @@ class Cast(object):
         # some low level voodoo
         ret = copy.deepcopy(self)
         ret._len = len(levels)
+        newdata = pandas.DataFrame(index=levels)
         for key in self.data:
-            if key is not self.primarykey:
-                ret.data[key] = np.interp(levels, self[self.primarykey], self[key],
-                                          left=np.nan, right=np.nan)
-        ret.data[self.primarykey] = levels
+            newdata[key] = np.interp(levels, self.data.index, self[key],
+                                     left=np.nan, right=np.nan)
+        ret.data = newdata
         return ret
 
     def save(self, fnm, binary=True):
@@ -269,11 +264,8 @@ class Cast(object):
         pressure to fields. Return the field name.
         
         salkey::string              Data key to use for salinity
-
         tempkey::string             Data key to use for in-situ temperature
-
         preskey::string             Data key to use for pressure
-
         rhokey::string              Data key to use for in-situ density
         """
         if salkey in self.fields and tempkey in self.fields and \
@@ -292,9 +284,7 @@ class Cast(object):
         """ Use density and pressure to calculate depth.
         
         preskey::string             Data key to use for pressure
-
         rhokey::string              Data key to use for in-situ density
-
         depthkey::string            Data key to use for depth
         """
         if preskey == "z" and self.zunits != units.decibar:
@@ -304,14 +294,14 @@ class Cast(object):
         rho = self[rhokey]
 
         # remove initial NaNs by replacing them with the first non-NaN
-        nnans = 0
-        r = rho[0]
+        idx = 0
+        r = np.nan
         while np.isnan(r):
-            nnans += 1
-            r = rho[nnans]
-        rho[:nnans] = rho[nnans+1]
+            r = rho.iloc[idx]
+            idx += 1
+        rho.iloc[:idx-1] = rho.iloc[idx+1]
 
-        dp = np.hstack([self[preskey][0], np.diff(self[preskey])])
+        dp = np.hstack([self[preskey].iloc[0], np.diff(self[preskey])])
         dz = dp / (rho * G) * 1e4
         depth = np.cumsum(dz)
         return self._addkeydata(depthkey, depth)
@@ -321,11 +311,8 @@ class Cast(object):
         Uses a smoothing spline to compute derivatives.
         
         rhokey::string              Data key to use for in-situ density
-
         depthkey::string            Data key to use for depth
-
         N2key::string               Data key to use for N^2
-
         s::float                    Spline smoothing factor (smaller values
                                     give a noisier result)
         """
@@ -353,9 +340,7 @@ class Cast(object):
 
         ztop                        the depth at which to cut off the profile,
                                     to avoid surface effects
-
         N2key::string               Data key to use for N^2
-
         depthkey::string            Data key to use for depth
         """
         if N2key not in self.fields or depthkey not in self.fields:
@@ -427,9 +412,7 @@ class Cast(object):
         smooth the data with a gaussian filter before computing the derivative.
 
         depthkey::string            Data key to use for depth
-
         vkey,ukey::string           Data key to use for u,v velocity
-
         dudzkey,dvdzkey::string     Data key to use for u,v velocity shears
         """
         if ukey not in self.fields or vkey not in self.fields:
@@ -671,15 +654,10 @@ class CastCollection(collections.Sequence):
         ----------
 
         tempkey::string     key to use for temperature if *rhokey* is None
-
         salkey::string      key to use for salinity if *rhokey* is None
-
         rhokey::string      key to use for density, or None [default: None]
-
         dudzkey::string     key to use for ∂U/∂z, subject to *overwrite*
-
         ukey::string        key to use for U, subject to *overwrite*
-
         overwrite::bool     whether to allow cast fields to be overwritten
                             if False, then *ukey* and *dudzkey* are incremented
                             until there is no clash
@@ -729,15 +707,10 @@ class CastCollection(collections.Sequence):
         ----------
 
         tempkey::string     key to use for temperature if *rhokey* is None
-
         salkey::string      key to use for salinity if *rhokey* is None
-
         rhokey::string      key to use for density, or None [default: None]
-
         dudzkey::string     key to use for ∂U/∂z, subject to *overwrite*
-
         ukey::string        key to use for U, subject to *overwrite*
-
         overwrite::bool     whether to allow cast fields to be overwritten
                             if False, then *ukey* and *dudzkey* are incremented
                             until there is no clash
@@ -768,7 +741,7 @@ class CastCollection(collections.Sequence):
             p = avgcolumns(self[i]["pres"], self[i+1]["pres"])
             t = avgcolumns(self[i]["temp"], self[i+1]["temp"])
             s = avgcolumns(self[i]["sal"], self[i+1]["sal"])
-            cast = CTDCast(p, temp=t, sal=s, primarykey="pres", coords=cmid)
+            cast = CTDCast(p, temp=t, sal=s, zname="pres", coords=cmid)
             cast.add_depth()
             cast.properties[bottomkey] = 0.5 * (self[i].properties[bottomkey] +
                                                 self[i+1].properties[bottomkey])
