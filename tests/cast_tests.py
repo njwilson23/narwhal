@@ -23,30 +23,30 @@ class CastTests(unittest.TestCase):
         self.p = p
         self.temp = temp
         self.sal = sal
-        self.cast1 = CTDCast(p, sal, temp)
+        self.cast = CTDCast(p, sal, temp)
         return
 
     def test_numerical_indexing(self):
-        r = self.cast1[40]
+        r = self.cast[40]
         self.assertTrue(r["pres"] == 81)
         self.assertTrue(r["sal"] == 27.771987072878822)
         self.assertTrue(r["temp"] == 1.1627808544797258)
 
-        r = self.cast1[100]
+        r = self.cast[100]
         self.assertTrue(r["pres"] == 201)
         self.assertTrue(r["sal"] == 32.124158554636729)
         self.assertTrue(r["temp"] == 0.67261848597249019)
 
-        r = self.cast1[400]
+        r = self.cast[400]
         self.assertTrue(r["pres"] == 801)
         self.assertTrue(r["sal"] == 33.995350253934227)
         self.assertTrue(r["temp"] == 1.8506793256302907)
         return
 
     def test_kw_indexing(self):
-        self.assertTrue(np.all(self.cast1["pres"] == self.p))
-        self.assertTrue(np.all(self.cast1["sal"] == self.sal))
-        self.assertTrue(np.all(self.cast1["temp"] == self.temp))
+        self.assertTrue(np.all(self.cast["pres"] == self.p))
+        self.assertTrue(np.all(self.cast["sal"] == self.sal))
+        self.assertTrue(np.all(self.cast["temp"] == self.temp))
         return
 
     def test_kw_property_indexing(self):
@@ -59,18 +59,18 @@ class CastTests(unittest.TestCase):
         temp = 12. * np.exp(-.007*p) - 14. * np.exp(-0.005*(p+100)) + 1.8
         sal = -13. * np.exp(-.01*p) + 34.5
         cast2 = Cast(p, temp=temp, sal=sal)
-        cc = self.cast1 + cast2
+        cc = self.cast + cast2
         self.assertTrue(isinstance(cc, CastCollection))
         self.assertEqual(len(cc), 2)
         return
 
     def test_interpolate(self):
-        self.assertEqual(np.round(self.cast1.interpolate("temp", "pres", 4.0), 8),
+        self.assertEqual(np.round(self.cast.interpolate("temp", "pres", 4.0), 8),
                          2.76745605)
-        self.assertEqual(np.round(self.cast1.interpolate("temp", "sal", 33.0), 8),
+        self.assertEqual(np.round(self.cast.interpolate("temp", "sal", 33.0), 8),
                          0.77935861)
         # temp not monotonic, which screws up the simple interpolation scheme
-        #self.assertEqual(np.round(self.cast1.interpolate("pres", "temp", 1.5), 8),
+        #self.assertEqual(np.round(self.cast.interpolate("pres", "temp", 1.5), 8),
         #                 2.7674560521632685)
         return
 
@@ -301,4 +301,7 @@ class MiscTests(unittest.TestCase):
         I = uintegrate(D, np.tile(x.T, (1, x.size)), ubase=ans[-1])
         self.assertTrue(np.max(abs(ans - I)) < 0.0005)
         return
+
+if __name__ == "__main__":
+    unittest.main()
 

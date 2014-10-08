@@ -67,12 +67,12 @@ class Cast(object):
             items = kwargs.items()
 
         # Populate vector and scalar data fields
-        data[zname] = pandas.Series(data=z, index=z, name=zname)
+        data[zname] = pandas.Series(data=z, name=zname)
         for (kw, val) in items:
             if isinstance(val, collections.Container) and \
                     not isinstance(val, str) and \
                     len(val) == len(z):
-                data[kw] = pandas.Series(data=val, index=z, name=kw)
+                data[kw] = pandas.Series(data=val, name=kw)
             else:
                 self.properties[kw] = val
         self.properties["coordinates"] = tuple(coords)
@@ -101,10 +101,6 @@ class Cast(object):
                                  "({1})".format(key, len(self)))
         elif key in self.data:
             return self.data[key]
-        # elif key == "depth" and self.zunit == units.meter:
-        #     return self.data["z"]
-        # elif key == "pres" and self.zunit == units.decibar:
-        #     return self.data["z"]
         else:
             raise KeyError("No field {0}".format(key))
         return
@@ -232,8 +228,8 @@ class Cast(object):
         # some low level voodoo
         ret = copy.deepcopy(self)
         newdata = pandas.DataFrame(index=levels)
-        for key in self.data:
-            newdata[key] = np.interp(levels, self.data.index, self[key],
+        for key in self.fields:
+            newdata[key] = np.interp(levels, self.data[self.zname], self[key],
                                      left=np.nan, right=np.nan)
         ret.data = newdata
         return ret
@@ -615,8 +611,8 @@ class CastCollection(collections.Sequence):
         return CastCollection(casts)
 
     def asarray(self, key):
-        """ Naively return values as an array, assuming that all casts are indexed
-        with the same pressure levels.
+        """ Naively return values as an array, assuming that all casts are
+        indexed with the same pressure levels.
 
         key::string                     property to return
         """
