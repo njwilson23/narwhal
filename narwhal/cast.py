@@ -160,7 +160,7 @@ class Cast(object):
 
     @property
     def fields(self):
-        return self.data.keys()
+        return list(self.data.columns)
 
     @property
     def coords(self):
@@ -273,29 +273,27 @@ class Cast(object):
             raise FieldError("add_density requires salinity, temperature, and "
                              "pressure fields")
 
-    def add_depth(self, preskey="pres", rhokey="rho", depthkey="depth"):
+    def add_depth(self, preskey="pres", rhokey="rho", depthkey="z"):
         """ Use density and pressure to calculate depth.
         
         preskey::string             Data key to use for pressure
         rhokey::string              Data key to use for in-situ density
         depthkey::string            Data key to use for depth
         """
-        if preskey == "z" and self.zunits != units.decibar:
+        if preskey not in self.fields:
             raise FieldError("add_depth requires a pressure field")
         if rhokey not in self.fields:
             raise FieldError("add_depth requires a density field")
-        rho = self[rhokey]
+        rho = self[rhokey].copy()
 
-        # remove initial NaNs by replacing them with the first non-NaN
+        # remove initial NaNs in Rho by replacing them with the first non-NaN
         idx = 0
-        r = np.nan
-        while np.isnan(r):
-            r = rho.iloc[idx]
+        while np.isnan(rho.iloc[idx]):
             idx += 1
-        rho.iloc[:idx-1] = rho.iloc[idx+1]
+        rho.iloc[:idx] = rho.iloc[idx]
 
-        dp = np.hstack([self[preskey].iloc[0], np.diff(self[preskey])])
-        dz = dp / (rho * G) * 1e4
+        dp = np.hstack([0.0, np.diff(self[preskey])])
+        dz = dp / (rho.interpolate() * G) * 1e4
         depth = np.cumsum(dz)
         return self._addkeydata(depthkey, depth)
 
@@ -669,13 +667,13 @@ class CastCollection(collections.Sequence):
         (m, n) = rho.shape
 
         for cast in self:
-            if "depth" not in cast.data.keys():
+            if "z" not in cast.data.keys():
                 cast.add_depth()
 
         drho = util.diff2_dinterp(rho, self.projdist())
         sinphi = np.sin([c.coords[1]*np.pi/180.0 for c in self.casts])
         dudz = (G / rho * drho) / (2*OMEGA*sinphi)
-        u = util.uintegrate(dudz, self.asarray("depth"))
+        u = util.uintegrate(dudz, self.asarray("z"))
 
         for (ic,cast) in enumerate(self.casts):
             cast._addkeydata(dudzkey, dudz[:,ic], overwrite=overwrite)
@@ -745,7 +743,7 @@ class CastCollection(collections.Sequence):
         sinphi = np.sin([c.coords[1]*np.pi/180.0 for c in midcasts])
         rhoavg = 0.5 * (rho[:,:-1] + rho[:,1:])
         dudz = (G / rhoavg * drho) / (2*OMEGA*sinphi)
-        u = util.uintegrate(dudz, coll.asarray("depth"))
+        u = util.uintegrate(dudz, coll.asarray("z"))
 
         for (ic,cast) in enumerate(coll):
             cast._addkeydata(dudzkey, dudz[:,ic], overwrite=overwrite)
