@@ -21,10 +21,16 @@ class Bathymetry2d(Line):
 
     def __init__(self, vertices, depth=None, crs=LONLAT, **kw):
         kw.setdefault("crs", crs)
-        if depth is not None:
-            kw.update({"data": {"depth": depth}})
+        if "data" not in kw:
+            kw["data"] = {}
+        if depth is None:
+            if "depth" not in kw["data"]:
+                raise KeyError("Bathymetry must be initialized with a 'depth' "
+                               "argument or a dictionary with a 'depth' key")
+            else:
+                depth = kw["data"]["depth"]
         else:
-            depth = kw["data"]["depth"]
+            kw.update({"data": {"depth": depth}})
         super(Line, self).__init__(vertices, **kw)
         self.depth = np.asarray(depth)
         return
