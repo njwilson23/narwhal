@@ -309,8 +309,6 @@ class Cast(object):
         """
         if rhokey not in self.fields:
             raise FieldError("add_Nsquared requires in-situ density")
-        if depthkey == "z" and self.zunits != units.meter:
-            raise FieldError("add_Nsquared requires depth in meters")
         msk = self.nanmask((rhokey, depthkey))
         rho = self[rhokey][~msk]
         z = self[depthkey][~msk]

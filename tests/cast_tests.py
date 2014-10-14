@@ -115,10 +115,10 @@ class CastTests(unittest.TestCase):
 
         cast = CTDCast(p, s, t, coords=(-20, 50), rho=rho)
         cast.add_depth()
-        cast.add_Nsquared(depthkey="depth")
+        cast.add_Nsquared(depthkey="z")
 
         # Calculate the buoyancy frequency directly
-        z = cast["depth"].values
+        z = cast["z"].values
         drhodz = -np.r_[rho[1]-rho[0], rho[2:]-rho[:-2], rho[-1]-rho[-2]] / \
                   np.r_[z[1]-z[0], z[2:]-z[:-2], z[-1]-z[-2]]
         N2_direct = -9.81 / rho * drhodz
