@@ -131,7 +131,7 @@ class Cast(object):
                                                                type(other)))
 
     def __eq__(self, other):
-        if any(self.fields != other.fields) or \
+        if set(self.fields) != set(other.fields) or \
                 self.properties != other.properties or \
                 any(np.any(self.data[k] != other.data[k]) for k in self.fields):
             return False
