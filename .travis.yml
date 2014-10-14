@@ -18,7 +18,7 @@ install:
                                         # aren't being shown for the travis install
   - conda create --yes -n test-environment python=$TRAVIS_PYTHON_VERSION numpy scipy pandas pip matplotlib
   - source activate test-environment
-  - pip install pyshp pyproj requests python-dateutil six
+  - pip install pyshp pyproj requests python-dateutil six brewer2mpl
   - pip install --pre karta
   - pip install . -v
 
