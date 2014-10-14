@@ -1,18 +1,13 @@
 import itertools
 import brewer2mpl
 import numpy as np
+import pandas
 import matplotlib
 import matplotlib.pyplot as plt
-from narwhal import AbstractCastCollection
-from .. import gsw
 
-try:
-    import pandas
-except ImportError:
-    # Fake a dataframe
-    class DummyPandas(object):
-        DataFrame = type(None)
-    pandas = DummyPandas
+from .plotutil import ensureiterable, getiterable
+from ..cast import AbstractCastCollection
+from .. import gsw
 
 import warnings
 warnings.filterwarnings("ignore", category=DeprecationWarning)
@@ -22,18 +17,6 @@ class PropertyPropertyAxes(plt.Axes):
 
     def __init__(self, *args, **kwargs):
         super(plt.Axes, self).__init__(*args, **kwargs)
-
-    @staticmethod
-    def _ensureiterable(item):
-        """ Turn *item* into an infinite lazy iterable. """
-        if not hasattr(item, "__iter__") or isinstance(item, str):
-            return itertools.repeat(item)
-        else:
-            return itertools.cycle(item)
-
-    def _getiterable(self, kw, name, default):
-        """ Equivalent to dict.get except that it ensures the result is an iterable. """
-        return self._ensureiterable(kw.get(name, default))
 
     @staticmethod
     def _castlabeliter():
@@ -71,15 +54,15 @@ class PropertyPropertyAxes(plt.Axes):
 
         n = min(8, max(3, len(castlikes)))
         defaultcolors = brewer2mpl.get_map("Dark2", "Qualitative", n).hex_colors
-        color = self._getiterable(kwargs, "color", defaultcolors)
-        style = self._getiterable(kwargs, "style", ["ok", "sr", "db", "^g"])
-        label = self._getiterable(kwargs, "label", self._castlabeliter())
-        markersize = self._getiterable(kwargs, "ms", 6)
+        color = getiterable(kwargs, "color", defaultcolors)
+        style = getiterable(kwargs, "style", ["ok", "sr", "db", "^g"])
+        label = getiterable(kwargs, "label", self._castlabeliter())
+        markersize = getiterable(kwargs, "ms", 6)
 
         plotkws = {"ms": itertools.repeat(6)}
         for key in kwargs:
             if key not in ("label", "style", "color"):
-                plotkws[key] = self._ensureiterable(kwargs[key])
+                plotkws[key] = ensureiterable(kwargs[key])
 
         oldlabels = []
         for i, cast in enumerate(castlikes):

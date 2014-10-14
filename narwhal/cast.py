@@ -454,9 +454,9 @@ class CastCollection(collections.Sequence):
     def __init__(self, *args):
         if len(args) == 0:
             self.casts = []
-        elif isinstance(args[0], Cast):
+        elif isinstance(args[0], AbstractCast):
             self.casts = list(args)
-        elif (len(args) == 1) and all(isinstance(a, Cast) for a in args[0]):
+        elif (len(args) == 1) and all(isinstance(a, AbstractCast) for a in args[0]):
             self.casts = args[0]
         else:
             raise TypeError("Arguments must be either Cast types or an "

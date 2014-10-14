@@ -1,7 +1,30 @@
 import copy
+import itertools
 from functools import reduce
 import numpy as np
-from narwhal.cast import Cast
+from narwhal.cast import AbstractCast, AbstractCastCollection
+
+def count_casts(castlikes):
+    """ Given an iterable of Casts and CastCollections, count the number of
+    individual Casts. """
+    n = 0
+    for c in castlikes:
+        if isinstance(c, AbstractCast):
+            n += 1
+        else:
+            n += count_casts(c)
+    return n
+
+def ensureiterable(item):
+    """ Turn *item* into an infinite lazy iterable. """
+    if not hasattr(item, "__iter__") or isinstance(item, str):
+        return itertools.repeat(item)
+    else:
+        return itertools.cycle(item)
+
+def getiterable(kw, name, default):
+    """ Equivalent to dict.get except that it ensures the result is an iterable. """
+    return ensureiterable(kw.get(name, default))
 
 def _nanmean(arr, axis=0):
     """ Re-implement nanmean in a way that doesn't fire off warning when there
