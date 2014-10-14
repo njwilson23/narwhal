@@ -1,15 +1,17 @@
 import itertools
 import copy
 import numpy as np
-import matplotlib.pyplot as plt
-import matplotlib.tri as mtri
-import brewer2mpl
+import pandas
 from scipy.interpolate import griddata, CloughTocher2DInterpolator
 from scipy import ndimage
 from scipy import stats
 from karta import Multipoint, Line
-import narwhal
-from narwhal import CastCollection
+
+import matplotlib.pyplot as plt
+import matplotlib.tri as mtri
+import brewer2mpl
+
+from ..cast import AbstractCast, AbstractCastCollection
 from . import plotutil
 from .. import gsw
 
@@ -19,14 +21,6 @@ except ImportError:
     import karta as crsreg
 LONLAT_WGS84 = crsreg.LONLAT_WGS84
 CARTESIAN = crsreg.CARTESIAN
-
-try:
-    import pandas
-except ImportError:
-    # Fake a dataframe
-    class DummyPandas(object):
-        DataFrame = type(None)
-    pandas = DummyPandas
 
 import warnings
 warnings.filterwarnings("ignore", category=DeprecationWarning)
@@ -45,10 +39,10 @@ def plot_profiles(castlikes, key="temp", ax=None, **kw):
     plotkw.setdefault("label", _castlabeliter())
 
     def _plot_profile(num, cast):
-        if isinstance(cast, narwhal.AbstractCastCollection):
+        if isinstance(cast, AbstractCastCollection):
             for cast_ in cast:
                 num = _plot_profile(num, cast_)
-        elif isinstance(cast, narwhal.AbstractCast):
+        elif isinstance(cast, AbstractCast):
             z = cast[cast.zname]
             _kw = dict((k, next(v)) for k, v in plotkw.items())
             ax.plot(cast[key], z, **_kw)
@@ -71,10 +65,10 @@ def plot_profiles(castlikes, key="temp", ax=None, **kw):
 def plot_map(castlikes, ax=None, **kw):
     """ Plot a simple map of cast locations. """
     def _plot_coords(ax, cast, **kw):
-        if isinstance(cast, narwhal.AbstractCastCollection):
+        if isinstance(cast, AbstractCastCollection):
             for cast_ in cast:
                 _plot_coords(ax, cast_, **kw)
-        elif isinstance(cast, narwhal.AbstractCast):
+        elif isinstance(cast, AbstractCast):
             ax.plot(cast.coords[0], cast.coords[1], **kw)
         else:
             raise TypeError("Argument not Cast or CastCollection-like")
@@ -176,7 +170,7 @@ def plot_ts(castlikes, ax=None,
             plotkw["label"] = lbl
             oldlabels.append(lbl)
 
-        if isinstance(cast, narwhal.AbstractCastCollection):
+        if isinstance(cast, AbstractCastCollection):
             x = np.hstack([np.hstack([subcast[xkey], np.nan]) for subcast in cast])
             y = np.hstack([np.hstack([subcast[ykey], np.nan]) for subcast in cast])
             ax.plot(x, y, sty, **plotkw)
@@ -213,14 +207,14 @@ def add_sigma_contours(contourint, ax=None, pres=0.0):
     return
 
 def plot_ts_average(*casts, **kwargs):
-    if all(isinstance(c, narwhal.AbstractCast) for c in casts):
+    if all(isinstance(c, AbstractCast) for c in casts):
         avgcasts = [ccmeanp(casts)]
     else:
         avgcasts = []
         for cast in casts:
-            if isinstance(cast, narwhal.AbstractCast):
+            if isinstance(cast, AbstractCast):
                 avgcasts.append(cast)
-            elif isinstance(cast, narwhal.AbstractCastCollection):
+            elif isinstance(cast, AbstractCastCollection):
                 avgcasts.append(ccmeanp(cast))
             else:
                 raise TypeError("argument type must be Cast or CastCollection")
@@ -571,7 +565,7 @@ def plot_section_bathymetry(bathymetry, vertices, ax=None,
 
     if isinstance(vertices, Multipoint):
         vertices = vertices.get_vertices()
-    elif isinstance(vertices, CastCollection):
+    elif isinstance(vertices, AbstractCastCollection):
         vertices = vertices.coords.get_vertices()
 
     cruiseline = Line(vertices, crs=LONLAT_WGS84)
