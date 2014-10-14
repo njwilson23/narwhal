@@ -319,7 +319,7 @@ class Cast(object):
         N2[~msk] = -G / rho * drhodz
         return self._addkeydata(N2key, N2)
 
-    def baroclinic_modes(self, nmodes, ztop=10, N2key="N2", depthkey="depth"):
+    def baroclinic_modes(self, nmodes, ztop=10, N2key="N2", depthkey="z"):
         """ Calculate the baroclinic normal modes based on linear
         quasigeostrophy and the vertical stratification. Return the first
         `nmodes::int` deformation radii and their associated eigenfunctions.
