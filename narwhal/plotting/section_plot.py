@@ -224,8 +224,8 @@ class SectionAxes(BaseSectionAxes):
     name = "section"
 
     @staticmethod
-    def _interpolate_section(cc, prop, ninterp, scheme="standard"):
-        """ Scheme may be one of "standard", "horizontal_corr", or "zero_base" """
+    def _interpolate_section(cc, prop, ninterp, scheme="horizontal_corr"):
+        """ Scheme may be one of "cubic", "horizontal_corr", or "zero_base" """
 
         def _longest_cast(cc):
             """ Return the longest cast in a cast collection """
