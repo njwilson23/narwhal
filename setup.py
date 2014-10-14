@@ -35,7 +35,7 @@ setup(
     version = "0.3.0",
     author = "Nat Wilson",
     #package_dir = {"narwhal": "src"},
-    packages = ["narwhal"],
+    packages = ["narwhal", "narwhal.plotting"],
     ext_modules = ext,
 )
 
