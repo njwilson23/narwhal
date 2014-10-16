@@ -6,8 +6,8 @@ from scipy.interpolate import griddata, CloughTocher2DInterpolator
 def cubic(X, Y, Z, Xi, Yi):
     """ Wraps scipy's cubic spline function. """
     X = np.array(X)
-    Y = np.array(Y)
-    Z = np.array(Z)
+    Y = np.array(Y).T
+    Z = np.array(Z).T
     msk = ~np.isnan(X+Y+Z)
     Zi = griddata(np.c_[X[msk], Y[msk]], Z[msk], np.c_[Xi.ravel(), Yi.ravel()],
                   method="cubic")
@@ -17,8 +17,8 @@ def cubic(X, Y, Z, Xi, Yi):
 def horizontal_corr(X, Y, Z, Xi, Yi):
     # this version works with irregular gridding
 
-    N = sum(np.sum(~np.isnan(z)) for x in Z)
-    X_, Y_, Z_ = np.empty(N), np.empty(N), np.empty(N)
+    N = sum(np.sum(~np.isnan(z)) for z in Z)
+    X_, Y_, Z_ = [], [], []
     d = X[0]
 
     for i,x in enumerate(d):
@@ -36,13 +36,12 @@ def horizontal_corr(X, Y, Z, Xi, Yi):
         # they're NaN, and if so add a dummy value half way between
         for lvl, v in zip(y[valid], z[valid]):
 
-            zname = cast.zname
-            if i != 0 and np.isnan(np.interp(Y[i-1], Z[i-1], lvl)):
+            if i != 0 and np.isnan(np.interp(lvl, Y[i-1], Z[i-1])):
                 X_.append(0.5 * (d[i] + d[i-1]))
                 Y_.append(lvl)
                 Z_.append(v)
         
-            if i != len(d) and np.isnan(np.interp(Y[i+1], Z[i+1], lvl)):
+            if i != len(d)-1 and np.isnan(np.interp(lvl, Y[i+1], Z[i+1])):
                 X_.append(0.5 * (d[i] + d[i+1]))
                 Y_.append(lvl)
                 Z_.append(v)
@@ -53,7 +52,7 @@ def horizontal_corr(X, Y, Z, Xi, Yi):
     Zi = ct(0.0001*Xi, Yi)
     return Zi
 
-def zero_base(X, Y, Z, Zi, Yi)
+def zero_base(X, Y, Z, Zi, Yi):
 
     # Add zero boundary condition
     def _find_idepth(arr):

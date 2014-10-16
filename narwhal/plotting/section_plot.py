@@ -3,7 +3,7 @@ from karta import Line
 from scipy import ndimage
 from scipy.interpolate import griddata, CloughTocher2DInterpolator
 from ..cast import AbstractCast, AbstractCastCollection
-import .interpolation as nint
+from . import interpolation as nint
 import matplotlib
 import matplotlib.pyplot as plt
 
@@ -92,12 +92,13 @@ class BaseSectionAxes(plt.Axes):
         return bg
 
     def contour(self, cc, prop, ninterp=30, sk=None, mask=True,
-                bottomkey="depth", interp_scheme="horizontal_corr", **kwargs):
+                bottomkey="depth", interpfunc=nint.horizontal_corr, **kwargs):
 
         if not isinstance(cc, AbstractCastCollection):
             raise TypeError("first argument must be a CastCollection type")
 
-        (Xi, Yi, Zi) = self._interpolate_section(cc, prop, ninterp, interp_scheme)
+        (Xi, Yi, Zi) = self._interpolate_section(cc, prop, ninterp,
+                                                 interpfunc=interpfunc)
 
         if sk is not None:
             Zi = self._smooth_field(Zi, sk)
@@ -110,12 +111,13 @@ class BaseSectionAxes(plt.Axes):
         return super(BaseSectionAxes, self).contour(Xi, Yi, Zi, **kwargs)
 
     def contourf(self, cc, prop, ninterp=30, sk=None, mask=True,
-                 bottomkey="depth", interp_scheme="horizontal_corr", **kwargs):
+                 bottomkey="depth", interpfunc=nint.horizontal_corr, **kwargs):
 
         if not isinstance(cc, AbstractCastCollection):
             raise TypeError("first argument must be a CastCollection type")
 
-        (Xi, Yi, Zi) = self._interpolate_section(cc, prop, ninterp, interp_scheme)
+        (Xi, Yi, Zi) = self._interpolate_section(cc, prop, ninterp,
+                                                 interpfunc=interpfunc)
 
         if sk is not None:
             Zi = self._smooth_field(Zi, sk)
@@ -128,11 +130,12 @@ class BaseSectionAxes(plt.Axes):
         return super(BaseSectionAxes, self).contourf(Xi, Yi, Zi, **kwargs)
 
     def pcolormesh(self, cc, prop, ninterp=30, sk=None, mask=True,
-                   bottomkey="depth", interp_scheme="horizontal_corr", **kwargs):
+                   bottomkey="depth", interpfunc=nint.horizontal_corr, **kwargs):
         if not isinstance(cc, AbstractCastCollection):
             raise TypeError("first argument must be a CastCollection type")
 
-        (Xi, Yi, Zi) = self._interpolate_section(cc, prop, ninterp, interp_scheme)
+        (Xi, Yi, Zi) = self._interpolate_section(cc, prop, ninterp,
+                                                 interpfunc=interpfunc)
 
         if sk is not None:
             Zi = self._smooth_field(Zi, sk)
@@ -224,7 +227,7 @@ class SectionAxes(BaseSectionAxes):
     name = "section"
 
     @staticmethod
-    def _interpolate_section(cc, prop, ninterp, z=None,
+    def _interpolate_section(casts, prop, ninterp, z=None,
                              interpfunc=nint.horizontal_corr):
         """ *interfunc* should be either an interpolation fruntion from
         narwhal.interpolation or a custom function of the form
@@ -245,9 +248,10 @@ class SectionAxes(BaseSectionAxes):
         if z is None:
             z = casts[0].zname
 
-        Yo = [cast[z] for cast in casts]
-        Xo = np.tile(casts.projdist(), (len(Yo), 1))
-        Zo = [cast[prop] for cast in casts]
+        distances = casts.projdist()
+        Yo = [cast[z].values for cast in casts]
+        Xo = np.tile(distances, (len(Yo[0]), 1))
+        Zo = [cast[prop].values for cast in casts]
 
         # c = _longest_cast(casts)
         # longest_z = c[c.zname]
