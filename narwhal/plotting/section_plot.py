@@ -1,11 +1,11 @@
 import numpy as np
+from karta import Line
+from scipy import ndimage
+from scipy.interpolate import griddata, CloughTocher2DInterpolator
+from ..cast import AbstractCast, AbstractCastCollection
+import .interpolation as nint
 import matplotlib
 import matplotlib.pyplot as plt
-# import matplotlib.tri as mtri
-from scipy.interpolate import griddata, CloughTocher2DInterpolator
-from scipy import ndimage
-from karta import Line
-from narwhal import AbstractCast, AbstractCastCollection
 
 try:
     from karta.crs import crsreg
@@ -224,8 +224,16 @@ class SectionAxes(BaseSectionAxes):
     name = "section"
 
     @staticmethod
-    def _interpolate_section(cc, prop, ninterp, scheme="horizontal_corr"):
-        """ Scheme may be one of "cubic", "horizontal_corr", or "zero_base" """
+    def _interpolate_section(cc, prop, ninterp, z=None,
+                             interpfunc=nint.horizontal_corr):
+        """ *interfunc* should be either an interpolation fruntion from
+        narwhal.interpolation or a custom function of the form
+
+            `Zi = interfunc(X, Y, Z, Xi, Yi, Zi)`
+
+        where X, Y, Z are lists of arrays taken from each cast and Xi, Yi are
+        arrays.
+        """
 
         def _longest_cast(cc):
             """ Return the longest cast in a cast collection """
@@ -234,126 +242,24 @@ class SectionAxes(BaseSectionAxes):
                 if max_y in cast[cast.zname]:
                     return cast
 
-        if scheme == "cubic":
-            Yo = np.vstack([cast[cast.zname] for cast in cc]).T
-            Xo = np.tile(cc.projdist(), (len(Yo), 1))
-            Zo = cc.asarray(prop)
+        if z is None:
+            z = casts[0].zname
 
-            msk = ~np.isnan(Xo+Yo+Zo)
-            c = _longest_cast(cc)
-            longest_z = c[c.zname]
+        Yo = [cast[z] for cast in casts]
+        Xo = np.tile(casts.projdist(), (len(Yo), 1))
+        Zo = [cast[prop] for cast in casts]
 
-            Xi, Yi = np.meshgrid(np.linspace(Xo[0,0], Xo[0,-1], ninterp), longest_z)
-            Zi = griddata(np.c_[Xo[msk], Yo[msk]], Zo[msk],
-                          np.c_[Xi.ravel(), Yi.ravel()], method="cubic")
-            Zi = Zi.reshape(Xi.shape)
+        # c = _longest_cast(casts)
+        # longest_z = c[c.zname]
+        # Xi, Yi = np.meshgrid(np.linspace(X[0,0], X[0,-1], ninterp), longest_z)
 
-        elif scheme == "horizontal_corr":
+        max_y = max(np.nanmax(c[c.zname].values) for c in casts)
+        max_x = distances[-1]
+        y_int = int(round(min(5, max_y/100)))
+        x_int = max_x / ninterp
+        Yi, Xi = np.mgrid[0:max_y+0.1*y_int:y_int, 0:max_x+0.1*x_int:x_int]
+        return Xi, Yi, interpfunc(Xo, Yo, Zo, Xi, Yi)
 
-            # this version works with irregular gridding
-
-            X, Y = [], []
-            Z = []
-
-            distances = cc.projdist()
-            castleft, xleft = None, None
-
-            for i,x in enumerate(distances):
-                cast = cc[i]
-                if i == len(cc) - 1:
-                    castrigh = None
-                    xrigh = None
-                else:
-                    castrigh = cc[i+1]
-                    xrigh = distances[i+1]
-                    
-                # add the measured values
-                X.extend(x * np.ones(cast.nvalid(prop)))
-                Y.extend(cast[cast.zname][~cast.nanmask(prop)])
-                Z.extend(cast[prop][~cast.nanmask(prop)])
-                    
-                # for each non-NaN level in *cast*, check castleft and castrigh
-                # to see if they're NaN
-                # if so, add a dummy value half way between
-                msk = ~cast.nanmask(prop)
-                for lvl, v in zip(cast[cast.zname][msk], cast[prop][msk]):
-
-                    zname = cast.zname
-                    if castleft and \
-                            np.isnan(castleft.interpolate(prop, zname, lvl)):
-                        X.append(0.5 * (xleft+x))
-                        Y.append(lvl)
-                        Z.append(v)
-                
-                    if castrigh and \
-                            np.isnan(castrigh.interpolate(prop, zname, lvl)):
-                        X.append(0.5 * (xrigh+x))
-                        Y.append(lvl)
-                        Z.append(v)
-
-                castleft = cast
-                xleft = x
-
-            X = np.array(X)
-            Y = np.array(Y)
-
-            max_y = max(np.nanmax(c[c.zname].values) for c in cc)
-            max_x = distances[-1]
-            y_int = int(round(min(5, max_y/100)))
-            x_int = max_x / ninterp
-            Yi, Xi = np.mgrid[0:max_y+0.1*y_int:y_int, 0:max_x+0.1*x_int:x_int]
-            ct = CloughTocher2DInterpolator(np.c_[0.0001*X,Y], Z)
-            Zi = ct(0.0001*Xi, Yi)
-
-        elif scheme == "zero_base":
-
-            Yo = np.vstack([cast[cast.zname] for cast in cc]).T
-            Xo = np.tile(cc.projdist(), (len(Yo), 1))
-            Zo = cc.asarray(prop)
-
-            # Add zero boundary condition
-            def _find_idepth(arr):
-                idepth = []
-                for col in arr.T:
-                    _inonnan = np.arange(len(col))[~np.isnan(col)]
-                    idepth.append(_inonnan[-1])
-                return idepth
-
-            xi = np.linspace(Xo[0,0], Xo[0,-1], ninterp)
-            c = _longest_cast(cc)
-            yi = c[c.zname]
-
-            idxdepth = _find_idepth(Zo)
-            idepth = np.round(np.interp(xi, Xo[0], idxdepth)).astype(int)
-
-            xbc, ybc, zbc = [], [], []
-            for j, i in enumerate(idepth):
-                xbc.append(xi[j])
-                ybc.append(yi[i]+2)
-                zbc.append(0.0)
-
-            msk = ~np.isnan(Xo + Yo + Zo)
-
-            Xo_bc = np.r_[Xo[msk], xbc]
-            Yo_bc = np.r_[Yo[msk], ybc]
-            Zo_bc = np.r_[Zo[msk], zbc]
-
-            Xi, Yi = np.meshgrid(xi, yi)
-
-            alpha = 1e4
-            Zi = griddata(np.c_[Xo_bc, alpha*Yo_bc], Zo_bc,
-                          np.c_[Xi.ravel(), alpha*Yi.ravel()], method="cubic")
-
-            # alpha = 1e2
-            # rbfi = interpolate.Rbf(Xo_bc, alpha*Yo_bc, Zo_bc, function="thin_plate")
-            # Zi = rbfi(Xi.ravel(), alpha*Yi.ravel())
-            # Zi_check = rbfi(Xo.ravel(), alpha*Yo.ravel())
-
-            Zi = Zi.reshape(Xi.shape)
-
-        else:
-            raise NotImplementedError("No scheme '{0}' implemented".format(scheme))
-        return Xi, Yi, Zi
 
 matplotlib.projections.register_projection(SectionAxes)
 
