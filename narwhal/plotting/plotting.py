@@ -25,8 +25,11 @@ CARTESIAN = crsreg.CARTESIAN
 import warnings
 warnings.filterwarnings("ignore", category=DeprecationWarning)
 
-ccmeanp = plotutil.ccmeanp
-ccmeans = plotutil.ccmeans
+def _castlabeliter():
+    i = 0
+    while True:
+        i += 1
+        yield "Cast " + str(i)
 
 def plot_profiles(castlikes, key="temp", ax=None, **kw):
     """ Plot vertical profiles from casts """
@@ -34,8 +37,8 @@ def plot_profiles(castlikes, key="temp", ax=None, **kw):
     n = min(8, max(3, len(castlikes)))
     defaultcolors = brewer2mpl.get_map("Dark2", "Qualitative", n).hex_colors
 
-    plotkw = dict((k, _ensureiterable(v)) for k,v in kw.items())
-    plotkw.setdefault("color", _ensureiterable(defaultcolors))
+    plotkw = dict((k, plotutil.ensureiterable(v)) for k,v in kw.items())
+    plotkw.setdefault("color", plotutil.ensureiterable(defaultcolors))
     plotkw.setdefault("label", _castlabeliter())
 
     def _plot_profile(num, cast):
