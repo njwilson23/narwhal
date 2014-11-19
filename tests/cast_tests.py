@@ -229,6 +229,18 @@ class CastCollectionTests(unittest.TestCase):
             self.assertEqual(len(cast), 70)
         return
 
+    def test_eofs(self):
+        pres = np.arange(1, 300)
+        casts = [Cast(pres, zunits="dbar", zname="pres",
+                      theta=np.sin(pres*i*np.pi/300))
+                 for i in range(3)]
+        cc = CastCollection(casts)
+        structures, λ, eofs = cc.eofs("theta")
+        self.assertAlmostEqual(np.mean(np.abs(structures["theta_eof1"])), 0.634719360307)
+        self.assertAlmostEqual(np.mean(np.abs(structures["theta_eof2"])), 0.363733575635)
+        self.assertAlmostEqual(np.mean(np.abs(structures["theta_eof3"])), 0.350665870142)
+        self.assertTrue(np.allclose(λ, [87.27018523, 40.37800904, 2.02016724]))
+        return
 
 class MiscTests(unittest.TestCase):
 

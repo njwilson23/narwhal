@@ -194,3 +194,14 @@ def uintegrate(dudz, X, ubase=0.0):
                                          initial=0.0)
         U[:imax+1,jcol] -= U[imax,jcol] - ubase[jcol]
     return U
+
+def eof_timeseries(data, eofs):
+    """ Compute EOF time(space) series from a data matrix and a matrix of
+    eigenvalues. """
+    N,M = data.shape
+    F = np.zeros((N,M))
+    for j in range(M):
+        for i in range(M):
+            F[:,j] += eofs[i,j] * data[:,i]
+    return F
+

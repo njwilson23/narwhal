@@ -748,6 +748,42 @@ class CastCollection(collections.Sequence):
             cast._addkeydata(ukey, u[:,ic], overwrite=overwrite)
         return coll
 
+
+    def eofs(self, key="temp", n_eofs=None):
+        """ Compute the EOFs and EOF structures for *key*. Returns a cast with
+        the structure functions, an array of eigenvectors (EOFs), and an array
+        of eigenvalues.
+
+        Requires all casts to have the same depth-gridding.
+        
+        Parameters
+        ----------
+
+        key::string     key to use for computing EOFs
+        n_eofs::int     number of EOFs to return
+        """
+        assert all(self[0].zname == c.zname for c in self[1:])
+        assert all(all(self[0].data.index == c.data.index) for c in self[1:])
+
+        if n_eofs is None:
+            n_eofs = len(self)
+
+        arr = self.asarray(key)
+        msk = reduce(lambda a,b:a|b, (c.nanmask(key) for c in self))
+        arr = arr[~msk,:]
+        arr -= arr.mean()
+
+        _,Σ,V = np.linalg.svd(arr)
+        λ = Σ**2/(len(self)-1)
+        eofts = util.eof_timeseries(arr, V)
+
+        c0 = self[0]
+        c = Cast(c0[c0.zname][~msk], coords=(np.nan, np.nan),
+                zunits=c0.zunits, zname=c0.zname)
+        for i in range(n_eofs):
+            c._addkeydata("_eof".join([key, str(i+1)]), eofts[:,i])
+        return c, λ[:n_eofs], V[:,:n_eofs]
+
     def save(self, fnm, binary=True):
         """ Save a JSON-formatted representation to a file.
 
