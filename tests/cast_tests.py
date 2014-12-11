@@ -236,11 +236,11 @@ class CastCollectionTests(unittest.TestCase):
                       theta=np.sin(pres*i*np.pi/300))
                  for i in range(3)]
         cc = CastCollection(casts)
-        structures, λ, eofs = cc.eofs("theta")
+        structures, lamb, eofs = cc.eofs("theta")
         self.assertAlmostEqual(np.mean(np.abs(structures["theta_eof1"])), 0.634719360307)
         self.assertAlmostEqual(np.mean(np.abs(structures["theta_eof2"])), 0.363733575635)
         self.assertAlmostEqual(np.mean(np.abs(structures["theta_eof3"])), 0.350665870142)
-        self.assertTrue(np.allclose(λ, [87.27018523, 40.37800904, 2.02016724]))
+        self.assertTrue(np.allclose(lamb, [87.27018523, 40.37800904, 2.02016724]))
         return
 
 class MiscTests(unittest.TestCase):
