@@ -773,8 +773,8 @@ class CastCollection(collections.Sequence):
         arr = arr[~msk,:]
         arr -= arr.mean()
 
-        _,Σ,V = np.linalg.svd(arr)
-        λ = Σ**2/(len(self)-1)
+        _,sigma,V = np.linalg.svd(arr)
+        lamb = sigma**2/(len(self)-1)
         eofts = util.eof_timeseries(arr, V)
 
         c0 = self[0]
@@ -782,7 +782,7 @@ class CastCollection(collections.Sequence):
                 zunits=c0.zunits, zname=c0.zname)
         for i in range(n_eofs):
             c._addkeydata("_eof".join([key, str(i+1)]), eofts[:,i])
-        return c, λ[:n_eofs], V[:,:n_eofs]
+        return c, lamb[:n_eofs], V[:,:n_eofs]
 
     def save(self, fnm, binary=True):
         """ Save a JSON-formatted representation to a file.
