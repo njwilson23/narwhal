@@ -15,13 +15,6 @@ from ..cast import AbstractCast, AbstractCastCollection
 from . import plotutil
 from .. import gsw
 
-try:
-    from karta.crs import crsreg
-except ImportError:
-    import karta as crsreg
-LONLAT_WGS84 = crsreg.LONLAT_WGS84
-CARTESIAN = crsreg.CARTESIAN
-
 import warnings
 warnings.filterwarnings("ignore", category=DeprecationWarning)
 

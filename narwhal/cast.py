@@ -26,11 +26,10 @@ from . import gsw
 from . import util
 
 try:
-    from karta.crs import crsreg
+    from karta.crs import LonLatWGS84
 except ImportError:
-    import karta as crsreg
-LONLAT = crsreg.LONLAT
-CARTESIAN = crsreg.CARTESIAN
+    from karta.crs import crsreg
+    LonLatWGS84 = crsreg.LONLAT_WGS84
 
 # Global physical constants
 G = 9.8
@@ -525,7 +524,7 @@ class CastCollection(collections.Sequence):
 
     @property
     def coords(self):
-        return Multipoint([c.coords for c in self], crs=LONLAT)
+        return Multipoint([c.coords for c in self], crs=LonLatWGS84)
 
     def add_bathymetry(self, bathymetry):
         """ Reference Bathymetry instance `bathymetry` to CastCollection.
@@ -622,9 +621,9 @@ class CastCollection(collections.Sequence):
         """ Return the cumulative distances from the cast to cast.
         """
         cumulative = [0]
-        a = Point(self.casts[0].coords, crs=LONLAT)
+        a = Point(self.casts[0].coords, crs=LonLatWGS84)
         for cast in self.casts[1:]:
-            b = Point(cast.coords, crs=LONLAT)
+            b = Point(cast.coords, crs=LonLatWGS84)
             cumulative.append(cumulative[-1] + a.distance(b))
             a = b
         return np.asarray(cumulative, dtype=np.float64)

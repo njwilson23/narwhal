@@ -8,11 +8,10 @@ from karta import Line
 from narwhal import AbstractCast, AbstractCastCollection
 
 try:
-    from karta.crs import crsreg
+    from karta.crs import LonLatWGS84
 except ImportError:
-    import karta as crsreg
-LONLAT_WGS84 = crsreg.LONLAT_WGS84
-CARTESIAN = crsreg.CARTESIAN
+    from karta.crs import crsreg
+    LonLatWGS84 = crsreg.LONLAT_WGS84
 
 class BaseSectionAxes(plt.Axes):
 
@@ -169,7 +168,7 @@ class BaseSectionAxes(plt.Axes):
         elif hasattr(vertices, "coords"):
             vertices = vertices.coords.get_vertices()
 
-        cruiseline = Line(vertices, crs=LONLAT_WGS84)
+        cruiseline = Line(vertices, crs=LonLatWGS84)
         xalong, xacross = bathymetry.project_along_cruise(cruiseline)
         depth_ = bathymetry.depth
         mask = ~np.isnan(depth_) * (xacross < maxdistance)
