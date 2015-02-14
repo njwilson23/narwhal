@@ -5,13 +5,7 @@ plotted.
 import numpy as np
 import karta
 from karta import Point, Line
-
-try:
-    from karta.crs import LonLatWGS84
-except ImportError:
-    from karta.crs import crsreg
-    LonLatWGS84 = crsreg.LONLAT
-
+from karta.crs import LonLatWGS84
 
 class Bathymetry2d(Line):
     """ Bathymetric line
@@ -44,8 +38,7 @@ class Bathymetry2d(Line):
         b = segments[ii][1]
         ptonseg = segments[ii].nearest_on_boundary(pt)
         return (b.data["depth"] - a.data["depth"]) \
-                * (a.greatcircle(ptonseg) / a.greatcircle(b)) \
-                + a.data["depth"]
+                * (a.distance(ptonseg) / a.distance(b)) + a.data["depth"]
 
     def projdist(self, reverse=False):
         distances = [seg[0].greatcircle(seg[1]) for seg in self.segments()]

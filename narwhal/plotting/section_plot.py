@@ -5,13 +5,8 @@ import matplotlib.pyplot as plt
 from scipy.interpolate import griddata, CloughTocher2DInterpolator
 from scipy import ndimage
 from karta import Line
+from karta.crs import LonLatWGS84
 from narwhal import AbstractCast, AbstractCastCollection
-
-try:
-    from karta.crs import LonLatWGS84
-except ImportError:
-    from karta.crs import crsreg
-    LonLatWGS84 = crsreg.LONLAT_WGS84
 
 class BaseSectionAxes(plt.Axes):
 

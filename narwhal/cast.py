@@ -20,16 +20,11 @@ from scipy import sparse as sprs
 from scipy.interpolate import UnivariateSpline
 from scipy.io import netcdf_file
 from karta import Point, Multipoint
+from karta.crs import LonLatWGS84
 from . import units
 from . import fileio
 from . import gsw
 from . import util
-
-try:
-    from karta.crs import LonLatWGS84
-except ImportError:
-    from karta.crs import crsreg
-    LonLatWGS84 = crsreg.LONLAT_WGS84
 
 # Global physical constants
 G = 9.8
