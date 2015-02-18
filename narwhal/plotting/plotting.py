@@ -25,7 +25,9 @@ def _castlabeliter():
         yield "Cast " + str(i)
 
 def plot_profiles(castlikes, key="temp", ax=None, **kw):
-    """ Plot vertical profiles from casts """
+    """ Plot vertical profiles from casts. Keyword arguments are passed to
+    `pyplot.plot`. If keyword arguments are non-string iterables, profiles are
+    plotted with the items in order. """
     # guess the number of casts - in the future, get this properly
     n = min(8, max(3, len(castlikes)))
     defaultcolors = brewer2mpl.get_map("Dark2", "Qualitative", n).hex_colors
