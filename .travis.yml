@@ -15,7 +15,7 @@ before_install:
 install:
   - conda create --yes -n test-environment python=$TRAVIS_PYTHON_VERSION numpy scipy pandas pip matplotlib
   - source activate test-environment
-  - pip install -U setuptools
+    #- pip install -U setuptools
   - pip install requests python-dateutil six brewer2mpl
   - pip install karta
   - pip install . -v
