@@ -11,6 +11,8 @@ import pandas
 from karta import Point, geojson
 from . import units
 
+TIME_TYPES = (datetime.date, datetime.time)
+
 def castasdict(cast):
     scalars = [key for key in cast.properties]
     vectors = list(cast.data.keys())
@@ -18,6 +20,8 @@ def castasdict(cast):
     for key in scalars:
         if isinstance(cast.properties[key], datetime.datetime):
             dscalar[key] = cast.properties[key].isoformat(sep=" ")
+        elif isinstance(cast.properties[key], TIME_TYPES):
+            dscalar[key] = cast.properties[key].isoformat()
         else:
             dscalar[key] = cast.properties[key]
     for key in vectors:
