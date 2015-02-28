@@ -21,7 +21,7 @@ class Bathymetry2d(Line):
                 raise KeyError("Bathymetry must be initialized with a 'depth' "
                                "argument or a dictionary with a 'depth' key")
             else:
-                depth = kw["data"]["depth"]
+                depth = kw["data"].getfield("depth")
         else:
             kw.update({"data": {"depth": depth}})
         super(Line, self).__init__(vertices, **kw)
@@ -34,11 +34,11 @@ class Bathymetry2d(Line):
         segments = tuple(self.segments)
         distances = [seg.shortest_distance_to(pt) for seg in segments]
         ii = distances.index(min(distances))
-        a = segments[ii][0]
-        b = segments[ii][1]
+        (a, b) = segments[ii]
         ptonseg = segments[ii].nearest_on_boundary(pt)
-        return (b.data["depth"] - a.data["depth"]) \
-                * (a.distance(ptonseg) / a.distance(b)) + a.data["depth"]
+        adepth = a.data[0][a.data.fields.index("depth")]
+        bdepth = b.data[0][b.data.fields.index("depth")]
+        return (bdepth-adepth) * (a.distance(ptonseg)/a.distance(b)) + adepth
 
     def projdist(self, reverse=False):
         distances = [seg[0].greatcircle(seg[1]) for seg in self.segments()]
