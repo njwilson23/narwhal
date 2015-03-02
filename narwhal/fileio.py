@@ -3,7 +3,6 @@ objects to persistent files. """
 
 import six
 import json
-import copy
 import datetime
 import dateutil.parser
 import numpy
@@ -45,7 +44,7 @@ def dictascast(d, obj):
     """ Read a file-like stream and construct an object with a Cast-like
     interface. """
     d_ = d.copy()
-    _ = d_.pop("type")
+    d_.pop("type")
     coords = d_["scalars"].pop("coordinates")
     zunits = findunit(d_.pop("zunits", "meter"))
     zname = d_.pop("zname", "z")

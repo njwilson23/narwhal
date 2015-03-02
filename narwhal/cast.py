@@ -338,7 +338,7 @@ class Cast(object):
         h = np.diff(dep)
         assert all(h == h_ for h_ in h[1:])     # requires uniform gridding for now
 
-        f = 4*OMEGA * math.sin(self.coords[1])
+        f = 4*OMEGA * np.sin(self.coords[1])
         F = f**2/N2
         F[0] = 0.0
         F[-1] = 0.0
@@ -347,14 +347,15 @@ class Cast(object):
         D1 = util.sparse_diffmat(len(self), 1, h)
         D2 = util.sparse_diffmat(len(self), 2, h)
 
-        T = sparse.diags(D1 * F.diagonal(), 0)
+        T = sprs.diags(D1 * F.diagonal(), 0)
         M = T*D1 + F*D2
         lamda, V = sprs.linalg.eigs(M.tocsc(), k=nmodes+1, sigma=1e-8)
         Ld = 1.0 / np.sqrt(np.abs(np.real(lamda[1:])))
         return Ld, V[:,1:]
 
     def water_fractions(self, sources, tracers=("sal", "temp")):
-        """ Compute water mass fractions based on *n* conservative tracers.
+        """ Compute water mass fractions based on *n* (>= 2) conservative
+        tracers.
 
         sources::[tuple, tuple, ...]    List of *n+1* tuples specifying prototype
                                         water masses in terms of *tracers*.
@@ -362,12 +363,10 @@ class Cast(object):
 
         tracers::[string, string, ...]  *n* Cast fields to use as tracers
                                         [default: ("sal", "temp")].
-
-        *n* must be two or greater.
         """
         n = len(tracers)
         if n < 2:
-            raise NarwhalError("At least two prototype water masses must be specified.")
+            raise NarwhalError("Two or more prototype waters required")
 
         m = self.nvalid(tracers)
         I = sprs.eye(m)
@@ -799,7 +798,7 @@ def read(fnm):
     try:
         with open(fnm, "r") as f:
             d = json.load(f)
-    except (UnicodeDecodeError,ValueError) as e:
+    except (UnicodeDecodeError,ValueError):
         with gzip.open(fnm, "rb") as f:
             s = f.read().decode("utf-8")
             d = json.loads(s)
@@ -847,9 +846,9 @@ def read_woce_netcdf(fnm):
 
     date = getvariable(nc, "woce_date")
     time = getvariable(nc, "woce_time")
-    return narwhal.CTDCast(pres, sal, temp, oxygen=oxy,
-                           coords=coords,
-                           properties={"woce_time":time, "woce_date":date})
+    return CTDCast(pres, sal, temp, oxygen=oxy,
+                   coords=coords,
+                   properties={"woce_time":time, "woce_date":date})
 
 class AbstractCast(six.with_metaclass(abc.ABCMeta)):
     pass

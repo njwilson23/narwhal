@@ -23,7 +23,7 @@ def sparse_diffmat(n, deriv, h, order=2):
         I = np.ones(n)
         I_ = np.ones(n-1)
         D = sparse.diags((I_, -2*I, I_), (1, 0, -1)) / h**2
-        D = D2.tolil()
+        D = D.tolil()
         D[0,:4] = np.asarray([2, -5, 4, -1]) / h**2
         D[-1,-4:] = np.asarray([-1, 4, -5, 2]) / h**2
     else:
