@@ -1,9 +1,9 @@
 setuptools>=0.7.0
 six>=1.7
-requests>=2.2.1
+requests>=2.2
 numpy>=1.5
 pandas>=0.14
-karta>=0.4.2
+karta>=0.4.3
 scipy>=0.12
 brewer2mpl>=1.4
 matplotlib>=1.2
