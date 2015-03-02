@@ -2,24 +2,38 @@
 
 [![Build Status](https://travis-ci.org/njwilson23/narwhal.svg?branch=master)](https://travis-ci.org/njwilson23/narwhal)
 
-Narwhal is a Python library built on [pandas](http://pandas.pydata.org/) and
+Narwhal is a Python module built on [pandas](http://pandas.pydata.org/) and
 [matplotlib](http://matplotlib.org/) for manipulating and visualizing
 oceanographic survey data.
 
-`Cast` and `CastCollection` classes make organizing and processing data more
-intuitive. These can also serialize themselves as zipped JSON objects for data
-storage and sharing. WOCE CTD casts in NetCDF format may be read directly.
+Oceanographic data are organized into `Cast` and `CastCollection` data structures. Functions are provided for
 
-The `narwhal.plotting` submodule contains convenience methods for creating
-attractive T-S diagrams, cast plots, and section plots. Here's some
-data from the <a href="http://cchdo.ucsd.edu/cruise/325021_1">WOCE P17N
-line,</a> collected on a cruise by the Thomas G. Thomson.</p>
+- interpolation
+- density and depth calculation
+- buoyancy frequency estimation
+- baroclinic mode analysis
+- water fraction inversion
+
+More specialized techniques can be added by subclassing the generic
+`Cast` type (see the `XBTCast` and `LADCP` classes as an example).
+
+For storage, data is serialized as zipped JSON objects streams. Due to the
+prevalence of JSON parsers, these data formats can be easily parsed into other
+analysis packages, and are furthermore ready for web-based visualization.
+
+Parsers are also included for WOCE CTD casts in NetCDF format and Arctic
+Switchyard CTD casts in table format.
+
+The `narwhal.plotting` submodule contains convenience methods for creating T-S
+diagrams, cast plots, and section plots. Here's some data from the [WOCE P17N
+line](http://cchdo.ucsd.edu/cruise/325021_1), collected on a cruise by the
+Thomas G. Thomson.
 
 ![P17N T-S diagram](https://rawgit.com/njwilson23/narwhal/gh-pages/ts-demo.png)
 
 ![P17N section diagram](https://rawgit.com/njwilson23/narwhal/gh-pages/section-demo.png)
 
-Narwhal provides a wrapper for the
+Narwhal provides a *ctypes* wrapper for the
 [Gibbs Seawater Toolbox](http://www.teos-10.org/pubs/gsw/html/gsw_contents.html)
 in the `narwhal.gsw` submodule, making things like the following possible:
 
@@ -32,18 +46,18 @@ in the `narwhal.gsw` submodule, making things like the following possible:
     pip install narwhal
 
 ## Dependencies
+
 - Python 2.7+ or Python 3.2+
 - pandas
 - numpy
 - scipy
-- requests
-- dateutil
-- six
 - [karta](https://github.com/njwilson23/karta)
-- matplotlib (optional; for plotting)
+- requests
+- six
+- matplotlib and brewer2mpl (optional; for plotting)
 - C-compiler (optional; for GSW)
 
-Narwhal is experimental. Also consider
+Narwhal is experimental. See also
 [python-oceans](https://github.com/ocefpaf/python-oceans) and
 [oce](https://github.com/dankelley/oce) (R).
 
