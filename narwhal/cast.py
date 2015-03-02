@@ -91,8 +91,7 @@ class Cast(object):
             if 0 <= key < len(self):
                 return self.data.irow(key)
             else:
-                raise IndexError("{0} not within cast length "
-                                 "({1})".format(key, len(self)))
+                raise IndexError("{0} not within cast length ({1})".format(key, len(self)))
         elif key in self.data:
             return self.data[key]
         else:
@@ -107,12 +106,12 @@ class Cast(object):
                 if key not in self.fields:
                     self.fields.append(key)
             else:
-                raise TypeError("Fields must be set from iterables with length equal to the cast")
+                raise NarwhalError("Fields must be set from iterables with length equal to the cast")
 
         elif isinstance(key, int):
-            raise KeyError("Cast object profiles are not mutable")
+            raise NarwhalError("Profiles are immutable")
         else:
-            raise KeyError("Cannot use {0} as a hash".format(key))
+            raise KeyError("{0} is an invalid key".format(key))
         return
 
     def __add__(self, other):
@@ -186,7 +185,7 @@ class Cast(object):
             empty_df = pandas.DataFrame({self.zname: np.nan * np.empty(n)})
             self.data = pandas.concat([self.data, empty_df], ignore_index=True)
         else:
-            raise ValueError("Cast must be extended with 1 or more rows")
+            raise NarwhalError("Cast must be extended with 1 or more rows")
         return
 
     def interpolate(self, y, x, v, force=False):
@@ -215,7 +214,7 @@ class Cast(object):
         elif force:
             return np.interp(v, util.force_monotonic(self[x]), self[y])
         else:
-            raise ValueError("x is not monotonic")
+            raise NarwhalError("{x} is not monotonic; pass force=True to override".format(x=x))
 
     def regrid(self, levels):
         """ Re-interpolate Cast at specified grid levels. Returns a new Cast. """
@@ -264,8 +263,7 @@ class Cast(object):
             rho = gsw.rho(SA, CT, self[preskey])
             return self._addkeydata(rhokey, np.asarray(rho))
         else:
-            raise FieldError("add_density requires salinity, temperature, and "
-                             "pressure fields")
+            raise FieldError("salinity, temperature, and pressure required")
 
     def add_depth(self, preskey="pres", rhokey="rho", depthkey="z"):
         """ Use density and pressure to calculate depth.
@@ -302,7 +300,7 @@ class Cast(object):
                                     give a noisier result)
         """
         if rhokey not in self.fields:
-            raise FieldError("add_Nsquared requires in-situ density")
+            raise FieldError("in-situ density required")
         msk = self.nanmask((rhokey, depthkey))
         rho = self[rhokey][~msk]
         z = self[depthkey][~msk]
@@ -327,7 +325,7 @@ class Cast(object):
         depthkey::string            Data key to use for depth
         """
         if N2key not in self.fields or depthkey not in self.fields:
-            raise FieldError("baroclinic_modes requires buoyancy frequency and depth")
+            raise FieldError("buoyancy frequency and depth required")
 
         igood = ~self.nanmask((N2key, depthkey))
         N2 = self[N2key][igood]
@@ -399,9 +397,9 @@ class Cast(object):
         dudzkey,dvdzkey::string     Data key to use for u,v velocity shears
         """
         if ukey not in self.fields or vkey not in self.fields:
-            raise FieldError("add_shear requires u and v velocity components")
+            raise FieldError("u and v velocity required")
         if depthkey == "z" and self.zunits != units.meter:
-            raise FieldError("add_shear requires depth in meters")
+            raise FieldError("depth in meters required")
         if s is not None:
             u = ndimage.filters.gaussian_filter1d(self[ukey], s)
             v = ndimage.filters.gaussian_filter1d(self[vkey], s)
@@ -453,8 +451,7 @@ class CastCollection(collections.Sequence):
         elif (len(args) == 1) and all(isinstance(a, AbstractCast) for a in args[0]):
             self.casts = args[0]
         else:
-            raise TypeError("Arguments must be either Cast types or an "
-                            "iterable collection of Cast types")
+            raise TypeError("Arguments must be Casts or a collection of Casts")
         return
 
     def __len__(self):
@@ -497,8 +494,7 @@ class CastCollection(collections.Sequence):
         elif isinstance(other, AbstractCast):
             return CastCollection(self.casts + [other])
         else:
-            raise TypeError("Can only add castcollection and *cast types to "
-                            "CastCollection")
+            raise TypeError("no rule to add {0} to CastCollection".format(type(other)))
 
     def __repr__(self):
         s = "CastCollection with {n} casts:".format(n=len(self.casts))
@@ -561,7 +557,7 @@ class CastCollection(collections.Sequence):
             if hasattr(key, "__call__"):
                 return CastCollection([c for c in self if key(c)])
             else:
-                raise ValueError("If one argument is given, it must be a function")
+                raise NarwhalError("When one argument is given, it must be a function")
         if hasattr(values, "__call__"):
             func = values
             for cast in self.casts:
@@ -650,8 +646,7 @@ class CastCollection(collections.Sequence):
             for cast in self.casts:
                 rhokeys.append(cast.add_density())
             if any(r != rhokeys[0] for r in rhokeys[1:]):
-                raise NameError("Tried to add density field, but ended up with "
-                                "different keys - aborting")
+                raise NarwhalError("Tried to add density field, but got inconsistent keys")
             else:
                 rhokey = rhokeys[0]
 
@@ -703,8 +698,7 @@ class CastCollection(collections.Sequence):
             for cast in self.casts:
                 rhokeys.append(cast.add_density())
             if any(r != rhokeys[0] for r in rhokeys[1:]):
-                raise NameError("Tried to add density field, but ended up with "
-                                "different keys - aborting")
+                raise NarwhalError("Tried to add density field, but found inconsistent keys")
             else:
                 rhokey = rhokeys[0]
 
@@ -828,7 +822,7 @@ def _fromjson(d):
         casts = [_fromjson(castdict) for castdict in d["casts"]]
         return CastCollection(casts)
     elif typ is None:
-        raise AttributeError("couldn't read data type - file may be corrupt")
+        raise NarwhalError("couldn't read data type - file may be corrupt")
     else:
         raise LookupError("Invalid type: {0}".format(typ))
 
@@ -862,6 +856,9 @@ class AbstractCast(six.with_metaclass(abc.ABCMeta)):
     pass
 
 class AbstractCastCollection(six.with_metaclass(abc.ABCMeta)):
+    pass
+
+class NarwhalError(Exception):
     pass
 
 class FieldError(TypeError):
