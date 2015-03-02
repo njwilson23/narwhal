@@ -12,36 +12,62 @@ class WaterFractionTests(unittest.TestCase):
     def setUp(self):
         pass
 
-    def test_three_sources1(self):
-        c = CTDCast(np.arange(10), 3.6*np.ones(10), 22.1*np.ones(10))
-        r1, r2, r3 = [1, 5, 8], [25, 20, 18], [1, 1, 1]
-        r1, r2, r3 = [1, 25], [5, 20], [8, 18]
-        (f1, f2, f3) = c.water_fractions((r1, r2, r3))
-        self.assertTrue(np.allclose(f1, 0.5*np.ones(10)))
-        self.assertTrue(np.allclose(f2, 0.3*np.ones(10)))
-        self.assertTrue(np.allclose(f3, 0.2*np.ones(10)))
+    def test_three_sources_constant(self):
+        ans = np.array([0.3, 0.2, 0.5])
+        sources = [(34.0, 2.0), (34.5, 7.0), (34.6, 5.0)]
+        s = np.array(sources)
+        x = np.ones(10, dtype=np.float64)
+        sal = x * np.dot(ans, s[:,0])
+        tmp = x * np.dot(ans, s[:,1])
+
+        c = CTDCast(np.arange(10), sal, tmp)
+        (chi1, chi2, chi3) = c.water_fractions(sources)
+        self.assertTrue(np.allclose(chi1, 0.3*np.ones(10)))
+        self.assertTrue(np.allclose(chi2, 0.2*np.ones(10)))
+        self.assertTrue(np.allclose(chi3, 0.5*np.ones(10)))
         return
 
-    def test_three_sources2(self):
-        print("test incomplete")
-        source1 = (10.0, 34.0)
-        source2 = (2.0, 32.0)
-        source3 = (17.0, 34.5)
+    def test_three_sources_varying(self):
+        ans_chi1 = np.linspace(0.2, 0.35, 10)
+        ans_chi2 = np.linspace(0.6, 0.1, 10)
+        ans_chi3 = 1.0 - (ans_chi1 + ans_chi2)
+        ans = np.c_[ans_chi1, ans_chi2, ans_chi3]
 
-        p = np.arange(0, 2000, 2)
-        S = 34.3 - 2.0 * np.exp(-p/300.0)
-        T = 15.0 * np.exp(-p/150.0) - 2e-3 * p
-        cast = CTDCast(p, S, T)
-        partitions = cast.water_fractions([source1, source2, source3])
+        sources = [(34.0, 2.0), (34.5, 7.0), (34.6, 5.0)]
+        s = np.array(sources)
+        x = np.ones(10, dtype=np.float64)
+        sal = x * np.dot(ans, s[:,0])
+        tmp = x * np.dot(ans, s[:,1])
 
-        # import matplotlib.pyplot as plt
-        # import seaborn
-        # for partition in partitions:
-        #     plt.plot(partition, p)
-        # plt.show()
-        
-        # temporary
-        self.assertTrue(partitions is not None)
+        c = CTDCast(np.arange(10), sal, tmp)
+        (chi1, chi2, chi3) = c.water_fractions(sources)
+        self.assertTrue(np.allclose(chi1, ans_chi1))
+        self.assertTrue(np.allclose(chi2, ans_chi2))
+        self.assertTrue(np.allclose(chi3, ans_chi3))
+        return
+
+    def test_four_sources_varying(self):
+        ans_chi1 = np.linspace(0.2, 0.35, 10)
+        ans_chi2 = np.linspace(0.6, 0.1, 10)
+        ans_chi3 = np.linspace(0.05, 0.12, 10)
+        ans_chi4 = 1.0 - (ans_chi1 + ans_chi2 + ans_chi3)
+        ans = np.c_[ans_chi1, ans_chi2, ans_chi3, ans_chi4]
+
+        sources = [(34.0, 2.0, 280.0), (34.5, 70.0, 250.0),
+                   (34.6, 5.0, 330.0), (33.9, 18.0, 390.0)]
+        s = np.array(sources)
+        x = np.ones(10, dtype=np.float64)
+        sal = x * np.dot(ans, s[:,0])
+        tmp = x * np.dot(ans, s[:,1])
+        oxy = x * np.dot(ans, s[:,2])
+
+        c = CTDCast(np.arange(10), sal, tmp, oxy=oxy)
+        (chi1, chi2, chi3, chi4) = c.water_fractions(sources,
+                                        tracers=["sal", "temp", "oxy"])
+        self.assertTrue(np.allclose(chi1, ans_chi1))
+        self.assertTrue(np.allclose(chi2, ans_chi2))
+        self.assertTrue(np.allclose(chi3, ans_chi3))
+        self.assertTrue(np.allclose(chi4, ans_chi4))
         return
 
 if __name__ == "__main__":

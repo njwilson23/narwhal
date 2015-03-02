@@ -354,38 +354,37 @@ class Cast(object):
         return Ld, V[:,1:]
 
     def water_fractions(self, sources, tracers=("sal", "temp")):
-        """ Compute water mass fractions based on conservative tracers.
-        `sources::[tuple, tuple, ...]` is a list of tuples giving the prototype water
-        masses.
+        """ Compute water mass fractions based on *n* conservative tracers.
 
-        tracers::[string, string]       must be fields in the CTDCast to use as
-                                        conservative tracers
+        sources::[tuple, tuple, ...]    List of *n+1* tuples specifying prototype
+                                        water masses in terms of *tracers*.
+                                        Each tuple must have length *n*.
+
+        tracers::[string, string, ...]  *n* Cast fields to use as tracers
                                         [default: ("sal", "temp")].
-        """
 
-        if len(sources) != 3:
-            raise ValueError("Three potential source waters must be given "
-                             "(not {0})".format(len(sources)))
-        n = self.nvalid(tracers)
-        I = sprs.eye(n)
-        A_ = np.array([[sources[0][0], sources[1][0], sources[2][0]],
-                       [sources[0][1], sources[1][1], sources[2][1]],
-                       [         1.0,          1.0,          1.0]])
-        As = sprs.kron(I, A_, "csr")
-        b = np.empty(3*n)
+        *n* must be two or greater.
+        """
+        n = len(tracers)
+        if n < 2:
+            raise NarwhalError("At least two prototype water masses must be specified.")
+
+        m = self.nvalid(tracers)
+        I = sprs.eye(m)
+        A_ = np.array([[src[i] for src in sources] for i in range(n)])
+        A = np.vstack([A_, np.ones(n+1, dtype=np.float64)])
+        As = sprs.kron(I, A, "csr")
+        b = np.zeros((n+1)*m)
         msk = self.nanmask(tracers)
-        b[::3] = self[tracers[0]][~msk]
-        b[1::3] = self[tracers[1]][~msk]
-        b[2::3] = 1.0               # lagrange multiplier
+        for i in range(n):
+            b[i::n+1] = self[tracers[i]][~msk]
+        b[n::n+1] = 1.0             # lagrange multiplier
 
         frac = sprs.linalg.spsolve(As, b)
-        mass1 = np.empty(len(self)) * np.nan
-        mass2 = np.empty(len(self)) * np.nan
-        mass3 = np.empty(len(self)) * np.nan
-        mass1[~msk] = frac[::3]
-        mass2[~msk] = frac[1::3]
-        mass3[~msk] = frac[2::3]
-        return (mass1, mass2, mass3)
+        chis = [np.empty(len(self)) * np.nan for i in range(n+1)]
+        for i in range(n+1):
+            chis[i][~msk] = frac[i::n+1]
+        return chis
 
     def add_shear(self, depthkey="z", ukey="u", vkey="v", dudzkey="dudz", dvdzkey="dvdz",
                   s=None):
