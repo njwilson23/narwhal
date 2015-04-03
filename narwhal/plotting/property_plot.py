@@ -101,6 +101,8 @@ class PropertyPropertyAxes(plt.Axes):
     def add_sigma_contours(self, contourint, pres=0.0):
         """ Add density contours to a T-S plot """
         sl = self.get_xlim()
+        if sl[0] < 0:
+            sl = (0.0, sl[1])
         tl = self.get_ylim()
         SA = np.linspace(sl[0], sl[1])
         CT = np.linspace(tl[0], tl[1])
