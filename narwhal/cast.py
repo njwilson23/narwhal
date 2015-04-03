@@ -332,20 +332,20 @@ class Cast(object):
         dep = self[depthkey][igood]
 
         itop = np.argwhere(dep > ztop)[0]
-        N2 = N2[itop:]
-        dep = dep[itop:]
+        N2 = N2[itop:].values
+        dep = dep[itop:].values
 
         h = np.diff(dep)
-        assert all(h == h_ for h_ in h[1:])     # requires uniform gridding for now
+        assert all(h[0] == h_ for h_ in h[1:])     # requires uniform gridding for now
 
-        f = 4*OMEGA * np.sin(self.coords[1])
+        f = 2*OMEGA * np.sin(self.coords[1])
         F = f**2/N2
         F[0] = 0.0
         F[-1] = 0.0
         F = sprs.diags(F, 0)
 
-        D1 = util.sparse_diffmat(len(self), 1, h)
-        D2 = util.sparse_diffmat(len(self), 2, h)
+        D1 = util.sparse_diffmat(len(N2), 1, h[0])
+        D2 = util.sparse_diffmat(len(N2), 2, h[0])
 
         T = sprs.diags(D1 * F.diagonal(), 0)
         M = T*D1 + F*D2
