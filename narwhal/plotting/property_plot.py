@@ -26,18 +26,17 @@ class PropertyPropertyAxes(plt.Axes):
             yield "Cast " + str(i)
 
     def plot_casts(self, castlikes, xkey, ykey, xlabel=None,  ylabel=None,
-                   drawlegend=True, **kwargs):
+                   **kwargs):
         """ Plot a T-S diagram from Casts or CastCollections
 
-        Takes a Cast/CastCollection or an iterable of Cast/CastCollection instances
-        as an argument.
+        Takes a Cast/CastCollection or an iterable of Cast/CastCollection
+        instances as an argument.
 
         Keyword arguments:
         ------------------
 
         xkey            The data key to plot along x-axis [default: "sal"]
         ykey            The data key to plot along y-axis [default: "theta"]
-        drawlegend      Whether to add a legend
         labels          An iterable of strings for the legend
         styles          A single or iterable of matplotlib linestyle strings
         colors          A single or iterable of line/marker colors
@@ -85,9 +84,6 @@ class PropertyPropertyAxes(plt.Axes):
                 lines.append(self.plot(x, y, sty, **plotkw))
             else:
                 lines.append(self.plot(cast[xkey], cast[ykey], sty, **plotkw))
-
-        if len(castlikes) > 1 and drawlegend:
-            self.legend(loc="best", frameon=False)
 
         self.set_xlabel(xlabel)
         self.set_ylabel(ylabel)
