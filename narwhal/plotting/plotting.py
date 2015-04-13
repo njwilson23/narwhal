@@ -60,14 +60,20 @@ def plot_profiles(castlikes, key="temp", ax=None, **kw):
         ax.invert_yaxis()
     return ax
 
-def plot_map(castlikes, ax=None, **kw):
+def plot_map(castlikes, ax=None, crs=None, **kw):
     """ Plot a simple map of cast locations. """
+    def _coord_transformer(cast, crs):
+        if crs:
+            return crs.project(cast.coords[0], cast.coords[1])
+        else:
+            return (cast.coords[0], cast.coords[1])
+
     def _plot_coords(ax, cast, **kw):
         if isinstance(cast, AbstractCastCollection):
             for cast_ in cast:
                 _plot_coords(ax, cast_, **kw)
         elif isinstance(cast, AbstractCast):
-            ax.plot(cast.coords[0], cast.coords[1], **kw)
+            ax.plot(*_coord_transformer(cast, crs), **kw)
         else:
             raise TypeError("Argument not Cast or CastCollection-like")
         return
