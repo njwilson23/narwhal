@@ -22,7 +22,7 @@ prevalence of JSON parsers, these data formats can be easily parsed into other
 analysis packages, and are furthermore ready for web-based visualization.
 
 Parsers are also included for WOCE CTD casts in NetCDF format and Arctic
-Switchyard CTD casts in table format.
+Switchyard CTD casts in ASCII table format.
 
 The `narwhal.plotting` submodule contains convenience methods for creating T-S
 diagrams, cast plots, and section plots. Here's some data from the [WOCE P17N
