@@ -60,6 +60,15 @@ def plot_profiles(castlikes, key="temp", ax=None, **kw):
         ax.invert_yaxis()
     return ax
 
+def plot_section(castlikes, prop="temp", cmap=plt.cm.Spectral, **kw):
+    """ Convenience method for making a basic section plot. """
+    ax = plt.axes(projection="section")
+    ax.contour(castlikes, prop, colors="black", linestyles="-", linewidths=0.5)
+    ax.contourf(castlikes, prop, cmap=cmap)
+    ax.mark_stations(castlikes)
+    ax.label_stations(castlikes, [str(i+1) for i in range(len(castlikes))], vert_offset=5)
+    return ax
+
 def plot_map(castlikes, ax=None, crs=None, **kw):
     """ Plot a simple map of cast locations. """
     def _coord_transformer(cast, crs):
