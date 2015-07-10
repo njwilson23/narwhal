@@ -165,6 +165,7 @@ def plot_ts(*args, **kwargs):
     WIP
     """
     ax = plt.axes(projection="propertyplot")
-    return ax.plot_ts(*args, **kwargs)
+    ax.plot_ts(*args, **kwargs)
+    return ax
 
 matplotlib.projections.register_projection(PropertyPropertyAxes)
