@@ -50,19 +50,20 @@ class BaseSectionAxes(plt.Axes):
         return zmask
 
     def hatch(self, nx=20, **kw):
-        """ Add a hatch pattern to section to represent NaNs. """
+        """ Add a hatch pattern to section to represent NaNs. *nx* gives the
+        number of hatch lines to draw. """
         ny = nx * self.bbox.height / self.bbox.width
         x0, x1 = self.get_xlim()
         y0, y1 = self.get_ylim()
         dx = (x1-x0) / nx
         m = (nx/ny) * abs((y1-y0)/(x1-x0))
 
-        LXb = np.linspace(x0 - abs(y1-y0)/m, x1-dx, nx)
-        LXt = LXb + abs(y1-y0)/m
+        LXbottom = np.linspace(x0 - abs(y1-y0)/m, x1-dx, nx)
+        LXtop = LXbottom + abs(y1-y0)/m
         LX = np.empty(3*nx, dtype=np.float64)
         LY = np.empty(3*nx, dtype=np.float64)
-        LX[0::3] = LXb
-        LX[1::3] = LXt
+        LX[0::3] = LXbottom
+        LX[1::3] = LXtop
         LX[2::3] = np.nan
         LY[0::3] = y0
         LY[1::3] = y1
