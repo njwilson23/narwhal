@@ -62,8 +62,9 @@ def plot_profiles(castlikes, key="temp", ax=None, **kw):
 
 def plot_section(castlikes, prop="temp", cmap=plt.cm.Spectral, **kw):
     """ Convenience method for making a basic section plot. """
-    ax = plt.axes(projection="section")
-    ax.contour(castlikes, prop, colors="black", linestyles="-", linewidths=0.5)
+    ax = plt.axes(projection="section", axisbg="#404040")
+    c = ax.contour(castlikes, prop, colors="black", linestyles="-", linewidths=0.5)
+    plt.clabel(c)
     ax.contourf(castlikes, prop, cmap=cmap)
     ax.mark_stations(castlikes)
     ax.label_stations(castlikes, [str(i+1) for i in range(len(castlikes))], vert_offset=5)
