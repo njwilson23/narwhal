@@ -9,6 +9,11 @@ Narwhal documentation
 .. toctree::
    :maxdepth: 2
 
+   index
+
+.. image:: http://ironicmtn.com/images/narwhal.png
+    :alt: Narwhal logo
+
 Casts and CastCollections
 -------------------------
 
@@ -20,20 +25,17 @@ individual transect or an entire cruise.
 .. autoclass:: narwhal.cast.Cast
    :members:
 
-.. autoclass:: narwhal.cast.CTDCast
-   :members:
+.. autofunction:: narwhal.cast.CTDCast
 
-.. autoclass:: narwhal.cast.LADCP
-   :members:
+.. autofunction:: narwhal.cast.LADCP
 
-.. autoclass:: narwhal.cast.XBTCast
-   :members:
+.. autofunction:: narwhal.cast.XBTCast
 
 .. autoclass:: narwhal.cast.CastCollection
    :members:
 
-Convenience plotting functions
-------------------------------
+Convenience plotting
+--------------------
 
 These functions create quick plots useful for scanning data during analysis.
 

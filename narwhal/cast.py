@@ -38,9 +38,14 @@ class Cast(object):
     Vector water properties and scalar metadata are provided as keyword
     arguments. There are several reserved keywords:
 
-    coords::iterable[2]     the geographic coordinates of the observation
-    zunit::Unit             the independent vector units [default: meter]
-    zname::string           name for the independent vector [default: "z"]
+    coords::iterable[2]
+        the geographic coordinates of the observation
+
+    zunit::Unit
+        the independent vector units [default: meter]
+
+    zname::string
+        name for the independent vector [default: "z"]
     """
 
     _type = "cast"
@@ -192,10 +197,17 @@ class Cast(object):
         """ Interpolate property y as a function of property x at values given
         by vector x=v.
 
-        y::string       name of property to interpolate
-        x::string       name of reference property
-        v::iterable     vector of values for x
-        force::bool     whether to coerce x to be monotonic (defualt False)
+        y::string
+            name of property to interpolate
+
+        x::string
+            name of reference property
+
+        v::iterable
+            vector of values for x
+
+        force::bool
+            whether to coerce x to be monotonic (default False)
 
         Note: it's difficult to interpolate when x is not monotonic, because
         this makes y not a true function. However, it's resonable to want to
@@ -249,10 +261,17 @@ class Cast(object):
         """ Add in-situ density computed from salinity, temperature, and
         pressure to fields. Return the field name.
         
-        salkey::string              Data key to use for salinity
-        tempkey::string             Data key to use for in-situ temperature
-        preskey::string             Data key to use for pressure
-        rhokey::string              Data key to use for in-situ density
+        salkey::string
+            data key to use for salinity
+
+        tempkey::string
+            data key to use for in-situ temperature
+
+        preskey::string
+            data key to use for pressure
+
+        rhokey::string
+            data key to use for in-situ density
         """
         if salkey in self.fields and tempkey in self.fields and \
                 (self.zunits == units.decibar or preskey != "z"):
@@ -268,9 +287,14 @@ class Cast(object):
     def add_depth(self, preskey="pres", rhokey="rho", depthkey="z"):
         """ Use density and pressure to calculate depth.
         
-        preskey::string             Data key to use for pressure
-        rhokey::string              Data key to use for in-situ density
-        depthkey::string            Data key to use for depth
+        preskey::string
+            data key to use for pressure
+
+        rhokey::string
+            data key to use for in-situ density
+
+        depthkey::string
+            data key to use for depth
         """
         if preskey not in self.fields:
             raise FieldError("add_depth requires a pressure field")
@@ -293,11 +317,17 @@ class Cast(object):
         """ Calculate the squared buoyancy frequency, based on in-situ density.
         Uses a smoothing spline to compute derivatives.
         
-        rhokey::string              Data key to use for in-situ density
-        depthkey::string            Data key to use for depth
-        N2key::string               Data key to use for N^2
-        s::float                    Spline smoothing factor (smaller values
-                                    give a noisier result)
+        rhokey::string
+            data key to use for in-situ density
+
+        depthkey::string
+            data key to use for depth
+
+        N2key::string
+            data key to use for N^2
+
+        s::float
+            spline smoothing factor (smaller values give a noisier result)
         """
         if rhokey not in self.fields:
             raise FieldError("in-situ density required")
@@ -316,13 +346,16 @@ class Cast(object):
         quasigeostrophy and the vertical stratification. Return the first
         `nmodes::int` deformation radii and their associated eigenfunctions.
 
-        Additional arguments
-        --------------------
+        **Parameters**
 
-        ztop                        the depth at which to cut off the profile,
-                                    to avoid surface effects
-        N2key::string               Data key to use for N^2
-        depthkey::string            Data key to use for depth
+        ztop::float
+            the depth at which to cut off the profile, to avoid surface effects
+
+        N2key::string
+            data key to use for N^2
+
+        depthkey::string
+            data key to use for depth
         """
         if N2key not in self.fields or depthkey not in self.fields:
             raise FieldError("buoyancy frequency and depth required")
@@ -357,12 +390,12 @@ class Cast(object):
         """ Compute water mass fractions based on *n* (>= 2) conservative
         tracers.
 
-        sources::[tuple, tuple, ...]    List of *n+1* tuples specifying prototype
-                                        water masses in terms of *tracers*.
-                                        Each tuple must have length *n*.
+        sources::[tuple, tuple, ...]
+            List of *n+1* tuples specifying prototype water masses in terms of
+            *tracers*. Each tuple must have length *n*.
 
-        tracers::[string, string, ...]  *n* Cast fields to use as tracers
-                                        [default: ("sal", "temp")].
+        tracers::[string, string, ...]
+            *n* Cast fields to use as tracers [default: ("sal", "temp")].
         """
         n = len(tracers)
         if n < 2:
@@ -390,9 +423,14 @@ class Cast(object):
         """ Compute the velocity shear for *u* and *v*. If *s* is not None,
         smooth the data with a gaussian filter before computing the derivative.
 
-        depthkey::string            Data key to use for depth
-        vkey,ukey::string           Data key to use for u,v velocity
-        dudzkey,dvdzkey::string     Data key to use for u,v velocity shears
+        depthkey::string
+            data key to use for depth
+
+        vkey,ukey::string
+            data key to use for u,v velocity
+
+        dudzkey,dvdzkey::string
+            data key to use for u,v velocity shears
         """
         if ukey not in self.fields or vkey not in self.fields:
             raise FieldError("u and v velocity required")
@@ -518,7 +556,8 @@ class CastCollection(collections.Sequence):
     def add_bathymetry(self, bathymetry):
         """ Reference Bathymetry instance `bathymetry` to CastCollection.
 
-        bathymetry::Bathymetry2d        bathymetry instance
+        bathymetry::Bathymetry2d
+            bathymetry instance
         """
         for cast in self.casts:
             if hasattr(cast, "coords"):
@@ -598,7 +637,8 @@ class CastCollection(collections.Sequence):
         """ Naively return values as an array, assuming that all casts are
         indexed with the same pressure levels.
 
-        key::string                     property to return
+        key::string
+            property to return
         """
         nrows = max(len(cast) for cast in self.casts)
         arr = np.nan * np.empty((nrows, len(self.casts)), dtype=np.float64)
@@ -627,17 +667,26 @@ class CastCollection(collections.Sequence):
         side-effect, if casts have no "depth" field, one is added and populated
         from temperature and salinity fields.
 
-        Parameters
-        ----------
+        **Parameters**
 
-        tempkey::string     key to use for temperature if *rhokey* is None
-        salkey::string      key to use for salinity if *rhokey* is None
-        rhokey::string      key to use for density, or None [default: None]
-        dudzkey::string     key to use for ∂U/∂z, subject to *overwrite*
-        ukey::string        key to use for U, subject to *overwrite*
-        overwrite::bool     whether to allow cast fields to be overwritten
-                            if False, then *ukey* and *dudzkey* are incremented
-                            until there is no clash
+        tempkey::string
+            key to use for temperature if *rhokey* is None
+
+        salkey::string
+            key to use for salinity if *rhokey* is None
+
+        rhokey::string
+            key to use for density, or None [default: None]
+
+        dudzkey::string
+            key to use for ∂U/∂z, subject to *overwrite*
+
+        ukey::string
+            key to use for U, subject to *overwrite*
+
+        overwrite::bool
+            whether to allow cast fields to be overwritten if False, then
+            *ukey* and *dudzkey* are incremented until there is no clash
         """
         if rhokey is None:
             rhokeys = []
@@ -679,17 +728,26 @@ class CastCollection(collections.Sequence):
         side-effect, if casts have no "depth" field, one is added and populated
         from temperature and salinity fields.
 
-        Parameters
-        ----------
+        **Parameters**
 
-        tempkey::string     key to use for temperature if *rhokey* is None
-        salkey::string      key to use for salinity if *rhokey* is None
-        rhokey::string      key to use for density, or None [default: None]
-        dudzkey::string     key to use for ∂U/∂z, subject to *overwrite*
-        ukey::string        key to use for U, subject to *overwrite*
-        overwrite::bool     whether to allow cast fields to be overwritten
-                            if False, then *ukey* and *dudzkey* are incremented
-                            until there is no clash
+        tempkey::string
+            key to use for temperature if *rhokey* is None
+
+        salkey::string
+            key to use for salinity if *rhokey* is None
+
+        rhokey::string
+            key to use for density, or None [default: None]
+
+        dudzkey::string
+            key to use for ∂U/∂z, subject to *overwrite*
+
+        ukey::string
+            key to use for U, subject to *overwrite*
+
+        overwrite::bool
+            whether to allow cast fields to be overwritten if False, then
+            *ukey* and *dudzkey* are incremented until there is no clash
         """
         if rhokey is None:
             rhokeys = []
@@ -742,11 +800,13 @@ class CastCollection(collections.Sequence):
 
         Requires all casts to have the same depth-gridding.
         
-        Parameters
-        ----------
+        **Parameters**
 
-        key::string     key to use for computing EOFs
-        n_eofs::int     number of EOFs to return
+        key::string
+            key to use for computing EOFs
+
+        n_eofs::int
+            number of EOFs to return
         """
         assert all(self[0].zname == c.zname for c in self[1:])
         assert all(all(self[0].data.index == c.data.index) for c in self[1:])
@@ -773,7 +833,8 @@ class CastCollection(collections.Sequence):
     def save(self, fnm, binary=True):
         """ Save a JSON-formatted representation to a file.
 
-        fnm::string     File name to save to
+        fnm::string
+            file name to save to
         """
         if hasattr(fnm, "write"):
             fileio.writecastcollection(fnm, self, binary=binary)
