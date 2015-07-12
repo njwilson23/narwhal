@@ -94,7 +94,7 @@ class PropertyPropertyAxes(plt.Axes):
                 **kw):
         return self.plot_casts(castlikes, p1, p2, xlabel=xlabel, ylabel=ylabel, **kw)
 
-    def add_sigma_contours(self, contourint, pres=0.0):
+    def add_sigma_contours(self, interval, pres=0.0, color="0.4", width=1.0):
         """ Add density contours to a T-S plot """
         sl = self.get_xlim()
         if sl[0] < 0:
@@ -105,11 +105,15 @@ class PropertyPropertyAxes(plt.Axes):
         SIGMA = np.reshape([gsw.rho(sa, ct, pres)-1000 for ct in CT for sa in SA],
                            (50, 50))
 
-        lev0 = np.sign(SIGMA.min()) * ((abs(SIGMA.min()) // contourint) + 1) * contourint
-        levels = np.arange(lev0, SIGMA.max(), contourint)
-        cc = self.contour(SA, CT, SIGMA, levels=levels, colors="0.4")
+        sm = SIGMA.min()
+        lev0 = sm/abs(sm) * ((abs(sm)//interval)+1) * interval
+
+        levels = np.arange(lev0, SIGMA.max(), interval)
+        cc = self.contour(SA, CT, SIGMA, levels=levels,
+                          colors=color,
+                          linewidths=width)
         prec = 0
-        while prec < 3 and round(contourint, prec) != contourint:
+        while prec < 3 and round(interval, prec) != interval:
             prec += 1
         self.clabel(cc, fmt="%.{0}f".format(prec))
         return
