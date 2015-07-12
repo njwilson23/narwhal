@@ -1,4 +1,6 @@
 import unittest
+import matplotlib
+matplotlib.use("Agg")
 
 from cast_tests import *
 from bathymetry_tests import *
