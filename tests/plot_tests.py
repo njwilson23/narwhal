@@ -3,8 +3,11 @@ import narwhal
 from narwhal import AbstractCast, AbstractCastCollection, CastCollection
 from narwhal.plotting.plotutil import ensureiterable, count_casts
 import numpy as np
+import matplotlib
 import matplotlib.pyplot as plt
 import unittest
+
+matplotlib.use("Agg")       # headless
 
 directory = os.path.dirname(__file__)
 DATADIR = os.path.join(directory, "data")
