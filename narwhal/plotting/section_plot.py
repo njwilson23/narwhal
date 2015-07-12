@@ -195,20 +195,27 @@ class BaseSectionAxes(plt.Axes):
         Arguments
         ---------
         cc              CastCollection used to draw section
-        labels          either a list of labels where `len(labels) == len(cc)`
-                        or a key (string) referring to an item in Cast
-                        properties
+
+        labels          one of:
+                          - a list of strings where `len(labels) == len(cc)`
+                          - a string matching a key in Cast.properties
+                          - a function that takes a cast and returns a string
+
         vert_offset     sets the vertical position of each label
 
         Keyword arguments are passed to `self.text`
         """
         if isinstance(labels, str):
-            labels = [c.properties[labels] for c in cc]
+            labels_str = (c.properties[labels] for c in cc)
+        elif hasattr(labels, "__call__"):
+            labels_str = (labels(c) for c in cc)
+        else:
+            labels_str = labels
         cx = cc.projdist()
         texts = []
         kwargs.setdefault("ha", "center")
         kwargs.setdefault("size", plt.rcParams["font.size"]-2)
-        for x, c, label in zip(cx, cc, labels):
+        for x, c, label in zip(cx, cc, labels_str):
             txt = self.text(x, -vert_offset, label, **kwargs)
             texts.append(txt)
         return texts
