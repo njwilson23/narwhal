@@ -5,5 +5,4 @@ numpy>=1.5
 pandas>=0.14
 karta>=0.4.3
 scipy>=0.12
-brewer2mpl>=1.4
 matplotlib>=1.2

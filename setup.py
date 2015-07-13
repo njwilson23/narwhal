@@ -32,7 +32,7 @@ finally:
 
 setup(
     name = "narwhal",
-    version = "0.3.1",
+    version = "0.3.2",
     author = "Nat Wilson",
     packages = ["narwhal", "narwhal.plotting"],
     ext_modules = ext,

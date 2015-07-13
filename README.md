@@ -50,12 +50,12 @@ in the `narwhal.gsw` submodule, making things like the following possible:
 - Python 2.7+ or Python 3.2+
 - pandas
 - numpy
+- matplotlib
 - scipy
 - [karta](https://github.com/njwilson23/karta)
 - requests
 - six
-- matplotlib and brewer2mpl (optional; for plotting)
-- C-compiler (optional; for GSW)
+- C-compiler (for GSW)
 
 Narwhal is experimental. See also
 [python-oceans](https://github.com/ocefpaf/python-oceans) and

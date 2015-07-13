@@ -9,10 +9,10 @@ from karta import Multipoint, Line
 
 import matplotlib.pyplot as plt
 import matplotlib.tri as mtri
-import brewer2mpl
 
-from ..cast import AbstractCast, AbstractCastCollection
+from .colors import default_colors
 from . import plotutil
+from ..cast import AbstractCast, AbstractCastCollection
 from .. import gsw
 
 import warnings
@@ -30,10 +30,9 @@ def plot_profiles(castlikes, key="temp", ax=None, **kw):
     plotted with the items in order. """
     # guess the number of casts - in the future, get this properly
     n = min(8, max(3, len(castlikes)))
-    defaultcolors = brewer2mpl.get_map("Dark2", "Qualitative", n).hex_colors
 
     plotkw = dict((k, plotutil.ensureiterable(v)) for k,v in kw.items())
-    plotkw.setdefault("color", plotutil.ensureiterable(defaultcolors))
+    plotkw.setdefault("color", plotutil.ensureiterable(default_colors(n)))
     plotkw.setdefault("label", _castlabeliter())
 
     def _plot_profile(num, cast):

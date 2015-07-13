@@ -1,10 +1,10 @@
 import itertools
-import brewer2mpl
 import numpy as np
 import pandas
 import matplotlib
 import matplotlib.pyplot as plt
 
+from .colors import default_colors
 from .plotutil import ensureiterable, getiterable
 from ..cast import AbstractCastCollection
 from .. import gsw
@@ -52,8 +52,7 @@ class PropertyPropertyAxes(plt.Axes):
             ylabel = ykey
 
         n = min(8, max(3, len(castlikes)))
-        defaultcolors = brewer2mpl.get_map("Dark2", "Qualitative", n).hex_colors
-        color = getiterable(kwargs, "color", defaultcolors)
+        color = getiterable(kwargs, "color", default_colors(n))
         style = getiterable(kwargs, "style", ["ok", "sr", "db", "^g"])
         label = getiterable(kwargs, "label", self._castlabeliter())
         markersize = getiterable(kwargs, "ms", 6)
