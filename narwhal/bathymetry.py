@@ -13,24 +13,23 @@ class Bathymetry2d(Line):
     """
 
     def __init__(self, vertices, depth=None, crs=LonLatWGS84, **kw):
-        kw.setdefault("crs", crs)
-        if "data" not in kw:
-            kw["data"] = {}
-        if depth is None:
-            if "depth" not in kw["data"]:
-                raise KeyError("Bathymetry must be initialized with a 'depth' "
-                               "argument or a dictionary with a 'depth' key")
-            else:
-                depth = kw["data"].getfield("depth")
-        else:
-            if len(depth) != len(vertices):
-                raise ValueError("Depth array length must matches vertices "
-                                 "length")
-            else:
-                kw.update({"data": {"depth": depth}})
-        super(Line, self).__init__(vertices, **kw)
+        kw.setdefault("data", {})
+        vertices = list(vertices)
+        if len(depth) != len(vertices):
+            raise ValueError("Depth array length must matches vertices "
+                             "length")
+        kw["data"]["depth"] = depth
+        super(Line, self).__init__(vertices, crs=crs, **kw)
         self.depth = np.asarray(depth)
         return
+
+    def _subset(self, idxs):
+        """ Return a subset defined by index in *idxs*. """
+        vertices = [self.vertices[i] for i in idxs]
+        depth = [self.depth[i] for i in idxs]
+        subset = Bathymetry2d(vertices, depth=depth, 
+                              crs=self._crs, copy_metadata=False)
+        return subset
 
     def atxy(self, x, y):
         """ Interpolate bottom depth at a point. """
