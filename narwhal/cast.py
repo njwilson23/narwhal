@@ -774,7 +774,9 @@ class CastCollection(collections.Sequence):
             p = avgcolumns(self[i]["pres"], self[i+1]["pres"])
             t = avgcolumns(self[i]["temp"], self[i+1]["temp"])
             s = avgcolumns(self[i]["sal"], self[i+1]["sal"])
-            cast = CTDCast(p, temp=t, sal=s, zname="pres", coords=cmid)
+            cast = CTDCast(p, temp=t, sal=s, coords=cmid)
+            if "depth" not in cast.fields:
+                cast.add_density()
             cast.add_depth()
             cast.properties[bottomkey] = 0.5 * (self[i].properties[bottomkey] +
                                                 self[i+1].properties[bottomkey])
