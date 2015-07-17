@@ -23,7 +23,11 @@ class Bathymetry2d(Line):
             else:
                 depth = kw["data"].getfield("depth")
         else:
-            kw.update({"data": {"depth": depth}})
+            if len(depth) != len(vertices):
+                raise ValueError("Depth array length must matches vertices "
+                                 "length")
+            else:
+                kw.update({"data": {"depth": depth}})
         super(Line, self).__init__(vertices, **kw)
         self.depth = np.asarray(depth)
         return
