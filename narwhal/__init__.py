@@ -8,7 +8,7 @@ from . import gsw
 from . import util
 from . import plotting
 
-from . import fileio
+from . import iojson
 
 try:
     from . import iohdf

@@ -22,7 +22,7 @@ from scipy.io import netcdf_file
 from karta import Point, Multipoint
 from karta.crs import LonLatWGS84
 from . import units
-from . import fileio
+from . import iojson
 from . import gsw
 from . import util
 
@@ -243,19 +243,22 @@ class Cast(object):
         """ Save a JSON-formatted representation to a file at `fnm::string`.
         """
         if hasattr(fnm, "write"):
-            fileio.writecast(fnm, self, binary=binary)
+            iojson.writecast(fnm, self, binary=binary)
         else:
             if binary:
                 if os.path.splitext(fnm)[1] != ".nwz":
                     fnm = fnm + ".nwz"
                 with gzip.open(fnm, "wb") as f:
-                    fileio.writecast(f, self, binary=True)
+                    iojson.writecast(f, self, binary=True)
             else:
                 if os.path.splitext(fnm)[1] != ".nwl":
                     fnm = fnm + ".nwl"
                 with open(fnm, "w") as f:
-                    fileio.writecast(f, self, binary=False)
+                    iojson.writecast(f, self, binary=False)
         return
+
+    def save_hdf(self, fnm):
+        return hdf.save_object(self, fnm)
 
     def add_density(self, salkey="sal", tempkey="temp", preskey="pres", rhokey="rho"):
         """ Add in-situ density computed from salinity, temperature, and
@@ -839,19 +842,22 @@ class CastCollection(collections.Sequence):
             file name to save to
         """
         if hasattr(fnm, "write"):
-            fileio.writecastcollection(fnm, self, binary=binary)
+            iojson.writecastcollection(fnm, self, binary=binary)
         else:
             if binary:
                 if os.path.splitext(fnm)[1] != ".nwz":
                     fnm = fnm + ".nwz"
                 with gzip.open(fnm, "wb") as f:
-                    fileio.writecastcollection(f, self, binary=True)
+                    iojson.writecastcollection(f, self, binary=True)
             else:
                 if os.path.splitext(fnm)[1] != ".nwl":
                     fnm = fnm + ".nwl"
                 with open(fnm, "w") as f:
-                    fileio.writecastcollection(f, self, binary=False)
+                    iojson.writecastcollection(f, self, binary=False)
         return
+
+    def save_hdf(self, fnm):
+        return hdf.save_object(self, fnm)
 
 
 def read(fnm):
@@ -872,13 +878,13 @@ def _fromjson(d):
     narwhal object. """
     typ = d.get("type", None)
     if typ == "cast":
-        return fileio.dictascast(d, Cast)
+        return iojson.dictascast(d, Cast)
     elif typ == "ctdcast":
-        return fileio.dictascast(d, CTDCast)
+        return iojson.dictascast(d, CTDCast)
     elif typ == "xbtcast":
-        return fileio.dictascast(d, XBTCast)
+        return iojson.dictascast(d, XBTCast)
     elif typ == "ladcpcast":
-        return fileio.dictascast(d, LADCP)
+        return iojson.dictascast(d, LADCP)
     elif typ == "castcollection":
         casts = [_fromjson(castdict) for castdict in d["casts"]]
         return CastCollection(casts)
