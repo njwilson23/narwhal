@@ -17,9 +17,9 @@ Oceanographic data are organized into `Cast` and `CastCollection` data structure
 More specialized techniques can be added by subclassing the generic
 `Cast` type (see the `XBTCast` and `LADCP` classes as an example).
 
-For storage, data is serialized as zipped JSON objects streams. Due to the
-prevalence of JSON parsers, these data formats can be easily parsed into other
-analysis packages, and are furthermore ready for web-based visualization.
+For storage, data is serialized to HDF or JSON files. These common formats are
+easily imported into other analysis packages (such as MATLAB), or browser-based
+visualization libraries (such as D3).
 
 Parsers are also included for WOCE CTD casts in NetCDF format and Arctic
 Switchyard CTD casts in ASCII table format.
@@ -53,6 +53,7 @@ in the `narwhal.gsw` submodule, making things like the following possible:
 - matplotlib
 - scipy
 - [karta](https://github.com/njwilson23/karta)
+- h5py
 - requests
 - six
 - C-compiler (for GSW)
