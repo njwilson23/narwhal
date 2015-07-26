@@ -6,6 +6,7 @@ import numpy as np
 import narwhal
 from narwhal.cast import Cast, CTDCast, XBTCast, LADCP
 from narwhal.cast import CastCollection
+import narwhal.iohdf as hdf
 
 from io import BytesIO
 if sys.version_info[0] < 3:
@@ -140,3 +141,37 @@ class IOTests(unittest.TestCase):
 #                       primarykey="z", properties={})
 #        self.assertEqual(cast, castl)
 
+class HDFTests(unittest.TestCase):
+
+    def setUp(self):
+        p = np.arange(1, 1001, 2)
+        temp = 10. * np.exp(-.008*p) - 15. * np.exp(-0.005*(p+100)) + 2.
+        sal = -14. * np.exp(-.01*p) + 34.
+        self.p = p
+        self.temp = temp
+        self.sal = sal
+        dt = datetime.datetime(1993, 8, 18, 14, 42, 36)
+        self.cast = Cast(self.p, temp=self.temp, sal=self.sal, date=dt)
+        self.ctd = CTDCast(self.p, temp=self.temp, sal=self.sal, date=dt)
+        self.xbt = XBTCast(self.p, temp=self.temp, sal=self.sal, date=dt)
+        self.collection = CastCollection(self.ctd, self.xbt, self.ctd)
+        return
+
+    def assertFilesEqual(self, f1, f2):
+        f1.seek(0)
+        f2.seek(0)
+        s1 = f1.read()
+        s2 = f2.read()
+        self.assertEqual(s1, s2)
+        return
+
+    def test_write_cast_hdf(self):
+        hdf.save_object(self.cast, "test.hdf", verbose=False)
+        return
+
+    def test_write_castcollection_hdf(self):
+        hdf.save_object(self.collection, "testcollection.hdf", verbose=False)
+        return
+
+if __name__ == "__main__":
+    unittest.main()
