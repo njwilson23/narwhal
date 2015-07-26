@@ -166,11 +166,27 @@ class HDFTests(unittest.TestCase):
         return
 
     def test_write_cast_hdf(self):
-        hdf.save_object(self.cast, "test.hdf", verbose=False)
+        hdf.save_object(self.cast, "testcast.hdf", verbose=False)
+        # Sorting of cast data and fields not deterministic
+        #try:
+        #    f1 = open("testcast.hdf", "rb")
+        #    f2 = open(os.path.join(DATADIR, "reference_cast_test.hdf"), "rb")
+        #    self.assertFilesEqual(f1, f2)
+        #finally:
+        #    f1.close()
+        #    f2.close()
         return
 
     def test_write_castcollection_hdf(self):
-        hdf.save_object(self.collection, "testcollection.hdf", verbose=False)
+        hdf.save_object(self.collection, "testcoll.hdf", verbose=False)
+        # Sorting of cast data and fields not deterministic
+        #try:
+        #    f1 = open("testcoll.hdf", "rb")
+        #    f2 = open(os.path.join(DATADIR, "reference_coll_test.hdf"), "rb")
+        #    self.assertFilesEqual(f1, f2)
+        #finally:
+        #    f1.close()
+        #    f2.close()
         return
 
 if __name__ == "__main__":

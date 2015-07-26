@@ -5,23 +5,27 @@ from . import units
 
 TIME_TYPES = (datetime.date, datetime.time)
 
-def save_object(obj, fnm):
+def save_object(obj, fnm, **kw):
+    """ Save a narwhal object to an HDF file. Valid kwargs are:
+
+    verbose :   print warnings
+    """
     f = h5py.File(fnm, "w")
     if obj._type == "cast":
         g = f.create_group("cast")
-        cast_to_group(obj, g)
+        cast_to_group(obj, g, **kw)
     elif obj._type == "castcollection":
         g = f.create_group("castcollection")
         for i,cast in enumerate(obj):
             gcast = g.create_group("cast%i" % i)
-            cast_to_group(cast, gcast)
+            cast_to_group(cast, gcast, **kw)
     else:
         raise TypeError("Unexportable type: {0}".format(type(obj)))
     f.close()
     return f
 
 def cast_to_group(cast, group, verbose=True):
-
+    """ Save a narwhal Cast object to an HDF group. """
     gdata = group.create_group("data")
     gdata["zunits"] = cast.zunits
     gdata["zname"] = cast.zname
