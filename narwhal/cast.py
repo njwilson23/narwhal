@@ -50,31 +50,30 @@ class Cast(object):
 
     _type = "cast"
 
-    def __init__(self, z, coords=(None, None), zunits=units.meter, zname="z", **kwargs):
+    def __init__(self, *args, zname="z", zunits=units.meter, **kwargs):
 
         self.properties = {}
         data = {}
 
-        self.zunits = zunits
         self.zname = zname
-        self.p = self.properties
+        self.zunits = zunits
 
-        # Python 3 workaround
-        try:
-            items = kwargs.iteritems()
-        except AttributeError:
-            items = kwargs.items()
+        # Get vertical measurement vector from either the first argument or the
+        # keyword argument matching *zname*
+        if len(args) != 0:
+            data[self.zname] = pandas.Series(data=args[0], name=zname)
+        else:
+            data[self.zname] = pandas.Series(data=kwargs.pop(zname), name=zname)
 
-        # Populate vector and scalar data fields
-        data[zname] = pandas.Series(data=z, name=zname)
-        for (kw, val) in items:
-            if isinstance(val, collections.Container) and \
-                    not isinstance(val, str) and \
-                    len(val) == len(z):
+        # Populate data and properties from remaining keyword arguments
+        for (kw, val) in kwargs.items():
+            if (isinstance(val, collections.Container)
+                        and not isinstance(val, str)
+                        and len(val) == len(data[self.zname])):
                 data[kw] = pandas.Series(data=val, name=kw)
             else:
                 self.properties[kw] = val
-        self.properties["coordinates"] = tuple(coords)
+        self.properties.setdefault("coordinates", (None, None))
         self.data = pandas.DataFrame(data)
         return
 
@@ -155,6 +154,10 @@ class Cast(object):
         ser = pandas.Series(data=data, index=self.data.index, name=key_)
         self.data = self.data.join(ser)
         return key_
+
+    @property
+    def p(self):
+        return self.properties
 
     @property
     def fields(self):
@@ -454,20 +457,23 @@ class Cast(object):
 
 def CTDCast(pres, sal, temp, coords=(None, None), **kw):
     """ Convenience function for creating CTD profiles. """
+    kw["pres"] = pres
     kw["sal"] = sal
     kw["temp"] = temp
-    return Cast(pres, zunits=units.decibar, zname="pres", coords=coords, **kw)
+    return Cast(zname="pres", zunits=units.decibar, coords=coords, **kw)
 
 def XBTCast(depth, temp, coords=(None, None), **kw):
     """ Convenience function for creating XBT profiles. """
+    kw["depth"] = depth
     kw["temp"] = temp
-    return Cast(depth, zunits=units.meter, coords=coords, **kw)
+    return Cast(zname="depth", zunits=units.meter, coords=coords, **kw)
 
 def LADCP(depth, uvel, vvel, coords=(None, None), **kw):
     """ Convenience function for creating LADCP profiles. """
+    kw["depth"] = depth
     kw["u"] = uvel
     kw["v"] = vvel
-    return Cast(depth, zunits=units.meter, coords=coords, **kw)
+    return Cast(zname="depth", zunits=units.meter, coords=coords, **kw)
 
 class CastCollection(collections.Sequence):
     """ A CastCollection is an indexable collection of Cast instances.
@@ -777,7 +783,7 @@ class CastCollection(collections.Sequence):
             p = avgcolumns(self[i]["pres"], self[i+1]["pres"])
             t = avgcolumns(self[i]["temp"], self[i+1]["temp"])
             s = avgcolumns(self[i]["sal"], self[i+1]["sal"])
-            cast = CTDCast(p, temp=t, sal=s, coords=cmid)
+            cast = CTDCast(p, s, t, coords=cmid)
             if "depth" not in cast.fields:
                 cast.add_density()
             cast.add_depth()
