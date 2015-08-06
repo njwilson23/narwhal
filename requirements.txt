@@ -7,3 +7,4 @@ karta>=0.4.3
 h5py>=2.2
 scipy>=0.12
 matplotlib>=1.2
+dateutil>=2.0

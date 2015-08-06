@@ -11,6 +11,7 @@ import itertools
 import json
 import gzip
 import copy
+import datetime, dateutil
 from functools import reduce
 import six
 import numpy as np
@@ -242,7 +243,30 @@ class Cast(object):
         ret.data = newdata
         return ret
 
-    def save(self, fnm, binary=True):
+    def asdict(self):
+        """ Return a representation of the Cast as a Python dictionary.
+        """
+        d = dict(zunits=self.zunits, zname=self.zname,
+                 data=dict(), properties=dict(), type="cast")
+
+        for col in self.data.columns:
+            d["data"][col] = list(self.data[col].values)
+
+        for k, v in self.properties.items():
+            if isinstance(v, datetime.datetime):
+                d["properties"][k] = v.isoformat(sep=" ")
+            elif isinstance(v, (datetime.time, datetime.date)):
+                d["properties"][k] = v.isoformat()
+            else:
+                try:
+                    d["properties"][k] = v
+                except TypeError:
+                    if verbose:
+                        print("Unable to serialize property {0} = {1}".format(k, v))
+
+        return d
+
+    def save_json(self, fnm, binary=True):
         """ Save a JSON-formatted representation to a file at `fnm::string`.
         """
         if hasattr(fnm, "write"):
@@ -841,7 +865,14 @@ class CastCollection(collections.Sequence):
             c._addkeydata("_eof".join([key, str(i+1)]), eofts[:,i])
         return c, lamb[:n_eofs], V[:,:n_eofs]
 
-    def save(self, fnm, binary=True):
+    def asdict(self):
+        """ Return a representation of the Cast as a Python dictionary.
+        """
+        d = dict(type="castcollection")
+        d["casts"] = [cast.asdict() for cast in self.casts]
+        return
+
+    def save_json(self, fnm, binary=True):
         """ Save a JSON-formatted representation to a file.
 
         fnm::string
@@ -865,11 +896,35 @@ class CastCollection(collections.Sequence):
     def save_hdf(self, fnm):
         return hdf.save_object(self, fnm)
 
-
 def read(fnm):
-    """ Convenience function for reading JSON-formatted measurement data from
-    `fnm::string`.
+    """ Guess a file format based on filename extension and attempt to read it. 
     """
+    base, ext = os.path.splitext(fnm)
+    if ext.lower() == ".hdf":
+        return readhdf(fnm)
+    elif ext.lower() in (".nwl", ".nwz", ".json"):
+        return readjson(fnm)
+    else:
+        raise NameError("File extension not recognized. "
+                        "Try a format-specific read function instead.")
+
+def readhdf(fnm):
+    """ Read HDF-formatted measurement data from `fnm::string`. """
+    fhdf = h5py.File(fnm, "r")
+    typ = fhdf["type"]
+
+    if typ == "cast":
+        d = iohdf.asdict(fhdf)
+        return iogeneric.dictascast(d, Cast)
+        #return iohdf.dictascast(d, Cast)
+    elif typ == "castcollection":
+        casts = [iogeneric.dictascast(castdict, Cast) for castdict in d["casts"]]
+        return CastCollection(casts)
+    else:
+        raise LookupError("Invalid type: {0}".format(typ))
+
+def readjson(fnm):
+    """ Read JSON-formatted measurement data from `fnm::string`. """
     try:
         with open(fnm, "r") as f:
             d = json.load(f)
@@ -884,13 +939,13 @@ def _fromjson(d):
     narwhal object. """
     typ = d.get("type", None)
     if typ == "cast":
-        return iojson.dictascast(d, Cast)
+        return iogeneric.dictascast(d, Cast)
     elif typ == "ctdcast":
-        return iojson.dictascast(d, CTDCast)
+        return iogeneric.dictascast(d, CTDCast)
     elif typ == "xbtcast":
-        return iojson.dictascast(d, XBTCast)
+        return iogeneric.dictascast(d, XBTCast)
     elif typ == "ladcpcast":
-        return iojson.dictascast(d, LADCP)
+        return iogeneric.dictascast(d, LADCP)
     elif typ == "castcollection":
         casts = [_fromjson(castdict) for castdict in d["casts"]]
         return CastCollection(casts)
@@ -898,6 +953,41 @@ def _fromjson(d):
         raise NarwhalError("couldn't read data type - file may be corrupt")
     else:
         raise LookupError("Invalid type: {0}".format(typ))
+
+# Dictionary schema:
+#
+# { type        ->  str: *type*,
+#   zunits      ->  unit: *unit*,
+#   zname       ->  str: *zname*,
+#   data        ->  { [key]?        ->  *value*,
+#                     [key]?        ->  *value* }
+#   properties  ->  { coordinates   ->  (float: *lon*, float: *lat*),
+#                     date|time?    ->  str: datetime (ISO formatted),
+#                     [key]?        ->  *value*,
+#                     [key]?        ->  *value* }
+#
+
+def fromdict(d):
+    """ Convert a dictionary to a Cast instance. """
+
+    if "type" not in d:
+        raise KeyError("dictionary missing `type` key")
+
+    if d["type"] == "castcollection":
+        return CastCollection([fromdict(cast) for cast in d["casts"]])
+
+    elif d["type"] == "cast":
+        data = d["data"]
+        properties = d["properties"]
+        for k,v in properties.items():
+            if k.lower() in ("time", "timestamp", "date", "datetime"):
+                properties[k] = dateutil.parser.parse(v)
+
+        data.update(properties)
+        return Cast(zunits=d["zunits"], zname=d["zname"], **data)
+
+    else:
+        raise TypeError("'{0}' not a valid narwhal type".format(d["type"]))
 
 def read_woce_netcdf(fnm):
     """ Read a CTD cast from a WOCE NetCDF file. """

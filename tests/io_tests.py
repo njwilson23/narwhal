@@ -1,6 +1,7 @@
 import unittest
 import os
 import sys
+import dateutil.tz
 import datetime
 import numpy as np
 import narwhal
@@ -41,22 +42,47 @@ class IOTests(unittest.TestCase):
         self.assertEqual(s1, s2)
         return
 
+    def test_fromdict_cast(self):
+        d = {"type": "cast",
+             "zunits": "meter",
+             "zname": "depth",
+             "properties": {"coordinates": (-10.0, 54.0),
+                            "date": "2015-04-17 15:03 UTC",
+                            "notes": "CTD touched bottom"},
+             "data": {"depth": np.arange(1.0, 500.0, 2.0),
+                      "temperature": np.linspace(8.0, 4.0, 250),
+                      "salinity": np.linspace(32.1, 34.4, 250)}}
+        cast = narwhal.cast.fromdict(d)
+        self.assertEqual(cast.zunits, d["zunits"])
+        self.assertEqual(cast.zname, d["zname"])
+        self.assertEqual(cast.p["coordinates"], (-10.0, 54.0))
+        self.assertEqual(cast.p["date"],
+                         datetime.datetime(2015, 4, 17, 15, 3,
+                                           tzinfo=dateutil.tz.tzutc()))
+        self.assertEqual(cast.p["notes"], "CTD touched bottom")
+
+        self.assertTrue((cast["depth"] == d["data"]["depth"]).all())
+        self.assertTrue((cast["temperature"] == d["data"]["temperature"]).all())
+        self.assertTrue((cast["salinity"] == d["data"]["salinity"]).all())
+        return
+
+
     def test_save_text(self):
         try:
             f = StringIO()
-            self.cast.save(f, binary=False)
+            self.cast.save_json(f, binary=False)
         finally:
             f.close()
 
         try:
             f = StringIO()
-            self.ctd.save(f, binary=False)
+            self.ctd.save_json(f, binary=False)
         finally:
             f.close()
 
         try:
             f = StringIO()
-            self.xbt.save(f, binary=False)
+            self.xbt.save_json(f, binary=False)
         finally:
             f.close()
         return
