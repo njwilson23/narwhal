@@ -1,59 +1,30 @@
-import datetime
+#import datetime
 import h5py
-from karta import Point, geojson
-from . import units
 
-TIME_TYPES = (datetime.date, datetime.time)
-
-def save_object(obj, fnm, **kw):
-    """ Save a narwhal object to an HDF file. Valid kwargs are:
-
-    verbose :   print warnings
-    """
+def write(fnm, d):
     f = h5py.File(fnm, "w")
-    if obj._type == "cast":
-        g = f.create_group("cast")
-        cast_to_group(obj, g, **kw)
-    elif obj._type == "castcollection":
-        g = f.create_group("castcollection")
-        for i,cast in enumerate(obj):
-            gcast = g.create_group("cast%i" % i)
-            cast_to_group(cast, gcast, **kw)
-    else:
-        raise TypeError("Unexportable type: {0}".format(type(obj)))
-    f.close()
-    return f
+    dicttogroup(d, f)
+    return
 
-def cast_to_group(cast, group, verbose=True):
-    """ Save a narwhal Cast object to an HDF group. """
-    gdata = group.create_group("data")
-    gdata["zunits"] = cast.zunits
-    gdata["zname"] = cast.zname
-    for col in cast.data.columns:
-        gdata.create_dataset(col, data=cast.data[col].values)
-
-    gprop = group.create_group("properties")
-    for k, v in cast.properties.items():
-        if isinstance(v, datetime.datetime):
-            gprop[k] = v.isoformat(sep=" ")
-        elif isinstance(v, TIME_TYPES):
-            gprop[k] = v.isoformat()
+def dicttogroup(d, h5group):
+    for k, v in d.items():
+        if isinstance(v, dict):
+            g = h5group.create_group(k)
+            dicttogroup(v, g)
         else:
-            try:
-                gprop[k] = v
-            except TypeError:
-                if verbose:
-                    print("Unable to serialize property {0} = {1}".format(k, v))
-
-    return (gdata, gprop)
-
-def group_to_narwhal(group):
+            h5group[k] = v
     return
 
-def group_to_cast(group):
-    return
+def read(fnm):
+    f = h5py.File(fnm, "r")
+    return grouptodict(f, dict())
 
-def group_to_cast_collection(group):
-    return
-
+def grouptodict(h5group, d):
+    """ Recursively add branches from a h5py Group to a dictionary """
+    for name in h5group:
+        if isinstance(h5group[name], h5py.Group):
+            d[name] = grouptodict(h5group[name], dict())
+        else:
+            d[name] = h5group[name]
+    return d
 
