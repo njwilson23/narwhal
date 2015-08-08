@@ -52,13 +52,13 @@ class Cast(object):
 
     _type = "cast"
 
-    def __init__(self, *args, zname="z", zunits=units.meter, **kwargs):
+    def __init__(self, *args, zname="z", zunit=units.meter, **kwargs):
 
         self.properties = {}
         data = {}
 
         self.zname = zname
-        self.zunits = zunits
+        self.zunit = zunit
 
         # Get vertical measurement vector from either the first argument or the
         # keyword argument matching *zname*
@@ -247,7 +247,7 @@ class Cast(object):
     def asdict(self):
         """ Return a representation of the Cast as a Python dictionary.
         """
-        d = dict(zunits=self.zunits, zname=self.zname,
+        d = dict(zunit=self.zunit, zname=self.zname,
                  data=dict(), properties=dict(), type="cast")
 
         for col in self.data.columns:
@@ -303,7 +303,7 @@ class Cast(object):
             data key to use for in-situ density
         """
         if salkey in self.fields and tempkey in self.fields and \
-                (self.zunits == units.decibar or preskey != "z"):
+                (self.zunit == units.decibar or preskey != "z"):
             SA = gsw.sa_from_sp(self[salkey], self[preskey],
                                 [self.coords[0] for _ in self[salkey]],
                                 [self.coords[1] for _ in self[salkey]])
@@ -463,7 +463,7 @@ class Cast(object):
         """
         if ukey not in self.fields or vkey not in self.fields:
             raise FieldError("u and v velocity required")
-        if depthkey == "z" and self.zunits != units.meter:
+        if depthkey == "z" and self.zunit != units.meter:
             raise FieldError("depth in meters required")
         if s is not None:
             u = ndimage.filters.gaussian_filter1d(self[ukey], s)
@@ -483,20 +483,20 @@ def CTDCast(pres, sal, temp, coords=(None, None), **kw):
     kw["pres"] = pres
     kw["sal"] = sal
     kw["temp"] = temp
-    return Cast(zname="pres", zunits=units.decibar, coords=coords, **kw)
+    return Cast(zname="pres", zunit=units.decibar, coords=coords, **kw)
 
 def XBTCast(depth, temp, coords=(None, None), **kw):
     """ Convenience function for creating XBT profiles. """
     kw["depth"] = depth
     kw["temp"] = temp
-    return Cast(zname="depth", zunits=units.meter, coords=coords, **kw)
+    return Cast(zname="depth", zunit=units.meter, coords=coords, **kw)
 
 def LADCP(depth, uvel, vvel, coords=(None, None), **kw):
     """ Convenience function for creating LADCP profiles. """
     kw["depth"] = depth
     kw["u"] = uvel
     kw["v"] = vvel
-    return Cast(zname="depth", zunits=units.meter, coords=coords, **kw)
+    return Cast(zname="depth", zunit=units.meter, coords=coords, **kw)
 
 class CastCollection(collections.Sequence):
     """ A CastCollection is an indexable collection of Cast instances.
@@ -859,7 +859,7 @@ class CastCollection(collections.Sequence):
 
         c0 = self[0]
         c = Cast(c0[c0.zname][~msk], coords=(np.nan, np.nan),
-                zunits=c0.zunits, zname=c0.zname)
+                zunit=c0.zunit, zname=c0.zname)
         for i in range(n_eofs):
             c._addkeydata("_eof".join([key, str(i+1)]), eofts[:,i])
         return c, lamb[:n_eofs], V[:,:n_eofs]
@@ -918,7 +918,7 @@ def readjson(fnm):
 # Dictionary schema:
 #
 # { type        ->  str: *type*,
-#   zunits      ->  unit: *unit*,
+#   zunit      ->  unit: *unit*,
 #   zname       ->  str: *zname*,
 #   data        ->  { [key]?        ->  *value*,
 #                     [key]?        ->  *value* }
@@ -945,7 +945,7 @@ def fromdict(d):
                 properties[k] = dateutil.parser.parse(v)
 
         data.update(properties)
-        return Cast(zunits=d["zunits"], zname=d["zname"], **data)
+        return Cast(zunit=d["zunit"], zname=d["zname"], **data)
 
     else:
         raise TypeError("'{0}' not a valid narwhal type".format(d["type"]))
