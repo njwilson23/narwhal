@@ -895,23 +895,23 @@ class CastCollection(collections.Sequence):
     def save_hdf(self, fnm):
         return iohdf.write(fnm, self.asdict())
 
-def read(fnm):
+def load(fnm):
     """ Guess a file format based on filename extension and attempt to read it. 
     """
     base, ext = os.path.splitext(fnm)
     if ext.lower() == ".hdf":
-        return readhdf(fnm)
+        return load_hdf(fnm)
     elif ext.lower() in (".nwl", ".nwz", ".json"):
-        return readjson(fnm)
+        return load_json(fnm)
     else:
         raise NameError("File extension not recognized. "
                         "Try a format-specific read function instead.")
 
-def readhdf(fnm):
+def load_hdf(fnm):
     """ Read HDF-formatted measurement data from `fnm::string`. """
     return fromdict(iohdf.read(fnm))
 
-def readjson(fnm):
+def load_json(fnm):
     """ Read JSON-formatted measurement data from `fnm::string`. """
     return fromdict(iojson.read(fnm))
 
