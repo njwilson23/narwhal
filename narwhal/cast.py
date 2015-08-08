@@ -43,40 +43,34 @@ class Cast(object):
     coords::iterable[2]
         the geographic coordinates of the observation
 
-    zunit::Unit
-        the independent vector units [default: meter]
-
     zname::string
         name for the independent vector [default: "z"]
     """
 
     _type = "cast"
 
-    def __init__(self, *args, zname="z", zunit=units.meter, **kwargs):
+    def __init__(self, zname=None, **kwargs):
 
         self.properties = {}
         data = {}
 
-        self.zname = zname
-        self.zunit = zunit
-
-        # Get vertical measurement vector from either the first argument or the
-        # keyword argument matching *zname*
-        if len(args) != 0:
-            data[self.zname] = pandas.Series(data=args[0], name=zname)
-        else:
-            data[self.zname] = pandas.Series(data=kwargs.pop(zname), name=zname)
+        if zname is None:
+            raise NarwhalError("one of the profile variable must be declared "
+                               "the vertical reference ('zname')")
+        data[zname] = pandas.Series(data=kwargs.pop(zname), name=zname)
 
         # Populate data and properties from remaining keyword arguments
         for (kw, val) in kwargs.items():
             if (isinstance(val, collections.Container)
                         and not isinstance(val, str)
-                        and len(val) == len(data[self.zname])):
+                        and len(val) == len(data[zname])):
                 data[kw] = pandas.Series(data=val, name=kw)
             else:
                 self.properties[kw] = val
-        self.properties.setdefault("coordinates", (None, None))
+
+        self.zname = zname
         self.data = pandas.DataFrame(data)
+        self.properties.setdefault("coordinates", (None, None))
         return
 
     def __len__(self):
@@ -303,8 +297,7 @@ class Cast(object):
         rhokey::string
             data key to use for in-situ density
         """
-        if salkey in self.fields and tempkey in self.fields and \
-                (self.zunit == units.decibar or preskey != "z"):
+        if salkey in self.fields and tempkey in self.fields and preskey in self.fields:
             SA = gsw.sa_from_sp(self[salkey], self[preskey],
                                 [self.coords[0] for _ in self[salkey]],
                                 [self.coords[1] for _ in self[salkey]])
@@ -454,7 +447,7 @@ class Cast(object):
         smooth the data with a gaussian filter before computing the derivative.
 
         depthkey::string
-            data key to use for depth
+            data key to use for depth in meters
 
         vkey,ukey::string
             data key to use for u,v velocity
@@ -464,8 +457,6 @@ class Cast(object):
         """
         if ukey not in self.fields or vkey not in self.fields:
             raise FieldError("u and v velocity required")
-        if depthkey == "z" and self.zunit != units.meter:
-            raise FieldError("depth in meters required")
         if s is not None:
             u = ndimage.filters.gaussian_filter1d(self[ukey], s)
             v = ndimage.filters.gaussian_filter1d(self[vkey], s)
@@ -484,20 +475,20 @@ def CTDCast(pres, sal, temp, coords=(None, None), **kw):
     kw["pres"] = pres
     kw["sal"] = sal
     kw["temp"] = temp
-    return Cast(zname="pres", zunit=units.decibar, coords=coords, **kw)
+    return Cast(zname="pres", coords=coords, **kw)
 
 def XBTCast(depth, temp, coords=(None, None), **kw):
     """ Convenience function for creating XBT profiles. """
     kw["depth"] = depth
     kw["temp"] = temp
-    return Cast(zname="depth", zunit=units.meter, coords=coords, **kw)
+    return Cast(zname="depth", coords=coords, **kw)
 
 def LADCP(depth, uvel, vvel, coords=(None, None), **kw):
     """ Convenience function for creating LADCP profiles. """
     kw["depth"] = depth
     kw["u"] = uvel
     kw["v"] = vvel
-    return Cast(zname="depth", zunit=units.meter, coords=coords, **kw)
+    return Cast(zname="depth", coords=coords, **kw)
 
 class CastCollection(collections.Sequence):
     """ A CastCollection is an indexable collection of Cast instances.
@@ -859,8 +850,7 @@ class CastCollection(collections.Sequence):
         eofts = util.eof_timeseries(arr, V)
 
         c0 = self[0]
-        c = Cast(c0[c0.zname][~msk], coords=(np.nan, np.nan),
-                zunit=c0.zunit, zname=c0.zname)
+        c = Cast(c0[c0.zname][~msk], coords=(np.nan, np.nan), zname=c0.zname)
         for i in range(n_eofs):
             c._addkeydata("_eof".join([key, str(i+1)]), eofts[:,i])
         return c, lamb[:n_eofs], V[:,:n_eofs]
@@ -915,12 +905,23 @@ def load_hdf(fnm):
 
 def load_json(fnm):
     """ Read JSON-formatted measurement data from `fnm::string`. """
-    return fromdict(iojson.read(fnm))
+    d = iojson.read(fnm)
+    if d.get("__schemaversion__", 0.0) >= 2.0:
+        return fromdict(d)
+    else:
+        # Try reading using schema version 1
+        try:
+            with open(fnm, "r") as f:
+                d = json.load(f)
+        except (UnicodeDecodeError,ValueError):
+            with gzip.open(fnm, "rb") as f:
+                s = f.read().decode("utf-8")
+                d = json.loads(s)
+        return _fromjson(d)
 
 # Dictionary schema:
 #
 # { type        ->  str: *type*,
-#   zunit      ->  unit: *unit*,
 #   zname       ->  str: *zname*,
 #   data        ->  { [key]?        ->  *value*,
 #                     [key]?        ->  *value* }
@@ -947,7 +948,7 @@ def fromdict(d):
                 properties[k] = dateutil.parser.parse(v)
 
         data.update(properties)
-        return Cast(zunit=d["zunit"], zname=d["zname"], **data)
+        return Cast(zname=d["zname"], **data)
 
     else:
         raise TypeError("'{0}' not a valid narwhal type".format(d["type"]))
