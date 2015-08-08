@@ -247,7 +247,8 @@ class Cast(object):
     def asdict(self):
         """ Return a representation of the Cast as a Python dictionary.
         """
-        d = dict(zunit=self.zunit, zname=self.zname,
+        d = dict(__schemaversion__=2.0,
+                 zname=self.zname,
                  data=dict(), properties=dict(), type="cast")
 
         for col in self.data.columns:
@@ -867,7 +868,8 @@ class CastCollection(collections.Sequence):
     def asdict(self):
         """ Return a representation of the Cast as a Python dictionary.
         """
-        d = dict(type="castcollection")
+        d = dict(__schemaversion__=2.0,
+                 type="castcollection")
         d["casts"] = [cast.asdict() for cast in self.casts]
         return
 
@@ -975,6 +977,60 @@ def read_woce_netcdf(fnm):
     return CTDCast(pres, sal, temp, oxygen=oxy,
                    coords=coords,
                    properties={"woce_time":time, "woce_date":date})
+
+##### FUNCTIONS FOR READING THE DEPRECATED JSON SCHEMA #####
+
+def _fromjson(d):
+    """ (DEPRECATED) Lower level function to (possibly recursively) convert
+    JSON into narwhal object. This reads the older JSON schema.
+    """
+
+    typ = d.get("type", None)
+    if typ == "cast":
+        return dictascast(d, Cast)
+    elif typ == "ctdcast":
+        return dictascast(d, CTDCast)
+    elif typ == "xbtcast":
+        return dictascast(d, XBTCast)
+    elif typ == "ladcpcast":
+        return dictascast(d, LADCP)
+    elif typ == "castcollection":
+        casts = [_fromjson(castdict) for castdict in d["casts"]]
+        return CastCollection(casts)
+    elif typ is None:
+        raise NarwhalError("couldn't read data type - file may be corrupt")
+    else:
+        raise LookupError("Invalid type: {0}".format(typ))
+
+def findunit(unitname):
+    """ (DEPRECATED - USED FOR _fromjson) """
+    for name in units.__dict__:
+        if str(units.__dict__[name]) == unitname:
+            return units.__dict__[name]
+    raise NameError("'{0}' not recognized as a unit".format(unitname))
+
+def dictascast(d, obj):
+    """ (DEPRECATED - USED FOR _fromjson)
+
+    Read a file-like stream and construct an object with a Cast-like
+    interface. """
+    d_ = d.copy()
+    d_.pop("type")
+    coords = d_["scalars"].pop("coordinates")
+    zname = d_.pop("zname", "z")
+    z = d_["vectors"].pop(zname)
+    prop = d["scalars"]
+    for (key, value) in prop.items():
+        if "date" in key or "time" in key and isinstance(prop[key], str):
+            try:
+                prop[key] = dateutil.parser.parse(value)
+            except (TypeError, ValueError):
+                pass
+    prop.update(d_["vectors"])
+    cast = obj(z, coords=coords, zname=zname, **prop)
+    return cast
+
+############################################################
 
 class AbstractCast(six.with_metaclass(abc.ABCMeta)):
     pass
