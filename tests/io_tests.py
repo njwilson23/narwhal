@@ -30,8 +30,7 @@ class IOTests(unittest.TestCase):
         dt = datetime.datetime(1993, 8, 18, 14, 42, 36)
         self.cast = Cast(pres=self.p, temp=self.temp, sal=self.sal, date=dt, zname="pres", zunit="dbar")
         self.ctd = CTDCast(self.p, self.sal, self.temp, date=dt)
-        self.xbt = XBTCast(self.p, self.temp, date=dt)
-        self.collection = CastCollection(self.ctd, self.xbt, self.ctd)
+        self.collection = CastCollection(self.ctd, self.ctd)
         return
 
     def assertFilesEqual(self, f1, f2):
@@ -44,7 +43,7 @@ class IOTests(unittest.TestCase):
 
     def test_fromdict_cast(self):
         d = {"type": "cast",
-             "zunits": "meter",
+             "zunit": "meter",
              "zname": "depth",
              "properties": {"coordinates": (-10.0, 54.0),
                             "date": "2015-04-17 15:03 UTC",
@@ -53,7 +52,7 @@ class IOTests(unittest.TestCase):
                       "temperature": np.linspace(8.0, 4.0, 250),
                       "salinity": np.linspace(32.1, 34.4, 250)}}
         cast = narwhal.cast.fromdict(d)
-        self.assertEqual(cast.zunits, d["zunits"])
+        self.assertEqual(cast.zunit, d["zunit"])
         self.assertEqual(cast.zname, d["zname"])
         self.assertEqual(cast.p["coordinates"], (-10.0, 54.0))
         self.assertEqual(cast.p["date"],
@@ -66,24 +65,24 @@ class IOTests(unittest.TestCase):
         self.assertTrue((cast["salinity"] == d["data"]["salinity"]).all())
         return
 
+    def test_iojson_text(self):
+        self.cast.save_json(os.path.join(DATADIR, "json_cast.nwl"), 
+                            binary=False)
+
+        cast = narwhal.readjson(os.path.join(DATADIR, "json_cast.nwl"))
+
+        self.assertTrue(np.all(cast["pres"] == self.cast["pres"]))
+        self.assertTrue(np.all(cast["temp"] == self.cast["temp"]))
+        self.assertTrue(np.all(cast["sal"] == self.cast["sal"]))
+        self.assertEqual(cast.zunit, self.cast.zunit)
+        self.assertEqual(cast.zname, self.cast.zname)
+        self.assertEqual(cast.p["date"], self.cast.p["date"])
+        return
 
     def test_save_json_text(self):
         try:
             f = StringIO()
-            #import pdb; pdb.set_trace()
             self.cast.save_json(f, binary=False)
-        finally:
-            f.close()
-
-        try:
-            f = StringIO()
-            self.ctd.save_json(f, binary=False)
-        finally:
-            f.close()
-
-        try:
-            f = StringIO()
-            self.xbt.save_json(f, binary=False)
         finally:
             f.close()
         return
@@ -92,18 +91,6 @@ class IOTests(unittest.TestCase):
         try:
             f = BytesIO()
             self.cast.save_json(f)
-        finally:
-            f.close()
-
-        try:
-            f = BytesIO()
-            self.ctd.save_json(f)
-        finally:
-            f.close()
-
-        try:
-            f = BytesIO()
-            self.xbt.save_json(f)
         finally:
             f.close()
         return
