@@ -22,10 +22,11 @@ from scipy.interpolate import UnivariateSpline
 from scipy.io import netcdf_file
 from karta import Point, Multipoint
 from karta.crs import LonLatWGS84
-from . import units
-from . import iojson
 from . import gsw
+from . import units
 from . import util
+from . import iojson
+from . import iohdf
 
 # Global physical constants
 G = 9.8
@@ -261,31 +262,29 @@ class Cast(object):
                 try:
                     d["properties"][k] = v
                 except TypeError:
-                    if verbose:
-                        print("Unable to serialize property {0} = {1}".format(k, v))
-
+                    print("Unable to serialize property {0} = {1}".format(k, v))
         return d
 
     def save_json(self, fnm, binary=True):
         """ Save a JSON-formatted representation to a file at `fnm::string`.
         """
         if hasattr(fnm, "write"):
-            iojson.writecast(fnm, self, binary=binary)
+            iojson.write(fnm, self.asdict(), binary=binary)
         else:
             if binary:
                 if os.path.splitext(fnm)[1] != ".nwz":
                     fnm = fnm + ".nwz"
                 with gzip.open(fnm, "wb") as f:
-                    iojson.writecast(f, self, binary=True)
+                    iojson.write(f, self.asdict(), binary=True)
             else:
                 if os.path.splitext(fnm)[1] != ".nwl":
                     fnm = fnm + ".nwl"
                 with open(fnm, "w") as f:
-                    iojson.writecast(f, self, binary=False)
+                    iojson.write(f, self.asdict(), binary=False)
         return
 
     def save_hdf(self, fnm):
-        return hdf.save_object(self, fnm)
+        return iohdf.write(fnm, self.asdict())
 
     def add_density(self, salkey="sal", tempkey="temp", preskey="pres", rhokey="rho"):
         """ Add in-situ density computed from salinity, temperature, and
@@ -879,22 +878,22 @@ class CastCollection(collections.Sequence):
             file name to save to
         """
         if hasattr(fnm, "write"):
-            iojson.writecastcollection(fnm, self, binary=binary)
+            return iojson.write(fnm, self.asdict(), binary=binary)
         else:
             if binary:
                 if os.path.splitext(fnm)[1] != ".nwz":
                     fnm = fnm + ".nwz"
                 with gzip.open(fnm, "wb") as f:
-                    iojson.writecastcollection(f, self, binary=True)
+                    iojson.write(f, self.asdict(), binary=True)
             else:
                 if os.path.splitext(fnm)[1] != ".nwl":
                     fnm = fnm + ".nwl"
                 with open(fnm, "w") as f:
-                    iojson.writecastcollection(f, self, binary=False)
+                    iojson.write(f, self.asdict(), binary=False)
         return
 
     def save_hdf(self, fnm):
-        return hdf.save_object(self, fnm)
+        return iohdf.write(fnm, self.asdict())
 
 def read(fnm):
     """ Guess a file format based on filename extension and attempt to read it. 
@@ -910,49 +909,11 @@ def read(fnm):
 
 def readhdf(fnm):
     """ Read HDF-formatted measurement data from `fnm::string`. """
-    fhdf = h5py.File(fnm, "r")
-    typ = fhdf["type"]
-
-    if typ == "cast":
-        d = iohdf.asdict(fhdf)
-        return iogeneric.dictascast(d, Cast)
-        #return iohdf.dictascast(d, Cast)
-    elif typ == "castcollection":
-        casts = [iogeneric.dictascast(castdict, Cast) for castdict in d["casts"]]
-        return CastCollection(casts)
-    else:
-        raise LookupError("Invalid type: {0}".format(typ))
+    return fromdict(iohdf.read(fnm))
 
 def readjson(fnm):
     """ Read JSON-formatted measurement data from `fnm::string`. """
-    try:
-        with open(fnm, "r") as f:
-            d = json.load(f)
-    except (UnicodeDecodeError,ValueError):
-        with gzip.open(fnm, "rb") as f:
-            s = f.read().decode("utf-8")
-            d = json.loads(s)
-    return _fromjson(d)
-
-def _fromjson(d):
-    """ Lower level function to (possibly recursively) convert JSON into
-    narwhal object. """
-    typ = d.get("type", None)
-    if typ == "cast":
-        return iogeneric.dictascast(d, Cast)
-    elif typ == "ctdcast":
-        return iogeneric.dictascast(d, CTDCast)
-    elif typ == "xbtcast":
-        return iogeneric.dictascast(d, XBTCast)
-    elif typ == "ladcpcast":
-        return iogeneric.dictascast(d, LADCP)
-    elif typ == "castcollection":
-        casts = [_fromjson(castdict) for castdict in d["casts"]]
-        return CastCollection(casts)
-    elif typ is None:
-        raise NarwhalError("couldn't read data type - file may be corrupt")
-    else:
-        raise LookupError("Invalid type: {0}".format(typ))
+    return fromdict(iojson.read(fnm))
 
 # Dictionary schema:
 #
