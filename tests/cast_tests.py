@@ -29,29 +29,30 @@ class CastTests(unittest.TestCase):
 
     def test_numerical_indexing(self):
         r = self.cast[40]
-        self.assertTrue(r["pres"] == 81)
-        self.assertTrue(r["sal"] == 27.771987072878822)
-        self.assertTrue(r["temp"] == 1.1627808544797258)
+        self.assertTrue(r["pressure"] == 81)
+        self.assertTrue(r["salinity"] == 27.771987072878822)
+        self.assertTrue(r["temperature"] == 1.1627808544797258)
 
         r = self.cast[100]
-        self.assertTrue(r["pres"] == 201)
-        self.assertTrue(r["sal"] == 32.124158554636729)
-        self.assertTrue(r["temp"] == 0.67261848597249019)
+        self.assertTrue(r["pressure"] == 201)
+        self.assertTrue(r["salinity"] == 32.124158554636729)
+        self.assertTrue(r["temperature"] == 0.67261848597249019)
 
         r = self.cast[400]
-        self.assertTrue(r["pres"] == 801)
-        self.assertTrue(r["sal"] == 33.995350253934227)
-        self.assertTrue(r["temp"] == 1.8506793256302907)
+        self.assertTrue(r["pressure"] == 801)
+        self.assertTrue(r["salinity"] == 33.995350253934227)
+        self.assertTrue(r["temperature"] == 1.8506793256302907)
         return
 
     def test_kw_indexing(self):
-        self.assertTrue(np.all(self.cast["pres"] == self.p))
-        self.assertTrue(np.all(self.cast["sal"] == self.sal))
-        self.assertTrue(np.all(self.cast["temp"] == self.temp))
+        self.assertTrue(np.all(self.cast["pressure"] == self.p))
+        self.assertTrue(np.all(self.cast["salinity"] == self.sal))
+        self.assertTrue(np.all(self.cast["temperature"] == self.temp))
         return
 
     def test_kw_property_indexing(self):
-        cast = Cast(self.p, temp=self.temp, sal=self.sal, name="Cruise station 7")
+        cast = Cast(pressure=self.p, temp=self.temp, sal=self.sal,
+                    name="Cruise station 7")
         self.assertEqual(cast.p["name"], "Cruise station 7")
         return
 
@@ -59,16 +60,16 @@ class CastTests(unittest.TestCase):
         p = np.arange(1, 1001, 2)
         temp = 12. * np.exp(-.007*p) - 14. * np.exp(-0.005*(p+100)) + 1.8
         sal = -13. * np.exp(-.01*p) + 34.5
-        cast2 = Cast(p, temp=temp, sal=sal)
+        cast2 = Cast(pres=p, temp=temp, sal=sal)
         cc = self.cast + cast2
         self.assertTrue(isinstance(cc, CastCollection))
         self.assertEqual(len(cc), 2)
         return
 
     def test_interpolate(self):
-        self.assertEqual(np.round(self.cast.interpolate("temp", "pres", 4.0), 8),
+        self.assertEqual(np.round(self.cast.interpolate("temperature", "pressure", 4.0), 8),
                          2.76745605)
-        self.assertEqual(np.round(self.cast.interpolate("temp", "sal", 33.0), 8),
+        self.assertEqual(np.round(self.cast.interpolate("temperature", "salinity", 33.0), 8),
                          0.77935861)
         # temp not monotonic, which screws up the simple interpolation scheme
         #self.assertEqual(np.round(self.cast.interpolate("pres", "temp", 1.5), 8),
@@ -76,13 +77,13 @@ class CastTests(unittest.TestCase):
         return
 
     def test_add_property_using_alias(self):
-        cast = Cast(self.p, temp=self.temp, sal=self.sal)
+        cast = Cast(pres=self.p, temp=self.temp, sal=self.sal)
         cast.p["comment"] = "performed bottle cast #23"
         self.assertEqual(cast.properties["comment"][-2:], "23")
         return
 
     def test_read_property_using_alias(self):
-        cast = Cast(self.p, temp=self.temp, sal=self.sal, time="late")
+        cast = Cast(pressure=self.p, temp=self.temp, sal=self.sal, time="late")
         self.assertEqual(cast.p["time"], "late")
         return
 
@@ -116,10 +117,10 @@ class CastTests(unittest.TestCase):
 
         cast = CTDCast(p, s, t, coords=(-20, 50), rho=rho)
         cast.add_depth()
-        cast.add_Nsquared(depthkey="z")
+        cast.add_Nsquared(depthkey="depth")
 
         # Calculate the buoyancy frequency directly
-        z = cast["z"].values
+        z = cast["depth"].values
         drhodz = -np.r_[rho[1]-rho[0], rho[2:]-rho[:-2], rho[-1]-rho[-2]] / \
                   np.r_[z[1]-z[0], z[2:]-z[:-2], z[-1]-z[-2]]
         N2_direct = -9.81 / rho * drhodz
@@ -153,7 +154,7 @@ class CastCollectionTests(unittest.TestCase):
         p = np.linspace(1, 999, 500)
         casts = []
         for i in range(10):
-            cast = Cast(p, temp=2*np.ones_like(p), sal=30*np.ones_like(p),
+            cast = Cast(pres=p, temp=2*np.ones_like(p), sal=30*np.ones_like(p),
                         station=i, val=abs(i-5), uniq_val=-i**2)
             casts.append(cast)
         self.cc = CastCollection(casts)
@@ -223,7 +224,7 @@ class CastCollectionTests(unittest.TestCase):
             p = np.r_[np.arange(0, 250, 5), np.arange(250, 250 + 5*(n-50), 5)]
             t = np.ones(n) * 10.0
             s = np.ones(n) * 34.0
-            cast = Cast(p, temp=t, sal=s)
+            cast = Cast(pres=p, temp=t, sal=s)
             casts.append(cast)
         defrayed_casts = CastCollection(casts).defray()
         for cast in defrayed_casts:
@@ -232,11 +233,10 @@ class CastCollectionTests(unittest.TestCase):
 
     def test_eofs(self):
         pres = np.arange(1, 300)
-        casts = [Cast(pres, zunits="dbar", zname="pres",
-                      theta=np.sin(pres*i*np.pi/300))
+        casts = [Cast(depth=np.arange(1, 300), theta=np.sin(pres*i*np.pi/300)) 
                  for i in range(3)]
         cc = CastCollection(casts)
-        structures, lamb, eofs = cc.eofs("theta")
+        structures, lamb, eofs = cc.eofs(key="theta")
         self.assertAlmostEqual(np.mean(np.abs(structures["theta_eof1"])), 0.634719360307)
         self.assertAlmostEqual(np.mean(np.abs(structures["theta_eof2"])), 0.363733575635)
         self.assertAlmostEqual(np.mean(np.abs(structures["theta_eof3"])), 0.350665870142)

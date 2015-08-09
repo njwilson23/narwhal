@@ -32,7 +32,6 @@ from . import iohdf
 G = 9.8
 OMEGA = 2*np.pi / 86400.0
 
-
 class Cast(object):
     """ A Cast is a set of referenced measurements associated with a single
     coordinate.
@@ -42,35 +41,32 @@ class Cast(object):
 
     coords::iterable[2]
         the geographic coordinates of the observation
-
-    zname::string
-        name for the independent vector [default: "z"]
     """
 
     _type = "cast"
 
-    def __init__(self, zname=None, **kwargs):
+    def __init__(self, length=None, **kwargs):
 
         self.properties = {}
         data = {}
 
-        if zname is None:
-            raise NarwhalError("one of the profile variable must be declared "
-                               "the vertical reference ('zname')")
-        data[zname] = pandas.Series(data=kwargs.pop(zname), name=zname)
+        def isvec(a):
+            return isinstance(a, collections.Container) and \
+                    not isinstance(a, str)
 
-        # Populate data and properties from remaining keyword arguments
-        for (kw, val) in kwargs.items():
-            if (isinstance(val, collections.Container)
-                        and not isinstance(val, str)
-                        and len(val) == len(data[zname])):
-                data[kw] = pandas.Series(data=val, name=kw)
+        # Identify the profile length
+        if length is None:
+            length = max(len(v) for v in kwargs.values() if isvec(v))
+
+        # Populate data and properties
+        for (k, v) in kwargs.items():
+            if isvec(v) and (len(v) == length):
+                data[k] = pandas.Series(data=v, name=k)
             else:
-                self.properties[kw] = val
+                self.properties[k] = v
 
-        self.zname = zname
         self.data = pandas.DataFrame(data)
-        self.properties.setdefault("coordinates", (None, None))
+        self.properties.setdefault("coordinates", (np.nan, np.nan))
         return
 
     def __len__(self):
@@ -186,8 +182,9 @@ class Cast(object):
     def extend(self, n):
         """ Add `n::int` NaN depth levels to cast. """
         if n > 0:
-            empty_df = pandas.DataFrame({self.zname: np.nan * np.empty(n)})
-            self.data = pandas.concat([self.data, empty_df], ignore_index=True)
+            d = dict((k, np.nan*np.empty(n)) for k in self.fields)
+            self.data = pandas.concat([self.data, pandas.DataFrame(d)],
+                                      ignore_index=True)
         else:
             raise NarwhalError("Cast must be extended with 1 or more rows")
         return
@@ -227,13 +224,13 @@ class Cast(object):
         else:
             raise NarwhalError("{x} is not monotonic; pass force=True to override".format(x=x))
 
-    def regrid(self, levels):
+    def regrid(self, levels, refkey):
         """ Re-interpolate Cast at specified grid levels. Returns a new Cast. """
         # some low level voodoo
         ret = copy.deepcopy(self)
         newdata = pandas.DataFrame(index=levels)
         for key in self.fields:
-            newdata[key] = np.interp(levels, self.data[self.zname], self[key],
+            newdata[key] = np.interp(levels, self.data[refkey], self[key],
                                      left=np.nan, right=np.nan)
         ret.data = newdata
         return ret
@@ -242,7 +239,6 @@ class Cast(object):
         """ Return a representation of the Cast as a Python dictionary.
         """
         d = dict(__schemaversion__=2.0,
-                 zname=self.zname,
                  data=dict(), properties=dict(), type="cast")
 
         for col in self.data.columns:
@@ -281,7 +277,7 @@ class Cast(object):
     def save_hdf(self, fnm):
         return iohdf.write(fnm, self.asdict())
 
-    def add_density(self, salkey="sal", tempkey="temp", preskey="pres", rhokey="rho"):
+    def add_density(self, salkey="salinity", tempkey="temperature", preskey="pressure", rhokey="rho"):
         """ Add in-situ density computed from salinity, temperature, and
         pressure to fields. Return the field name.
         
@@ -307,7 +303,7 @@ class Cast(object):
         else:
             raise FieldError("salinity, temperature, and pressure required")
 
-    def add_depth(self, preskey="pres", rhokey="rho", depthkey="z"):
+    def add_depth(self, preskey="pressure", rhokey="rho", depthkey="depth"):
         """ Use density and pressure to calculate depth.
         
         preskey::string
@@ -441,8 +437,8 @@ class Cast(object):
             chis[i][~msk] = frac[i::n+1]
         return chis
 
-    def add_shear(self, depthkey="z", ukey="u", vkey="v", dudzkey="dudz", dvdzkey="dvdz",
-                  s=None):
+    def add_shear(self, depthkey="depth", ukey="u_velocity", vkey="v_velocity", 
+                  dudzkey="dudz", dvdzkey="dvdz", s=None):
         """ Compute the velocity shear for *u* and *v*. If *s* is not None,
         smooth the data with a gaussian filter before computing the derivative.
 
@@ -470,25 +466,25 @@ class Cast(object):
         self._addkeydata(dvdzkey, dvdz)
         return
 
-def CTDCast(pres, sal, temp, coords=(None, None), **kw):
+def CTDCast(pres, sal, temp, **kw):
     """ Convenience function for creating CTD profiles. """
-    kw["pres"] = pres
-    kw["sal"] = sal
-    kw["temp"] = temp
-    return Cast(zname="pres", coords=coords, **kw)
+    kw["pressure"] = pres
+    kw["salinity"] = sal
+    kw["temperature"] = temp
+    return Cast(**kw)
 
-def XBTCast(depth, temp, coords=(None, None), **kw):
+def XBTCast(depth, temp, **kw):
     """ Convenience function for creating XBT profiles. """
     kw["depth"] = depth
-    kw["temp"] = temp
-    return Cast(zname="depth", coords=coords, **kw)
+    kw["temperature"] = temp
+    return Cast(**kw)
 
-def LADCP(depth, uvel, vvel, coords=(None, None), **kw):
+def LADCP(depth, uvel, vvel, **kw):
     """ Convenience function for creating LADCP profiles. """
     kw["depth"] = depth
-    kw["u"] = uvel
-    kw["v"] = vvel
-    return Cast(zname="depth", coords=coords, **kw)
+    kw["u_velocity"] = uvel
+    kw["v_velocity"] = vvel
+    return Cast(**kw)
 
 class CastCollection(collections.Sequence):
     """ A CastCollection is an indexable collection of Cast instances.
@@ -795,9 +791,9 @@ class CastCollection(collections.Sequence):
             c1 = self[i].coords
             c2 = self[i+1].coords
             cmid = (0.5*(c1[0]+c2[0]), 0.5*(c1[1]+c2[1]))
-            p = avgcolumns(self[i]["pres"], self[i+1]["pres"])
-            t = avgcolumns(self[i]["temp"], self[i+1]["temp"])
-            s = avgcolumns(self[i]["sal"], self[i+1]["sal"])
+            p = avgcolumns(self[i]["pressure"], self[i+1]["pressure"])
+            t = avgcolumns(self[i]["temperature"], self[i+1]["temperature"])
+            s = avgcolumns(self[i]["salinity"], self[i+1]["salinity"])
             cast = CTDCast(p, s, t, coords=cmid)
             if "depth" not in cast.fields:
                 cast.add_density()
@@ -819,7 +815,7 @@ class CastCollection(collections.Sequence):
         return coll
 
 
-    def eofs(self, key="temp", n_eofs=None):
+    def eofs(self, key="temperature", zkey="depth", n_eofs=None):
         """ Compute the EOFs and EOF structures for *key*. Returns a cast with
         the structure functions, an array of eigenvectors (EOFs), and an array
         of eigenvalues.
@@ -834,7 +830,7 @@ class CastCollection(collections.Sequence):
         n_eofs::int
             number of EOFs to return
         """
-        assert all(self[0].zname == c.zname for c in self[1:])
+        assert all(zkey in c.fields for c in self)
         assert all(all(self[0].data.index == c.data.index) for c in self[1:])
 
         if n_eofs is None:
@@ -850,7 +846,7 @@ class CastCollection(collections.Sequence):
         eofts = util.eof_timeseries(arr, V)
 
         c0 = self[0]
-        c = Cast(c0[c0.zname][~msk], coords=(np.nan, np.nan), zname=c0.zname)
+        c = Cast(**{zkey: c0[zkey][~msk]})
         for i in range(n_eofs):
             c._addkeydata("_eof".join([key, str(i+1)]), eofts[:,i])
         return c, lamb[:n_eofs], V[:,:n_eofs]
@@ -922,7 +918,6 @@ def load_json(fnm):
 # Dictionary schema:
 #
 # { type        ->  str: *type*,
-#   zname       ->  str: *zname*,
 #   data        ->  { [key]?        ->  *value*,
 #                     [key]?        ->  *value* }
 #   properties  ->  { coordinates   ->  (float: *lon*, float: *lat*),
@@ -948,7 +943,7 @@ def fromdict(d):
                 properties[k] = dateutil.parser.parse(v)
 
         data.update(properties)
-        return Cast(zname=d["zname"], **data)
+        return Cast(**data)
 
     else:
         raise TypeError("'{0}' not a valid narwhal type".format(d["type"]))
@@ -1018,8 +1013,6 @@ def dictascast(d, obj):
     d_ = d.copy()
     d_.pop("type")
     coords = d_["scalars"].pop("coordinates")
-    zname = d_.pop("zname", "z")
-    z = d_["vectors"].pop(zname)
     prop = d["scalars"]
     for (key, value) in prop.items():
         if "date" in key or "time" in key and isinstance(prop[key], str):
@@ -1028,7 +1021,7 @@ def dictascast(d, obj):
             except (TypeError, ValueError):
                 pass
     prop.update(d_["vectors"])
-    cast = obj(z, coords=coords, zname=zname, **prop)
+    cast = obj(coords=coords, **prop)
     return cast
 
 ############################################################
