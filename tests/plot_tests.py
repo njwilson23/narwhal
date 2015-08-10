@@ -62,7 +62,7 @@ class PlotTests(unittest.TestCase):
 class SectionPlotTests(unittest.TestCase):
     def setUp(self):
 
-        self.ctds = narwhal.read(os.path.join(DATADIR, "line_w_dec1997.nwl"))
+        self.ctds = narwhal.load_json(os.path.join(DATADIR, "line_w_dec1997.nwl"))
 
     def test_label_station_strings(self):
         ax = plt.axes(projection="section")
