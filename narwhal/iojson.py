@@ -99,7 +99,7 @@ def dictascast_old(d, constructor):
             except (TypeError, ValueError):
                 pass
     prop.update(d_["vectors"])
-    return constructor(coords=coords, **prop)
+    return constructor(coordinates=coords, **prop)
 
 ############################################################
 

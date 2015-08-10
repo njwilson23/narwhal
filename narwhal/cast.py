@@ -686,6 +686,8 @@ class CastCollection(NarwhalBase, collections.Sequence):
     def projdist(self):
         """ Return the cumulative distances from the cast to cast.
         """
+        if (np.nan, np.nan) in (c.p["coordinates"] for c in self):
+            raise AttributeError("all casts must contain non-NaN coordinates")
         cumulative = [0]
         a = Point(self.casts[0].coords, crs=LonLatWGS84)
         for cast in self.casts[1:]:
