@@ -21,12 +21,33 @@ class NumpyJSONEncoder(json.JSONEncoder):
         except (AttributeError, TypeError):
             return json.JSONEncoder.default(self, o)
 
-def write(f, d, binary=True):
-    if binary:
-        s = json.dumps(d, indent=0, cls=NumpyJSONEncoder)
-        f.write(six.b(s))
-    else:
+def write_text(fnm, d):
+
+    try:
+        if hasattr(fnm, "write"):
+            f = fnm
+        else:
+            f = open(fnm, "w")
+
         json.dump(d, f, indent=2, cls=NumpyJSONEncoder)
+
+    finally:
+        f.close()
+    return
+
+def write_binary(fnm, d):
+
+    try:
+        if hasattr(fnm, "write"):
+            f = fnm
+        else:
+            f = gzip.open(fnm, "wb")
+
+        jsonstring = json.dumps(d, indent=0, cls=NumpyJSONEncoder)
+        f.write(six.b(jsonstring))
+
+    finally:
+        f.close()
     return
 
 def read(fnm):

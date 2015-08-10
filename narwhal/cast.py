@@ -32,7 +32,25 @@ from . import iohdf
 G = 9.8
 OMEGA = 2*np.pi / 86400.0
 
-class Cast(object):
+class NarwhalBase(object):
+    """ Base class for Narwhal objects implementing data export methods.
+
+    Derived subclasses must implement `asdict`
+    """
+
+    def save_json(self, fnm, binary=True):
+        """ Save a JSON-formatted representation to a file at `fnm::string`.
+        """
+        if binary:
+            iojson.write_binary(fnm, self.asdict())
+        else:
+            iojson.write_text(fnm, self.asdict())
+        return
+
+    def save_hdf(self, fnm):
+        return iohdf.write(fnm, self.asdict())
+
+class Cast(NarwhalBase):
     """ A Cast is a set of referenced measurements associated with a single
     coordinate.
 
@@ -256,27 +274,6 @@ class Cast(object):
                     print("Unable to serialize property {0} = {1}".format(k, v))
         return d
 
-    def save_json(self, fnm, binary=True):
-        """ Save a JSON-formatted representation to a file at `fnm::string`.
-        """
-        if hasattr(fnm, "write"):
-            iojson.write(fnm, self.asdict(), binary=binary)
-        else:
-            if binary:
-                if os.path.splitext(fnm)[1] != ".nwz":
-                    fnm = fnm + ".nwz"
-                with gzip.open(fnm, "wb") as f:
-                    iojson.write(f, self.asdict(), binary=True)
-            else:
-                if os.path.splitext(fnm)[1] != ".nwl":
-                    fnm = fnm + ".nwl"
-                with open(fnm, "w") as f:
-                    iojson.write(f, self.asdict(), binary=False)
-        return
-
-    def save_hdf(self, fnm):
-        return iohdf.write(fnm, self.asdict())
-
     def add_density(self, salkey="salinity", tempkey="temperature", preskey="pressure", rhokey="rho"):
         """ Add in-situ density computed from salinity, temperature, and
         pressure to fields. Return the field name.
@@ -486,7 +483,7 @@ def LADCP(depth, uvel, vvel, **kw):
     kw["v_velocity"] = vvel
     return Cast(**kw)
 
-class CastCollection(collections.Sequence):
+class CastCollection(NarwhalBase, collections.Sequence):
     """ A CastCollection is an indexable collection of Cast instances.
 
     Create from casts or an iterable ordered sequence of casts:
@@ -858,30 +855,6 @@ class CastCollection(collections.Sequence):
                  type="castcollection")
         d["casts"] = [cast.asdict() for cast in self.casts]
         return d
-
-    def save_json(self, fnm, binary=True):
-        """ Save a JSON-formatted representation to a file.
-
-        fnm::string
-            file name to save to
-        """
-        if hasattr(fnm, "write"):
-            return iojson.write(fnm, self.asdict(), binary=binary)
-        else:
-            if binary:
-                if os.path.splitext(fnm)[1] != ".nwz":
-                    fnm = fnm + ".nwz"
-                with gzip.open(fnm, "wb") as f:
-                    iojson.write(f, self.asdict(), binary=True)
-            else:
-                if os.path.splitext(fnm)[1] != ".nwl":
-                    fnm = fnm + ".nwl"
-                with open(fnm, "w") as f:
-                    iojson.write(f, self.asdict(), binary=False)
-        return
-
-    def save_hdf(self, fnm):
-        return iohdf.write(fnm, self.asdict())
 
 def load(fnm):
     """ Guess a file format based on filename extension and attempt to read it. 
