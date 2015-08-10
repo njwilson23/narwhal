@@ -3,7 +3,6 @@ Arctic Switchyard project. Maybe I'm being dumb and there's a straightforward
 way to do this, but as far as I can tell, the format was constructed as a
 competitive programming exercise. """
 
-import itertools
 import dateutil.parser
 
 def _read_headline(s):

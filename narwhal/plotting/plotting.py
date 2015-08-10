@@ -1,19 +1,8 @@
-import itertools
-import copy
-import numpy as np
-import pandas
-from scipy.interpolate import griddata, CloughTocher2DInterpolator
-from scipy import ndimage
-from scipy import stats
-from karta import Multipoint, Line
-
 import matplotlib.pyplot as plt
-import matplotlib.tri as mtri
 
 from .colors import default_colors
 from . import plotutil
 from ..cast import AbstractCast, AbstractCastCollection
-from .. import gsw
 
 import warnings
 warnings.filterwarnings("ignore", category=DeprecationWarning)
@@ -24,10 +13,11 @@ def _castlabeliter():
         i += 1
         yield "Cast " + str(i)
 
-def plot_profiles(castlikes, key="temp", ax=None, **kw):
+def plot_profiles(castlikes, key="temp", ykey="depth", ax=None, **kw):
     """ Plot vertical profiles from casts. Keyword arguments are passed to
     `pyplot.plot`. If keyword arguments are non-string iterables, profiles are
     plotted with the items in order. """
+
     # guess the number of casts - in the future, get this properly
     n = min(8, max(3, len(castlikes)))
 
@@ -40,9 +30,8 @@ def plot_profiles(castlikes, key="temp", ax=None, **kw):
             for cast_ in cast:
                 num = _plot_profile(num, cast_)
         elif isinstance(cast, AbstractCast):
-            z = cast[cast.zname]
             _kw = dict((k, next(v)) for k, v in plotkw.items())
-            ax.plot(cast[key], z, **_kw)
+            ax.plot(cast[key], cast[ykey], **_kw)
             num += 1
         else:
             raise TypeError("Argument not a Cast or CastCollection")

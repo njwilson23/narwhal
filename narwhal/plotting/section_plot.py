@@ -6,18 +6,20 @@ from scipy.interpolate import griddata, CloughTocher2DInterpolator
 from scipy import ndimage
 from karta import Line
 from karta.crs import LonLatWGS84
-from narwhal import AbstractCast, AbstractCastCollection
+from narwhal import AbstractCastCollection
 
 class BaseSectionAxes(plt.Axes):
 
     def __init__(self, *args, **kwargs):
+        """ ykey        Key in casts to use along y-axis """
+        self.ykey = kwargs.pop("ykey", "depth")
         super(plt.Axes, self).__init__(*args, **kwargs)
 
     def _set_section_bounds(self, cc, prop):
         """ Given a CastCollection and a property name, set the axes bounds to
         propertly show all valid data. """
         # vertical extents
-        zgen = (c[c.zname].values for c in cc)
+        zgen = (c[self.ykey].values for c in cc)
         validmsk = (~np.isnan(c[prop].values) for c in cc)
         ymax = max(z[msk][-1] for z,msk in zip(zgen, validmsk))
         self.set_ylim((ymax, 0))
@@ -35,15 +37,14 @@ class BaseSectionAxes(plt.Axes):
         d_[msk] = np.nan
         return d_
 
-    @staticmethod
-    def _computemask(cc, Xi, Yi, Zi, bottomkey):
+    def _computemask(self, cc, Xi, Yi, Zi, bottomkey):
         if bottomkey is not None:
             depth = [cast.properties[bottomkey] for cast in cc]
         else:
             def _last(arr):
                 msk = ~np.isnan(arr)
                 return arr[np.max(np.argwhere(msk))]
-            depth = [_last(cast[cast.zname].values) for cast in cc]
+            depth = [_last(cast[self.ykey].values) for cast in cc]
         cx = cc.projdist()
         base = np.interp(Xi[0,:], cx, depth)
         zmask = Yi > np.tile(base, (Xi.shape[0], 1))
@@ -101,7 +102,7 @@ class BaseSectionAxes(plt.Axes):
             msk = self._computemask(cc, Xi, Yi, Zi, bottomkey)
             Zi[msk] = np.nan
 
-        self._set_section_bounds(cc, prop)
+        self._set_section_bounds(self.ykey, cc, prop)
         return super(BaseSectionAxes, self).contour(Xi, Yi, Zi, **kwargs)
 
     def contourf(self, cc, prop, ninterp=30, sk=None, mask=True,
@@ -119,7 +120,7 @@ class BaseSectionAxes(plt.Axes):
             msk = self._computemask(cc, Xi, Yi, Zi, bottomkey)
             Zi[msk] = np.nan
 
-        self._set_section_bounds(cc, prop)
+        self._set_section_bounds(self.ykey, cc, prop)
         return super(BaseSectionAxes, self).contourf(Xi, Yi, Zi, **kwargs)
 
     def pcolormesh(self, cc, prop, ninterp=30, sk=None, mask=True,
@@ -136,7 +137,7 @@ class BaseSectionAxes(plt.Axes):
             msk = self._computemask(cc, Xi, Yi, Zi, bottomkey)
             Zi[msk] = np.nan
 
-        self._set_section_bounds(cc, prop)
+        self._set_section_bounds(self.ykey, cc, prop)
         kwargs.setdefault("vmin", np.nanmin(Zi))
         kwargs.setdefault("vmax", np.nanmax(Zi))
         return super(BaseSectionAxes, self).pcolormesh(Xi, Yi, Zi, **kwargs)
@@ -183,7 +184,7 @@ class BaseSectionAxes(plt.Axes):
     def mark_stations(self, cc, **kwargs):
         """ Draw a vertical line at each station position along the section.
         Keyword arguments are passed to `self.plot` """
-        ymax = max(np.nanmax(np.array(c[c.zname])) for c in cc)
+        ymax = max(np.nanmax(np.array(c[self.ykey])) for c in cc)
         kwargs.setdefault("color", "0.3")
         kwargs.setdefault("linestyle", "--")
         lines = [self.plot((x_, x_), (ymax, 0), **kwargs) for x_ in cc.projdist()]
@@ -225,25 +226,24 @@ class SectionAxes(BaseSectionAxes):
     """ Basic class for plotting an oceanographic section """
     name = "section"
 
-    @staticmethod
-    def _interpolate_section(cc, prop, ninterp, scheme="horizontal_corr"):
+    def _interpolate_section(self, cc, prop, ninterp, scheme="horizontal_corr"):
         """ Scheme may be one of "cubic", "horizontal_corr", or "zero_base" """
 
         def _longest_cast(cc):
             """ Return the longest cast in a cast collection """
-            max_y = max(np.nanmax(c[c.zname]) for c in cc)
+            max_y = max(np.nanmax(c[self.ykey]) for c in cc)
             for cast in cc:
-                if max_y in cast[cast.zname]:
+                if max_y in cast[self.ykey]:
                     return cast
 
         if scheme == "cubic":
-            Yo = np.vstack([cast[cast.zname] for cast in cc]).T
+            Yo = np.vstack([cast[self.ykey] for cast in cc]).T
             Xo = np.tile(cc.projdist(), (len(Yo), 1))
             Zo = cc.asarray(prop)
 
             msk = ~np.isnan(Xo+Yo+Zo)
             c = _longest_cast(cc)
-            longest_z = c[c.zname]
+            longest_z = c[self.ykey]
 
             Xi, Yi = np.meshgrid(np.linspace(Xo[0,0], Xo[0,-1], ninterp), longest_z)
             Zi = griddata(np.c_[Xo[msk], Yo[msk]], Zo[msk],
@@ -271,24 +271,23 @@ class SectionAxes(BaseSectionAxes):
                     
                 # add the measured values
                 X.extend(x * np.ones(cast.nvalid(prop)))
-                Y.extend(cast[cast.zname][~cast.nanmask(prop)])
+                Y.extend(cast[self.ykey][~cast.nanmask(prop)])
                 Z.extend(cast[prop][~cast.nanmask(prop)])
                     
                 # for each non-NaN level in *cast*, check castleft and castrigh
                 # to see if they're NaN
                 # if so, add a dummy value half way between
                 msk = ~cast.nanmask(prop)
-                for lvl, v in zip(cast[cast.zname][msk], cast[prop][msk]):
+                for lvl, v in zip(cast[self.ykey][msk], cast[prop][msk]):
 
-                    zname = cast.zname
                     if castleft and \
-                            np.isnan(castleft.interpolate(prop, zname, lvl)):
+                            np.isnan(castleft.interpolate(prop, self.ykey, lvl)):
                         X.append(0.5 * (xleft+x))
                         Y.append(lvl)
                         Z.append(v)
                 
                     if castrigh and \
-                            np.isnan(castrigh.interpolate(prop, zname, lvl)):
+                            np.isnan(castrigh.interpolate(prop, self.ykey, lvl)):
                         X.append(0.5 * (xrigh+x))
                         Y.append(lvl)
                         Z.append(v)
@@ -299,7 +298,7 @@ class SectionAxes(BaseSectionAxes):
             X = np.array(X)
             Y = np.array(Y)
 
-            max_y = max(np.nanmax(c[c.zname].values) for c in cc)
+            max_y = max(np.nanmax(c[self.ykey].values) for c in cc)
             max_x = distances[-1]
             y_int = int(round(min(5, max_y/100)))
             x_int = max_x / ninterp
@@ -309,7 +308,7 @@ class SectionAxes(BaseSectionAxes):
 
         elif scheme == "zero_base":
 
-            Yo = np.vstack([cast[cast.zname] for cast in cc]).T
+            Yo = np.vstack([cast[self.ykey] for cast in cc]).T
             Xo = np.tile(cc.projdist(), (len(Yo), 1))
             Zo = cc.asarray(prop)
 
@@ -323,7 +322,7 @@ class SectionAxes(BaseSectionAxes):
 
             xi = np.linspace(Xo[0,0], Xo[0,-1], ninterp)
             c = _longest_cast(cc)
-            yi = c[c.zname]
+            yi = c[self.ykey]
 
             idxdepth = _find_idepth(Zo)
             idepth = np.round(np.interp(xi, Xo[0], idxdepth)).astype(int)

@@ -2,7 +2,7 @@ import copy
 import itertools
 from functools import reduce
 import numpy as np
-from narwhal.cast import AbstractCast, AbstractCastCollection
+from narwhal.cast import AbstractCast, Cast
 
 def count_casts(castlikes):
     """ Given an iterable of Casts and CastCollections, count the number of
