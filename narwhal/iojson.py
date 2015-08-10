@@ -1,22 +1,23 @@
 """ Module for handling the serialization of Cast- and CastCollection-like
 objects to persistent files. """
 
-import six
 import json
+import gzip
+import six
 import karta
 
 # This class coerces numpy values into Python types for JSON serialization. 
 class NumpyJSONEncoder(json.JSONEncoder):
     def default(self, o):
         try:
-            if o.dtype in ("int8", "int16", "int32", "int64"):
+            if o.dtype in ("int8", "int16", "int32", "int64", "uint8", "uint16", "uint32", "uint64"):
                 return int(o)
             elif o.dtype in ("float16", "float32", "float64", "float128"):
                 return float(o)
             elif o.dtype in ("complex64", "complex128", "complex256"):
                 return complex(o)
             else:
-                raise TypeError("not a recognized type")
+                raise TypeError("not a recognized type: {0}".format(o.dtype))
         except (AttributeError, TypeError):
             return json.JSONEncoder.default(self, o)
 
