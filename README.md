@@ -14,9 +14,6 @@ Oceanographic data are organized into `Cast` and `CastCollection` data structure
 - baroclinic mode analysis
 - water fraction inversion
 
-More specialized techniques can be added by subclassing the generic
-`Cast` type (see the `XBTCast` and `LADCP` classes as an example).
-
 For storage, data is serialized to HDF or JSON files. These common formats are
 easily imported into other analysis packages (such as MATLAB), or browser-based
 visualization libraries (such as D3).
@@ -55,6 +52,7 @@ in the `narwhal.gsw` submodule, making things like the following possible:
 - [karta](https://github.com/njwilson23/karta)
 - h5py
 - requests
+- dateutil
 - six
 - C-compiler (for GSW)
 
