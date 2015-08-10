@@ -19,11 +19,11 @@ class BathymetryTests(unittest.TestCase):
 
     def test_add_to_castcollection(self):
         cc = CastCollection(
-                Cast(np.arange(100), T=np.random.rand(100), S=np.random.rand(100),
+                Cast(P=np.arange(100), T=np.random.rand(100), S=np.random.rand(100),
                      coords=(-17.42, 80.09)),
-                Cast(np.arange(100), T=np.random.rand(100), S=np.random.rand(100),
+                Cast(P=np.arange(100), T=np.random.rand(100), S=np.random.rand(100),
                      coords=(-17.426, 80.112)),
-                Cast(np.arange(100), T=np.random.rand(100), S=np.random.rand(100),
+                Cast(P=np.arange(100), T=np.random.rand(100), S=np.random.rand(100),
                      coords=(-17.45, 80.16)))
         cc.add_bathymetry(self.bathymetry)
         correctresult = np.array([92.61373822294766, 123.15924954803165,
