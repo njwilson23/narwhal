@@ -1,6 +1,24 @@
 # -*- coding: utf-8 -*-
 """
 Cast and CastCollection classes for managing CTD observations
+
+Casts are a wrapper around a
+pandas.Dataframe, with methods that are
+useful to oceanographers.
+
+Narwhal objects serialize to Python
+dictionaries, with the following schema:
+
+Dictionary schema:
+
+{ __schemaversion__ ->  float: *version, currently 2.0*,
+  type              ->  str: *type*,
+  data              ->  { [key]?        ->  *value*,
+                          [key]?        ->  *value* }
+  properties        ->  { coordinates   ->  (float: *lon*, float: *lat*),
+                          date|time?    ->  str: datetime (ISO formatted),
+                          [key]?        ->  *value*,
+                          [key]?        ->  *value* }
 """
 
 import os
@@ -8,22 +26,24 @@ import sys
 import abc
 import collections
 import itertools
-import gzip
 import copy
 import datetime, dateutil
 from functools import reduce
+
 import six
 import numpy as np
 import pandas
+
 import scipy.ndimage
 import scipy.sparse
 import scipy.sparse.linalg
-from scipy.interpolate import UnivariateSpline
-from scipy.io import netcdf_file
+import scipy.io
+import scipy.interpolate
+
 from karta import Point, Multipoint
 from karta.crs import LonLatWGS84
+
 from . import gsw
-from . import units
 from . import util
 from . import iojson
 from . import iohdf
@@ -350,7 +370,7 @@ class Cast(NarwhalBase):
         msk = self.nanmask((rhokey, depthkey))
         rho = self[rhokey][~msk]
         z = self[depthkey][~msk]
-        rhospl = UnivariateSpline(z, rho, s=s)
+        rhospl = scipy.interpolate.UnivariateSpline(z, rho, s=s)
         drhodz = np.asarray([-rhospl.derivatives(_z)[1] for _z in z])
         N2 = np.empty(len(self), dtype=np.float64)
         N2[msk] = np.nan
@@ -881,17 +901,6 @@ def load_json(fnm):
         # Try reading using schema version 1
         return iojson._fromjson_old(d, Cast, CastCollection)
 
-# Dictionary schema:
-#
-# { type        ->  str: *type*,
-#   data        ->  { [key]?        ->  *value*,
-#                     [key]?        ->  *value* }
-#   properties  ->  { coordinates   ->  (float: *lon*, float: *lat*),
-#                     date|time?    ->  str: datetime (ISO formatted),
-#                     [key]?        ->  *value*,
-#                     [key]?        ->  *value* }
-#
-
 def fromdict(d):
     """ Convert a dictionary to a Cast instance. """
 
@@ -920,7 +929,7 @@ def read_woce_netcdf(fnm):
     def getvariable(nc, key):
         return nc.variables[key].data.copy()
 
-    nc = netcdf_file(fnm)
+    nc = scipy.io.netcdf_file(fnm)
     coords = (getvariable(nc, "longitude")[0], getvariable(nc, "latitude")[0])
 
     pres = getvariable(nc, "pressure")
@@ -953,8 +962,5 @@ class FieldError(TypeError):
     pass
 
 AbstractCast.register(Cast)
-# AbstractCast.register(CTDCast)
-# AbstractCast.register(XBTCast)
-# AbstractCast.register(LADCP)
 AbstractCastCollection.register(CastCollection)
 
