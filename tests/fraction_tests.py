@@ -61,9 +61,9 @@ class WaterFractionTests(unittest.TestCase):
         tmp = x * np.dot(ans, s[:,1])
         oxy = x * np.dot(ans, s[:,2])
 
-        c = CTDCast(np.arange(10), sal, tmp, oxy=oxy)
+        c = CTDCast(np.arange(10), sal, tmp, oxygen=oxy)
         (chi1, chi2, chi3, chi4) = c.water_fractions(sources,
-                                        tracers=["sal", "temp", "oxy"])
+                                    tracers=["salinity", "temperature", "oxygen"])
         self.assertTrue(np.allclose(chi1, ans_chi1))
         self.assertTrue(np.allclose(chi2, ans_chi2))
         self.assertTrue(np.allclose(chi3, ans_chi3))

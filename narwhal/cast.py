@@ -405,7 +405,7 @@ class Cast(object):
         Ld = 1.0 / np.sqrt(np.abs(np.real(lamda[1:])))
         return Ld, V[:,1:]
 
-    def water_fractions(self, sources, tracers=("sal", "temp")):
+    def water_fractions(self, sources, tracers=("salinity", "temperature")):
         """ Compute water mass fractions based on *n* (>= 2) conservative
         tracers.
 
