@@ -857,7 +857,7 @@ class CastCollection(collections.Sequence):
         d = dict(__schemaversion__=2.0,
                  type="castcollection")
         d["casts"] = [cast.asdict() for cast in self.casts]
-        return
+        return d
 
     def save_json(self, fnm, binary=True):
         """ Save a JSON-formatted representation to a file.
