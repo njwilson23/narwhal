@@ -8,7 +8,6 @@ import sys
 import abc
 import collections
 import itertools
-import json
 import gzip
 import copy
 import datetime, dateutil
@@ -16,8 +15,9 @@ from functools import reduce
 import six
 import numpy as np
 import pandas
-from scipy import ndimage
-from scipy import sparse as sprs
+import scipy.ndimage
+import scipy.sparse
+import scipy.sparse.linalg
 from scipy.interpolate import UnivariateSpline
 from scipy.io import netcdf_file
 from karta import Point, Multipoint
@@ -394,14 +394,14 @@ class Cast(object):
         F = f**2/N2
         F[0] = 0.0
         F[-1] = 0.0
-        F = sprs.diags(F, 0)
+        F = scipy.sparse.diags(F, 0)
 
         D1 = util.sparse_diffmat(len(N2), 1, h[0])
         D2 = util.sparse_diffmat(len(N2), 2, h[0])
 
-        T = sprs.diags(D1 * F.diagonal(), 0)
+        T = scipy.sparse.diags(D1 * F.diagonal(), 0)
         M = T*D1 + F*D2
-        lamda, V = sprs.linalg.eigs(M.tocsc(), k=nmodes+1, sigma=1e-8)
+        lamda, V = scipy.sparse.linalg.eigs(M.tocsc(), k=nmodes+1, sigma=1e-8)
         Ld = 1.0 / np.sqrt(np.abs(np.real(lamda[1:])))
         return Ld, V[:,1:]
 
@@ -421,17 +421,17 @@ class Cast(object):
             raise NarwhalError("Two or more prototype waters required")
 
         m = self.nvalid(tracers)
-        I = sprs.eye(m)
+        I = scipy.sparse.eye(m)
         A_ = np.array([[src[i] for src in sources] for i in range(n)])
         A = np.vstack([A_, np.ones(n+1, dtype=np.float64)])
-        As = sprs.kron(I, A, "csr")
+        As = scipy.sparse.kron(I, A, "csr")
         b = np.zeros((n+1)*m)
         msk = self.nanmask(tracers)
         for i in range(n):
             b[i::n+1] = self[tracers[i]][~msk]
         b[n::n+1] = 1.0             # lagrange multiplier
 
-        frac = sprs.linalg.spsolve(As, b)
+        frac = scipy.sparse.linalg.spsolve(As, b)
         chis = [np.empty(len(self)) * np.nan for i in range(n+1)]
         for i in range(n+1):
             chis[i][~msk] = frac[i::n+1]
@@ -454,8 +454,8 @@ class Cast(object):
         if ukey not in self.fields or vkey not in self.fields:
             raise FieldError("u and v velocity required")
         if s is not None:
-            u = ndimage.filters.gaussian_filter1d(self[ukey], s)
-            v = ndimage.filters.gaussian_filter1d(self[vkey], s)
+            u = scipy.ndimage.filters.gaussian_filter1d(self[ukey], s)
+            v = scipy.ndimage.filters.gaussian_filter1d(self[vkey], s)
         else:
             u = self[ukey]
             v = self[vkey]
@@ -906,14 +906,7 @@ def load_json(fnm):
         return fromdict(d)
     else:
         # Try reading using schema version 1
-        try:
-            with open(fnm, "r") as f:
-                d = json.load(f)
-        except (UnicodeDecodeError,ValueError):
-            with gzip.open(fnm, "rb") as f:
-                s = f.read().decode("utf-8")
-                d = json.loads(s)
-        return _fromjson(d)
+        return iojson._fromjson_old(d, Cast, CastCollection)
 
 # Dictionary schema:
 #
@@ -973,58 +966,6 @@ def read_woce_netcdf(fnm):
     return CTDCast(pres, sal, temp, oxygen=oxy,
                    coords=coords,
                    properties={"woce_time":time, "woce_date":date})
-
-##### FUNCTIONS FOR READING THE DEPRECATED JSON SCHEMA #####
-
-def _fromjson(d):
-    """ (DEPRECATED) Lower level function to (possibly recursively) convert
-    JSON into narwhal object. This reads the older JSON schema.
-    """
-
-    typ = d.get("type", None)
-    if typ == "cast":
-        return dictascast(d, Cast)
-    elif typ == "ctdcast":
-        return dictascast(d, CTDCast)
-    elif typ == "xbtcast":
-        return dictascast(d, XBTCast)
-    elif typ == "ladcpcast":
-        return dictascast(d, LADCP)
-    elif typ == "castcollection":
-        casts = [_fromjson(castdict) for castdict in d["casts"]]
-        return CastCollection(casts)
-    elif typ is None:
-        raise NarwhalError("couldn't read data type - file may be corrupt")
-    else:
-        raise LookupError("Invalid type: {0}".format(typ))
-
-def findunit(unitname):
-    """ (DEPRECATED - USED FOR _fromjson) """
-    for name in units.__dict__:
-        if str(units.__dict__[name]) == unitname:
-            return units.__dict__[name]
-    raise NameError("'{0}' not recognized as a unit".format(unitname))
-
-def dictascast(d, obj):
-    """ (DEPRECATED - USED FOR _fromjson)
-
-    Read a file-like stream and construct an object with a Cast-like
-    interface. """
-    d_ = d.copy()
-    d_.pop("type")
-    coords = d_["scalars"].pop("coordinates")
-    prop = d["scalars"]
-    for (key, value) in prop.items():
-        if "date" in key or "time" in key and isinstance(prop[key], str):
-            try:
-                prop[key] = dateutil.parser.parse(value)
-            except (TypeError, ValueError):
-                pass
-    prop.update(d_["vectors"])
-    cast = obj(coords=coords, **prop)
-    return cast
-
-############################################################
 
 class AbstractCast(six.with_metaclass(abc.ABCMeta)):
     pass

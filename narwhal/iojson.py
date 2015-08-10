@@ -40,6 +40,50 @@ def read(fnm):
             d = json.loads(s)
     return d
 
+
+##### FUNCTIONS FOR READING THE DEPRECATED JSON SCHEMA #####
+
+def _fromjson_old(d, cast_constructor, collection_constructor):
+    """ (DEPRECATED) Lower level function to (possibly recursively) convert
+    JSON into narwhal object. This reads the older JSON schema (version < 2.0).
+    """
+
+    typ = d.get("type", None)
+    if typ in ("cast", "ctdcast", "xbtcast", "ladcpcast"):
+        return dictascast_old(d, cast_constructor)
+    elif typ == "castcollection":
+        casts = [_fromjson_old(castdict, 
+                               cast_constructor,
+                               collection_constructor)
+                            for castdict in d["casts"]]
+        return collection_constructor(casts)
+    elif typ is None:
+        raise NarwhalError("couldn't read data type - file may be corrupt")
+    else:
+        raise LookupError("Invalid type: {0}".format(typ))
+
+def dictascast_old(d, constructor):
+    """ (DEPRECATED - USED FOR _fromjson_old)
+
+    Read a file-like stream and construct an object with a Cast-like
+    interface. """
+    d_ = d.copy()
+    d_.pop("type")
+    coords = d_["scalars"].pop("coordinates")
+    prop = d["scalars"]
+    for (key, value) in prop.items():
+        if "date" in key or "time" in key and isinstance(prop[key], str):
+            try:
+                prop[key] = dateutil.parser.parse(value)
+            except (TypeError, ValueError):
+                pass
+    prop.update(d_["vectors"])
+    return constructor(coords=coords, **prop)
+
+############################################################
+
+
+
 #def writecast(f, cast, binary=True):
 #    """ Write Cast data to a file-like stream. """
 #    d = cast.asdict()
