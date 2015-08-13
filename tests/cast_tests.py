@@ -99,7 +99,7 @@ class CastTests(unittest.TestCase):
 
         cast = CTDCast(p, s, t, coords=(-20, 50))
         cast.add_density()
-        self.assertTrue(np.allclose(rho, cast["rho"]))
+        self.assertTrue(np.allclose(rho, cast["density"]))
         return
 
     def test_add_buoyancy_freq_squared(self):
@@ -115,7 +115,7 @@ class CastTests(unittest.TestCase):
         ct = gsw.ct_from_t(sa, t, p)
         rho = np.asarray(gsw.rho(sa, ct, p))
 
-        cast = CTDCast(p, s, t, coords=(-20, 50), rho=rho)
+        cast = CTDCast(p, s, t, coords=(-20, 50), density=rho)
         cast.add_depth()
         cast.add_Nsquared(depthkey="depth")
 

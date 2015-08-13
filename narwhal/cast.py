@@ -288,7 +288,8 @@ class Cast(NarwhalBase):
                     print("Unable to serialize property {0} = {1}".format(k, v))
         return d
 
-    def add_density(self, salkey="salinity", tempkey="temperature", preskey="pressure", rhokey="rho"):
+    def add_density(self, salkey="salinity", tempkey="temperature",
+                    preskey="pressure", rhokey="density"):
         """ Add in-situ density computed from salinity, temperature, and
         pressure to fields. Return the field name.
         
@@ -314,7 +315,7 @@ class Cast(NarwhalBase):
         else:
             raise FieldError("salinity, temperature, and pressure required")
 
-    def add_depth(self, preskey="pressure", rhokey="rho", depthkey="depth"):
+    def add_depth(self, preskey="pressure", rhokey="density", depthkey="depth"):
         """ Use density and pressure to calculate depth.
         
         preskey::string
@@ -343,7 +344,7 @@ class Cast(NarwhalBase):
         depth = np.cumsum(dz)
         return self._addkeydata(depthkey, depth)
 
-    def add_Nsquared(self, rhokey="rho", depthkey="z", N2key="N2", s=0.2):
+    def add_Nsquared(self, rhokey="density", depthkey="depth", N2key="N2", s=0.2):
         """ Calculate the squared buoyancy frequency, based on in-situ density.
         Uses a smoothing spline to compute derivatives.
         
