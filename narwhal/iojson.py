@@ -3,8 +3,8 @@ objects to persistent files. """
 
 import json
 import gzip
+import dateutil
 import six
-import karta
 
 # This class coerces numpy values into Python types for JSON serialization. 
 class NumpyJSONEncoder(json.JSONEncoder):
@@ -79,7 +79,7 @@ def _fromjson_old(d, cast_constructor, collection_constructor):
                             for castdict in d["casts"]]
         return collection_constructor(casts)
     elif typ is None:
-        raise NarwhalError("couldn't read data type - file may be corrupt")
+        raise IOError("couldn't read data type - file may be corrupt")
     else:
         raise LookupError("Invalid type: {0}".format(typ))
 
@@ -127,9 +127,3 @@ def dictascast_old(d, constructor):
 #        json.dump(d, f, indent=2)
 #    return
 #
-#def castcollection_as_geojson(cc):
-#    castpoints = (karta.Point(c.coords, properties={"id":i})
-#                  for i, c in enumerate(cc))
-#    geojsonstring = karta.geojson.printFeatureCollection(castpoints)
-#    return geojsonstring
-
