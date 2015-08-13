@@ -35,8 +35,6 @@ import numpy as np
 import pandas
 
 import scipy.ndimage
-import scipy.sparse
-import scipy.sparse.linalg
 import scipy.io
 import scipy.interpolate
 
@@ -47,10 +45,6 @@ from . import gsw
 from . import util
 from . import iojson
 from . import iohdf
-
-# Global physical constants
-G = 9.8
-OMEGA = 2*np.pi / 86400.0
 
 class NarwhalBase(object):
     """ Base class for Narwhal objects implementing data export methods.
@@ -345,7 +339,7 @@ class Cast(NarwhalBase):
         rho.iloc[:idx] = rho.iloc[idx]
 
         dp = np.hstack([0.0, np.diff(self[preskey])])
-        dz = dp / (rho.interpolate() * G) * 1e4
+        dz = dp / (rho.interpolate() * 9.81) * 1e4
         depth = np.cumsum(dz)
         return self._addkeydata(depthkey, depth)
 
@@ -374,85 +368,8 @@ class Cast(NarwhalBase):
         drhodz = np.asarray([-rhospl.derivatives(_z)[1] for _z in z])
         N2 = np.empty(len(self), dtype=np.float64)
         N2[msk] = np.nan
-        N2[~msk] = -G / rho * drhodz
+        N2[~msk] = -9.81 / rho * drhodz
         return self._addkeydata(N2key, N2)
-
-    def baroclinic_modes(self, nmodes, ztop=10, N2key="N2", depthkey="z"):
-        """ Calculate the baroclinic normal modes based on linear
-        quasigeostrophy and the vertical stratification. Return the first
-        `nmodes::int` deformation radii and their associated eigenfunctions.
-
-        **Parameters**
-
-        ztop::float
-            the depth at which to cut off the profile, to avoid surface effects
-
-        N2key::string
-            data key to use for N^2
-
-        depthkey::string
-            data key to use for depth
-        """
-        if N2key not in self.fields or depthkey not in self.fields:
-            raise FieldError("buoyancy frequency and depth required")
-
-        igood = ~self.nanmask((N2key, depthkey))
-        N2 = self[N2key][igood]
-        dep = self[depthkey][igood]
-
-        itop = np.argwhere(dep > ztop)[0]
-        N2 = N2[itop:].values
-        dep = dep[itop:].values
-
-        h = np.diff(dep)
-        assert all(h[0] == h_ for h_ in h[1:])     # requires uniform gridding for now
-
-        f = 2*OMEGA * np.sin(self.coords[1])
-        F = f**2/N2
-        F[0] = 0.0
-        F[-1] = 0.0
-        F = scipy.sparse.diags(F, 0)
-
-        D1 = util.sparse_diffmat(len(N2), 1, h[0])
-        D2 = util.sparse_diffmat(len(N2), 2, h[0])
-
-        T = scipy.sparse.diags(D1 * F.diagonal(), 0)
-        M = T*D1 + F*D2
-        lamda, V = scipy.sparse.linalg.eigs(M.tocsc(), k=nmodes+1, sigma=1e-8)
-        Ld = 1.0 / np.sqrt(np.abs(np.real(lamda[1:])))
-        return Ld, V[:,1:]
-
-    def water_fractions(self, sources, tracers=("salinity", "temperature")):
-        """ Compute water mass fractions based on *n* (>= 2) conservative
-        tracers.
-
-        sources::[tuple, tuple, ...]
-            List of *n+1* tuples specifying prototype water masses in terms of
-            *tracers*. Each tuple must have length *n*.
-
-        tracers::[string, string, ...]
-            *n* Cast fields to use as tracers [default: ("sal", "temp")].
-        """
-        n = len(tracers)
-        if n < 2:
-            raise NarwhalError("Two or more prototype waters required")
-
-        m = self.nvalid(tracers)
-        I = scipy.sparse.eye(m)
-        A_ = np.array([[src[i] for src in sources] for i in range(n)])
-        A = np.vstack([A_, np.ones(n+1, dtype=np.float64)])
-        As = scipy.sparse.kron(I, A, "csr")
-        b = np.zeros((n+1)*m)
-        msk = self.nanmask(tracers)
-        for i in range(n):
-            b[i::n+1] = self[tracers[i]][~msk]
-        b[n::n+1] = 1.0             # lagrange multiplier
-
-        frac = scipy.sparse.linalg.spsolve(As, b)
-        chis = [np.empty(len(self)) * np.nan for i in range(n+1)]
-        for i in range(n+1):
-            chis[i][~msk] = frac[i::n+1]
-        return chis
 
     def add_shear(self, depthkey="depth", ukey="u_velocity", vkey="v_velocity", 
                   dudzkey="dudz", dvdzkey="dvdz", s=None):
@@ -695,180 +612,6 @@ class CastCollection(NarwhalBase, collections.Sequence):
             cumulative.append(cumulative[-1] + a.distance(b))
             a = b
         return np.asarray(cumulative, dtype=np.float64)
-
-    def thermal_wind(self, tempkey="temp", salkey="sal", rhokey=None,
-                     dudzkey="dudz", ukey="u", overwrite=False):
-        """ Compute profile-orthagonal velocity shear using hydrostatic thermal
-        wind. In-situ density is computed from temperature and salinity unless
-        *rhokey* is provided.
-
-        Adds a U field and a ∂U/∂z field to each cast in the collection. As a
-        side-effect, if casts have no "depth" field, one is added and populated
-        from temperature and salinity fields.
-
-        **Parameters**
-
-        tempkey::string
-            key to use for temperature if *rhokey* is None
-
-        salkey::string
-            key to use for salinity if *rhokey* is None
-
-        rhokey::string
-            key to use for density, or None [default: None]
-
-        dudzkey::string
-            key to use for ∂U/∂z, subject to *overwrite*
-
-        ukey::string
-            key to use for U, subject to *overwrite*
-
-        overwrite::bool
-            whether to allow cast fields to be overwritten if False, then
-            *ukey* and *dudzkey* are incremented until there is no clash
-        """
-        if rhokey is None:
-            rhokeys = []
-            for cast in self.casts:
-                rhokeys.append(cast.add_density())
-            if any(r != rhokeys[0] for r in rhokeys[1:]):
-                raise NarwhalError("Tried to add density field, but got inconsistent keys")
-            else:
-                rhokey = rhokeys[0]
-
-        rho = self.asarray(rhokey)
-        (m, n) = rho.shape
-
-        for cast in self:
-            if "z" not in cast.data.keys():
-                cast.add_depth()
-
-        drho = util.diff2_dinterp(rho, self.projdist())
-        sinphi = np.sin([c.coords[1]*np.pi/180.0 for c in self.casts])
-        dudz = (G / rho * drho) / (2*OMEGA*sinphi)
-        u = util.uintegrate(dudz, self.asarray("z"))
-
-        for (ic,cast) in enumerate(self.casts):
-            cast._addkeydata(dudzkey, dudz[:,ic], overwrite=overwrite)
-            cast._addkeydata(ukey, u[:,ic], overwrite=overwrite)
-        return
-
-    def thermal_wind_inner(self, tempkey="temp", salkey="sal", rhokey=None,
-                           dudzkey="dudz", ukey="u", bottomkey="depth",
-                           overwrite=False):
-        """ Alternative implementation that creates a new cast collection
-        consistng of points between the observation casts.
-
-        Compute profile-orthagonal velocity shear using hydrostatic thermal
-        wind. In-situ density is computed from temperature and salinity unless
-        *rhokey* is provided.
-
-        Adds a U field and a ∂U/∂z field to each cast in the collection. As a
-        side-effect, if casts have no "depth" field, one is added and populated
-        from temperature and salinity fields.
-
-        **Parameters**
-
-        tempkey::string
-            key to use for temperature if *rhokey* is None
-
-        salkey::string
-            key to use for salinity if *rhokey* is None
-
-        rhokey::string
-            key to use for density, or None [default: None]
-
-        dudzkey::string
-            key to use for ∂U/∂z, subject to *overwrite*
-
-        ukey::string
-            key to use for U, subject to *overwrite*
-
-        overwrite::bool
-            whether to allow cast fields to be overwritten if False, then
-            *ukey* and *dudzkey* are incremented until there is no clash
-        """
-        if rhokey is None:
-            rhokeys = []
-            for cast in self.casts:
-                rhokeys.append(cast.add_density())
-            if any(r != rhokeys[0] for r in rhokeys[1:]):
-                raise NarwhalError("Tried to add density field, but found inconsistent keys")
-            else:
-                rhokey = rhokeys[0]
-
-        rho = self.asarray(rhokey)
-        (m, n) = rho.shape
-
-        def avgcolumns(a, b):
-            avg = a if len(a[~np.isnan(a)]) > len(b[~np.isnan(b)]) else b
-            return avg
-
-        # Add casts in intermediate positions
-        midcasts = []
-        for i in range(len(self.casts)-1):
-            c1 = self[i].coords
-            c2 = self[i+1].coords
-            cmid = (0.5*(c1[0]+c2[0]), 0.5*(c1[1]+c2[1]))
-            p = avgcolumns(self[i]["pressure"], self[i+1]["pressure"])
-            t = avgcolumns(self[i]["temperature"], self[i+1]["temperature"])
-            s = avgcolumns(self[i]["salinity"], self[i+1]["salinity"])
-            cast = CTDCast(p, s, t, coords=cmid)
-            if "depth" not in cast.fields:
-                cast.add_density()
-            cast.add_depth()
-            cast.properties[bottomkey] = 0.5 * (self[i].properties[bottomkey] +
-                                                self[i+1].properties[bottomkey])
-            midcasts.append(cast)
-
-        coll = CastCollection(midcasts)
-        drho = util.diff2_inner(rho, self.projdist())
-        sinphi = np.sin([c.coords[1]*np.pi/180.0 for c in midcasts])
-        rhoavg = 0.5 * (rho[:,:-1] + rho[:,1:])
-        dudz = (G / rhoavg * drho) / (2*OMEGA*sinphi)
-        u = util.uintegrate(dudz, coll.asarray("z"))
-
-        for (ic,cast) in enumerate(coll):
-            cast._addkeydata(dudzkey, dudz[:,ic], overwrite=overwrite)
-            cast._addkeydata(ukey, u[:,ic], overwrite=overwrite)
-        return coll
-
-
-    def eofs(self, key="temperature", zkey="depth", n_eofs=None):
-        """ Compute the EOFs and EOF structures for *key*. Returns a cast with
-        the structure functions, an array of eigenvectors (EOFs), and an array
-        of eigenvalues.
-
-        Requires all casts to have the same depth-gridding.
-        
-        **Parameters**
-
-        key::string
-            key to use for computing EOFs
-
-        n_eofs::int
-            number of EOFs to return
-        """
-        assert all(zkey in c.fields for c in self)
-        assert all(all(self[0].data.index == c.data.index) for c in self[1:])
-
-        if n_eofs is None:
-            n_eofs = len(self)
-
-        arr = self.asarray(key)
-        msk = reduce(lambda a,b:a|b, (c.nanmask(key) for c in self))
-        arr = arr[~msk,:]
-        arr -= arr.mean()
-
-        _,sigma,V = np.linalg.svd(arr)
-        lamb = sigma**2/(len(self)-1)
-        eofts = util.eof_timeseries(arr, V)
-
-        c0 = self[0]
-        c = Cast(**{zkey: c0[zkey][~msk]})
-        for i in range(n_eofs):
-            c._addkeydata("_eof".join([key, str(i+1)]), eofts[:,i])
-        return c, lamb[:n_eofs], V[:,:n_eofs]
 
     def asdict(self):
         """ Return a representation of the Cast as a Python dictionary.
