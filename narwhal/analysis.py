@@ -13,19 +13,25 @@ import scipy.sparse
 import scipy.sparse.linalg
 
 # Global physical constants
-G = 9.8
+G = 9.81
 OMEGA = 2*np.pi / 86400.0
 
 def water_fractions(cast, sources, tracers=("salinity", "temperature")):
     """ Compute water mass fractions based on *n* (>= 2) conservative
     tracers.
 
-    sources::[tuple, tuple, ...]
-        List of *n+1* tuples specifying prototype water masses in terms of
-        *tracers*. Each tuple must have length *n*.
+    Arguments
+    ---------
 
-    tracers::[string, string, ...]
-        *n* Cast fields to use as tracers [default: ("sal", "temp")].
+    sources (list of tuples)
+
+        List of *n+1* tuples specifying prototype water masses in terms of
+        `tracers` (see below). Each tuple must have length *n*.
+
+    tracers (list of strings)
+
+        *n* strings serving as Cast fields to use as tracers [default:
+        ("salinity", "temperature")].
     """
     n = len(tracers)
     if n < 2:
@@ -49,20 +55,24 @@ def water_fractions(cast, sources, tracers=("salinity", "temperature")):
     return chis
 
 
-def baroclinic_modes(cast, nmodes, ztop=10, N2key="N2", depthkey="z"):
+def baroclinic_modes(cast, nmodes, ztop=10, N2key="N2", depthkey="depth"):
     """ Calculate the baroclinic normal modes based on linear
     quasigeostrophy and the vertical stratification. Return the first
     `nmodes::int` deformation radii and their associated eigenfunctions.
 
-    **Parameters**
+    Arguments
+    ---------
 
-    ztop::float
+    ztop (float)
+
         the depth at which to cut off the profile, to avoid surface effects
 
-    N2key::string
+    N2key (string)
+
         data key to use for N^2
 
-    depthkey::string
+    depthkey (string)
+
         data key to use for depth
     """
     if N2key not in cast.fields or depthkey not in cast.fields:
@@ -95,8 +105,8 @@ def baroclinic_modes(cast, nmodes, ztop=10, N2key="N2", depthkey="z"):
     return Ld, V[:,1:]
 
 
-def thermal_wind(castcoll, tempkey="temp", salkey="sal", rhokey=None,
-                 dudzkey="dudz", ukey="u", overwrite=False):
+def thermal_wind(castcoll, tempkey="temperature", salkey="salinity",
+                 rhokey=None, depthkey="depth", dudzkey="dudz", ukey="u", overwrite=False):
     """ Compute profile-orthagonal velocity shear using hydrostatic thermal
     wind. In-situ density is computed from temperature and salinity unless
     *rhokey* is provided.
@@ -105,24 +115,31 @@ def thermal_wind(castcoll, tempkey="temp", salkey="sal", rhokey=None,
     side-effect, if casts have no "depth" field, one is added and populated
     from temperature and salinity fields.
 
-    **Parameters**
+    Arguments
+    ---------
 
-    tempkey::string
+    tempkey (string)
+
         key to use for temperature if *rhokey* is None
 
-    salkey::string
+    salkey (string)
+
         key to use for salinity if *rhokey* is None
 
-    rhokey::string
+    rhokey (string)
+
         key to use for density, or None [default: None]
 
-    dudzkey::string
+    dudzkey (string)
+
         key to use for ∂U/∂z, subject to *overwrite*
 
-    ukey::string
+    ukey (string)
+
         key to use for U, subject to *overwrite*
 
-    overwrite::bool
+    overwrite (bool)
+
         whether to allow cast fields to be overwritten if False, then
         *ukey* and *dudzkey* are incremented until there is no clash
     """
@@ -139,21 +156,21 @@ def thermal_wind(castcoll, tempkey="temp", salkey="sal", rhokey=None,
     (m, n) = rho.shape
 
     for cast in castcoll:
-        if "z" not in cast.data.keys():
+        if depthkey not in cast.data.keys():
             cast.add_depth()
 
     drho = util.diff2_dinterp(rho, castcoll.projdist())
     sinphi = np.sin([c.coords[1]*np.pi/180.0 for c in castcoll.casts])
     dudz = (G / rho * drho) / (2*OMEGA*sinphi)
-    u = util.uintegrate(dudz, castcoll.asarray("z"))
+    u = util.uintegrate(dudz, castcoll.asarray(depthkey))
 
     for (ic,cast) in enumerate(castcoll.casts):
         cast._addkeydata(dudzkey, dudz[:,ic], overwrite=overwrite)
         cast._addkeydata(ukey, u[:,ic], overwrite=overwrite)
     return
 
-def thermal_wind_inner(castcoll, tempkey="temp", salkey="sal", rhokey=None,
-                       dudzkey="dudz", ukey="u", bottomkey="depth",
+def thermal_wind_inner(castcoll, tempkey="temperature", salkey="salinity",
+                       rhokey=None, dudzkey="dudz", ukey="u", bottomkey="depth",
                        overwrite=False):
     """ Alternative implementation that creates a new cast collection
     consistng of points between the observation casts.
@@ -166,24 +183,31 @@ def thermal_wind_inner(castcoll, tempkey="temp", salkey="sal", rhokey=None,
     side-effect, if casts have no "depth" field, one is added and populated
     from temperature and salinity fields.
 
-    **Parameters**
+    Arguments
+    ---------
 
-    tempkey::string
+    tempkey (string)
+
         key to use for temperature if *rhokey* is None
 
-    salkey::string
+    salkey (string)
+
         key to use for salinity if *rhokey* is None
 
-    rhokey::string
+    rhokey (string)
+
         key to use for density, or None [default: None]
 
-    dudzkey::string
+    dudzkey (string)
+
         key to use for ∂U/∂z, subject to *overwrite*
 
-    ukey::string
+    ukey (string)
+
         key to use for U, subject to *overwrite*
 
-    overwrite::bool
+    overwrite (bool)
+
         whether to allow cast fields to be overwritten if False, then
         *ukey* and *dudzkey* are incremented until there is no clash
     """
@@ -225,7 +249,7 @@ def thermal_wind_inner(castcoll, tempkey="temp", salkey="sal", rhokey=None,
     sinphi = np.sin([c.coords[1]*np.pi/180.0 for c in midcasts])
     rhoavg = 0.5 * (rho[:,:-1] + rho[:,1:])
     dudz = (G / rhoavg * drho) / (2*OMEGA*sinphi)
-    u = util.uintegrate(dudz, coll.asarray("z"))
+    u = util.uintegrate(dudz, coll.asarray(depthkey))
 
     for (ic,cast) in enumerate(coll):
         cast._addkeydata(dudzkey, dudz[:,ic], overwrite=overwrite)
@@ -239,12 +263,15 @@ def eofs(castcoll, key="temperature", zkey="depth", n_eofs=None):
 
     Requires all casts to have the same depth-gridding.
     
-    **Parameters**
+    Arguments
+    ---------
 
-    key::string
+    key (string)
+
         key to use for computing EOFs
 
-    n_eofs::int
+    n_eofs (int)
+
         number of EOFs to return
     """
     assert all(zkey in c.fields for c in castcoll)
