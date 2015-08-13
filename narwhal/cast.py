@@ -194,8 +194,8 @@ class Cast(NarwhalBase):
         return list(self.data.columns)
 
     @property
-    def coords(self):
-        return self.properties["coordinates"]
+    def coordinates(self):
+        return Point(self.properties["coordinates"], crs=LonLatWGS84)
 
     def nanmask(self, fields=None):
         """ Return a mask for observations containing at least one NaN. """
@@ -587,7 +587,7 @@ class CastCollection(NarwhalBase, collections.Sequence):
         return s
 
     @property
-    def coords(self):
+    def coordinates(self):
         return Multipoint([c.coords for c in self], crs=LonLatWGS84)
 
     def add_bathymetry(self, bathymetry):
