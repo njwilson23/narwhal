@@ -115,7 +115,7 @@ class Cast(NarwhalBase):
         return s
 
     def __getitem__(self, key):
-        if isinstance(key, int):
+        if isinstance(key, (int, np.int32, np.int64)):
             if 0 <= key < len(self):
                 return self.data.irow(key)
             else:
@@ -136,7 +136,7 @@ class Cast(NarwhalBase):
             else:
                 raise NarwhalError("Fields must be set from iterables with length equal to the cast")
 
-        elif isinstance(key, int):
+        elif isinstance(key, (int, np.int32, np.int64)):
             raise NarwhalError("Profiles are immutable")
         else:
             raise KeyError("{0} is an invalid key".format(key))
