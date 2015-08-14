@@ -2,6 +2,10 @@
 import unittest
 import os
 import numpy as np
+
+from karta import Point
+from karta.crs import LonLatWGS84
+
 import narwhal
 from narwhal import gsw
 from narwhal.cast import Cast, CTDCast, XBTCast, LADCP
@@ -215,6 +219,19 @@ class CastCollectionTests(unittest.TestCase):
         cc = self.cc
         casts = cc.select("uniq_val", (-36, -49, -16))
         self.assertEqual(casts, cc[6:8] + cc[4])
+        return
+
+    def test_nearest_to(self):
+        casts = []
+        for i in range(10):
+            casts.append(Cast(pressure=[1, 2, 3], temperature=[5, 6, 7],
+                              coordinates=(-30.0 + i, 10.0 - 2*i)))
+
+        cc = CastCollection(casts)
+        pt = Point((-26.2, 2.1), crs=LonLatWGS84)
+        nearest, dist = cc.nearest_to_point(pt)
+        self.assertEqual(nearest.coordinates.vertex, (-26.0, 2.0))
+        self.assertAlmostEqual(dist, 24845.942236224932)
         return
 
     def test_defray(self):

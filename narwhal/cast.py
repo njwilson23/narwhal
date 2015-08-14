@@ -105,8 +105,8 @@ class Cast(NarwhalBase):
         return len(self.data.index)
 
     def __str__(self):
-        if self.coords is not None:
-            coords = tuple(round(c, 3) for c in self.coords)
+        if self.coordinates is not None:
+            coords = tuple(round(c, 3) for c in self.coordinates)
         else:
             coords = (None, None)
         s = "Cast (" + "".join([str(k)+", " for k in self.fields])
@@ -307,8 +307,8 @@ class Cast(NarwhalBase):
         """
         if salkey in self.fields and tempkey in self.fields and preskey in self.fields:
             SA = gsw.sa_from_sp(self[salkey], self[preskey],
-                                [self.coords[0] for _ in self[salkey]],
-                                [self.coords[1] for _ in self[salkey]])
+                                [self.coordinates[0] for _ in self[salkey]],
+                                [self.coordinates[1] for _ in self[salkey]])
             CT = gsw.ct_from_t(SA, self[tempkey], self[preskey])
             rho = gsw.rho(SA, CT, self[preskey])
             return self._addkeydata(rhokey, np.asarray(rho))
@@ -449,7 +449,7 @@ class CastCollection(NarwhalBase, collections.Sequence):
         return len(self.casts)
 
     def __getitem__(self, key):
-        if isinstance(key, int):
+        if isinstance(key, (int, np.int32, np.int64)):
             return self.casts.__getitem__(key)
         elif isinstance(key, slice):
             return type(self)(self.casts.__getitem__(key))
@@ -492,8 +492,8 @@ class CastCollection(NarwhalBase, collections.Sequence):
         i = 0
         while i != 10 and i != len(self.casts):
             c = self.casts[i]
-            lon = c.coords[0] or np.nan
-            lat = c.coords[1] or np.nan
+            lon = c.coordinates[0] or np.nan
+            lat = c.coordinates[1] or np.nan
             s +=  ("\n  {num:3g} {typestr:6s} {lon:3.3f} {lat:2.3f}    "
                     "{keys}".format(typestr="Cast", num=i+1,
                                     lon=lon, lat=lat, keys=c.fields[:8]))
@@ -506,7 +506,7 @@ class CastCollection(NarwhalBase, collections.Sequence):
 
     @property
     def coordinates(self):
-        return Multipoint([c.coords for c in self], crs=LonLatWGS84)
+        return Multipoint([c.coordinates for c in self], crs=LonLatWGS84)
 
     def add_bathymetry(self, bathymetry):
         """ Reference Bathymetry instance `bathymetry` to CastCollection.
@@ -515,8 +515,8 @@ class CastCollection(NarwhalBase, collections.Sequence):
             bathymetry instance
         """
         for cast in self.casts:
-            if hasattr(cast, "coords"):
-                cast.properties["depth"] = bathymetry.atxy(*cast.coords)
+            if hasattr(cast, "coordinates"):
+                cast.properties["depth"] = bathymetry.atxy(*cast.coordinates)
             else:
                 cast.properties["tdepth"] = np.nan
                 sys.stderr.write("Warning: cast has no coordinates")
@@ -570,6 +570,12 @@ class CastCollection(NarwhalBase, collections.Sequence):
         casts = [self.castwhere(key, v) for v in values]
         return CastCollection(casts)
 
+    def nearest_to_point(self, point):
+        """ Return the cast nearest to a karta Point, as well as the distance """
+        distances = self.coordinates.distances_to(point)
+        idx_min = np.argmin(distances)
+        return self[idx_min], distances[idx_min]
+
     def defray(self):
         """ Pad casts to all have the same length, and return a copy.
         
@@ -607,9 +613,9 @@ class CastCollection(NarwhalBase, collections.Sequence):
         if (np.nan, np.nan) in (c.p["coordinates"] for c in self):
             raise AttributeError("all casts must contain non-NaN coordinates")
         cumulative = [0]
-        a = Point(self.casts[0].coords, crs=LonLatWGS84)
+        a = Point(self.casts[0].coordinates, crs=LonLatWGS84)
         for cast in self.casts[1:]:
-            b = Point(cast.coords, crs=LonLatWGS84)
+            b = Point(cast.coordinates, crs=LonLatWGS84)
             cumulative.append(cumulative[-1] + a.distance(b))
             a = b
         return np.asarray(cumulative, dtype=np.float64)
@@ -692,7 +698,7 @@ def read_woce_netcdf(fnm):
     date = getvariable(nc, "woce_date")
     time = getvariable(nc, "woce_time")
     return CTDCast(pres, sal, temp, oxygen=oxy,
-                   coords=coords,
+                   coordinates=coords,
                    properties={"woce_time":time, "woce_date":date})
 
 class AbstractCast(six.with_metaclass(abc.ABCMeta)):
