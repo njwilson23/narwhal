@@ -106,7 +106,8 @@ def baroclinic_modes(cast, nmodes, ztop=10, N2key="N2", depthkey="depth"):
 
 
 def thermal_wind(castcoll, tempkey="temperature", salkey="salinity",
-                 rhokey=None, depthkey="depth", dudzkey="dudz", ukey="u", overwrite=False):
+                 rhokey=None, depthkey="depth", dudzkey="dudz", ukey="u", 
+                 overwrite=False):
     """ Compute profile-orthagonal velocity shear using hydrostatic thermal
     wind. In-situ density is computed from temperature and salinity unless
     *rhokey* is provided.
@@ -170,8 +171,8 @@ def thermal_wind(castcoll, tempkey="temperature", salkey="salinity",
     return
 
 def thermal_wind_inner(castcoll, tempkey="temperature", salkey="salinity",
-                       rhokey=None, dudzkey="dudz", ukey="u", bottomkey="depth",
-                       overwrite=False):
+                       rhokey=None, depthkey="depth", dudzkey="dudz", ukey="u", 
+                       bottomkey="bottom", overwrite=False):
     """ Alternative implementation that creates a new cast collection
     consistng of points between the observation casts.
 
