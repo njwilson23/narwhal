@@ -34,7 +34,7 @@ Narwhal provides a *ctypes* wrapper for the
 [Gibbs Seawater Toolbox](http://www.teos-10.org/pubs/gsw/html/gsw_contents.html)
 in the `narwhal.gsw` submodule, making things like the following possible:
 
-    density = narwhal.gsw.rho(cast["abssal"], cast["constemp"], cast["pres"])
+    density = narwhal.gsw.rho(cast["sa"], cast["ct"], cast["p"])
 
 ## Installation
 
