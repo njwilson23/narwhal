@@ -31,9 +31,8 @@ class Bathymetry2d(Line):
                               crs=self._crs, copy_metadata=False)
         return subset
 
-    def atxy(self, x, y):
+    def atpoint(self, pt):
         """ Interpolate bottom depth at a point. """
-        pt = Point((x, y), crs=LonLatWGS84)
         segments = tuple(self.segments)
         distances = [seg.shortest_distance_to(pt) for seg in segments]
         ii = distances.index(min(distances))

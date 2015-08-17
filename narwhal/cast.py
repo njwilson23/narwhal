@@ -516,7 +516,7 @@ class CastCollection(NarwhalBase, collections.Sequence):
         """
         for cast in self.casts:
             if hasattr(cast, "coordinates"):
-                cast.properties["depth"] = bathymetry.atxy(*cast.coordinates)
+                cast.properties["depth"] = bathymetry.atpoint(cast.coordinates)
             else:
                 cast.properties["tdepth"] = np.nan
                 sys.stderr.write("Warning: cast has no coordinates")
@@ -613,11 +613,10 @@ class CastCollection(NarwhalBase, collections.Sequence):
         if (np.nan, np.nan) in (c.p["coordinates"] for c in self):
             raise AttributeError("all casts must contain non-NaN coordinates")
         cumulative = [0]
-        a = Point(self.casts[0].coordinates, crs=LonLatWGS84)
+        prevcast = self.casts[0]
         for cast in self.casts[1:]:
-            b = Point(cast.coordinates, crs=LonLatWGS84)
-            cumulative.append(cumulative[-1] + a.distance(b))
-            a = b
+            cumulative.append(cumulative[-1] + prevcast.coordinates.distance(cast.coordinates))
+            prevcast = cast
         return np.asarray(cumulative, dtype=np.float64)
 
     def asdict(self):
