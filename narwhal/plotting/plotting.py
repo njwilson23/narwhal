@@ -62,9 +62,9 @@ def plot_map(castlikes, ax=None, crs=None, **kw):
     """ Plot a simple map of cast locations. """
     def _coord_transformer(cast, crs):
         if crs:
-            return crs.project(cast.coords[0], cast.coords[1])
+            return crs.project(cast.coordinates.x, cast.coordinates.y)
         else:
-            return (cast.coords[0], cast.coords[1])
+            return (cast.coordinates.x, cast.coordinates.y)
 
     def _plot_coords(ax, cast, **kw):
         if isinstance(cast, AbstractCastCollection):

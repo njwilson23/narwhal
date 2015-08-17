@@ -162,8 +162,8 @@ class BaseSectionAxes(plt.Axes):
         """
         if hasattr(vertices, "get_vertices"):
             vertices = vertices.get_vertices()
-        elif hasattr(vertices, "coords"):
-            vertices = vertices.coords.get_vertices()
+        elif hasattr(vertices, "coordinates"):
+            vertices = vertices.coordinates.get_vertices()
 
         cruiseline = Line(vertices, crs=LonLatWGS84)
         xalong, xacross = bathymetry.project_along_cruise(cruiseline)

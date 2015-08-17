@@ -101,7 +101,7 @@ class CastTests(unittest.TestCase):
         ct = gsw.ct_from_t(sa, t, p)
         rho = gsw.rho(sa, ct, p)
 
-        cast = CTDCast(p, s, t, coords=(-20, 50))
+        cast = CTDCast(p, s, t, coordinates=(-20, 50))
         cast.add_density()
         self.assertTrue(np.allclose(rho, cast["density"]))
         return
@@ -119,7 +119,7 @@ class CastTests(unittest.TestCase):
         ct = gsw.ct_from_t(sa, t, p)
         rho = np.asarray(gsw.rho(sa, ct, p))
 
-        cast = CTDCast(p, s, t, coords=(-20, 50), density=rho)
+        cast = CTDCast(p, s, t, coordinates=(-20, 50), density=rho)
         cast.add_depth()
         cast.add_Nsquared(depthkey="depth")
 

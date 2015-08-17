@@ -89,7 +89,7 @@ def baroclinic_modes(cast, nmodes, ztop=10, N2key="N2", depthkey="depth"):
     h = np.diff(dep)
     assert all(h[0] == h_ for h_ in h[1:])     # requires uniform gridding for now
 
-    f = 2*OMEGA * np.sin(cast.coords[1])
+    f = 2*OMEGA * np.sin(cast.coordinates.y)
     F = f**2/N2
     F[0] = 0.0
     F[-1] = 0.0
@@ -161,7 +161,7 @@ def thermal_wind(castcoll, tempkey="temperature", salkey="salinity",
             cast.add_depth()
 
     drho = util.diff2_dinterp(rho, castcoll.projdist())
-    sinphi = np.sin([c.coords[1]*np.pi/180.0 for c in castcoll.casts])
+    sinphi = np.sin([c.coordinates.y*np.pi/180.0 for c in castcoll.casts])
     dudz = (G / rho * drho) / (2*OMEGA*sinphi)
     u = util.uintegrate(dudz, castcoll.asarray(depthkey))
 
@@ -231,13 +231,13 @@ def thermal_wind_inner(castcoll, tempkey="temperature", salkey="salinity",
     # Add casts in intermediate positions
     midcasts = []
     for i in range(len(castcoll)-1):
-        c1 = castcoll[i].coords
-        c2 = castcoll[i+1].coords
-        cmid = (0.5*(c1[0]+c2[0]), 0.5*(c1[1]+c2[1]))
+        c1 = castcoll[i].coordinates
+        c2 = castcoll[i+1].coordinates
+        cmid = c1.walk(0.5*c1.distance(c2), c1.azimuth(c2))
         p = avgcolumns(castcoll[i]["pressure"], castcoll[i+1]["pressure"])
         t = avgcolumns(castcoll[i]["temperature"], castcoll[i+1]["temperature"])
         s = avgcolumns(castcoll[i]["salinity"], castcoll[i+1]["salinity"])
-        cast = CTDCast(p, s, t, coords=cmid)
+        cast = CTDCast(p, s, t, coordinates=cmid.vertex)
         if "depth" not in cast.fields:
             cast.add_density()
         cast.add_depth()
@@ -247,7 +247,7 @@ def thermal_wind_inner(castcoll, tempkey="temperature", salkey="salinity",
 
     coll = CastCollection(midcasts)
     drho = util.diff2_inner(rho, castcoll.projdist())
-    sinphi = np.sin([c.coords[1]*np.pi/180.0 for c in midcasts])
+    sinphi = np.sin([c.coordinates.y*np.pi/180.0 for c in midcasts])
     rhoavg = 0.5 * (rho[:,:-1] + rho[:,1:])
     dudz = (G / rhoavg * drho) / (2*OMEGA*sinphi)
     u = util.uintegrate(dudz, coll.asarray(depthkey))
