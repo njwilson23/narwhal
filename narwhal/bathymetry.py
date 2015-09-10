@@ -27,8 +27,8 @@ class Bathymetry2d(Line):
         """ Return a subset defined by index in *idxs*. """
         vertices = [self.vertices[i] for i in idxs]
         depth = [self.depth[i] for i in idxs]
-        subset = Bathymetry2d(vertices, depth=depth, 
-                              crs=self._crs, copy_metadata=False)
+        subset = Bathymetry2d(vertices, depth=depth,
+                              crs=self.crs, copy_metadata=False)
         return subset
 
     def atpoint(self, pt):
@@ -59,7 +59,7 @@ class Bathymetry2d(Line):
         p       a vector of distances along the cruise
         q       a vector of distances from the cruise line
         """
-        if self._crs != cruiseline._crs:
+        if self.crs != cruiseline.crs:
             raise karta.CRSError("CRS mismatch")
 
         P, Q = [], []
@@ -78,4 +78,3 @@ class Bathymetry2d(Line):
         return np.asarray(P), np.asarray(Q)
 
 Bathymetry = Bathymetry2d
-
