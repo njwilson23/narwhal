@@ -3,9 +3,14 @@ Bathymetry class that can be referenced to a CastCollection and automatically
 plotted.
 """
 import numpy as np
-import karta
-from karta import Point, Line
-from karta.crs import LonLatWGS84
+
+try:
+    import karta
+    from karta import Point, Line
+    from karta.crs import LonLatWGS84
+except ImportError:
+    # Frankly, this is unlikely to work right now
+    from .geo import Point, Line, LonLatWGS84
 
 class Bathymetry2d(Line):
     """ Bathymetric line
