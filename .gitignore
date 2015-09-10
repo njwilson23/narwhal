@@ -12,5 +12,4 @@ tests/htmlcov/
 
 # Build information
 build/
-deps/
 *.egg-info
