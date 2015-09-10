@@ -25,6 +25,7 @@ def debug_showtypes(d, indent=0):
 
 def write(fnm, d):
     f = h5py.File(fnm, "w")
+    f.attrs["hdf_driver_version"] = "0.4.0"
     dicttogroup(d, f)
     return
 
