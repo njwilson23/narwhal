@@ -1,4 +1,5 @@
 #import datetime
+import numpy as np
 import h5py
 
 def debug_showtypes(d, indent=0):
@@ -41,10 +42,14 @@ def dicttogroup(d, h5group):
             dicttogroup(v, g)
         else:
             try:
-                h5group[k] = v
+                if isinstance(v, (list, np.ndarray)):
+                    dset = h5group.create_dataset(k, data=v,
+                                                     compression="gzip",
+                                                     compression_opts=4)
+                else:
+                    h5group[k] = v
             except TypeError as e:
-                print(str(e))
-                print(type(v))
+                print(k, str(e))
     return
 
 def read(fnm):
