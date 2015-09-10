@@ -292,7 +292,7 @@ class Cast(NarwhalBase):
                     preskey="pressure", rhokey="density"):
         """ Add in-situ density computed from salinity, temperature, and
         pressure to fields. Return the field name.
-        
+
         salkey::string
             data key to use for salinity
 
@@ -317,7 +317,7 @@ class Cast(NarwhalBase):
 
     def add_depth(self, preskey="pressure", rhokey="density", depthkey="depth"):
         """ Use density and pressure to calculate depth.
-        
+
         preskey::string
             data key to use for pressure
 
@@ -347,7 +347,7 @@ class Cast(NarwhalBase):
     def add_Nsquared(self, rhokey="density", depthkey="depth", N2key="N2", s=0.2):
         """ Calculate the squared buoyancy frequency, based on in-situ density.
         Uses a smoothing spline to compute derivatives.
-        
+
         rhokey::string
             data key to use for in-situ density
 
@@ -372,7 +372,7 @@ class Cast(NarwhalBase):
         N2[~msk] = -9.81 / rho * drhodz
         return self._addkeydata(N2key, N2)
 
-    def add_shear(self, depthkey="depth", ukey="u_velocity", vkey="v_velocity", 
+    def add_shear(self, depthkey="depth", ukey="u_velocity", vkey="v_velocity",
                   dudzkey="dudz", dvdzkey="dvdz", s=None):
         """ Compute the velocity shear for *u* and *v*. If *s* is not None,
         smooth the data with a gaussian filter before computing the derivative.
@@ -578,7 +578,7 @@ class CastCollection(NarwhalBase, collections.Sequence):
 
     def defray(self):
         """ Pad casts to all have the same length, and return a copy.
-        
+
         Warning: does not correct differing pressure bins, which require
         explicit interpolation.
         """
@@ -628,10 +628,10 @@ class CastCollection(NarwhalBase, collections.Sequence):
         return d
 
 def load(fnm):
-    """ Guess a file format based on filename extension and attempt to read it. 
+    """ Guess a file format based on filename extension and attempt to read it.
     """
     base, ext = os.path.splitext(fnm)
-    if ext.lower() == ".hdf":
+    if ext.lower() in (".h5", ".hdf"):
         return load_hdf(fnm)
     elif ext.lower() in (".nwl", ".nwz", ".json"):
         return load_json(fnm)
@@ -714,4 +714,3 @@ class FieldError(TypeError):
 
 AbstractCast.register(Cast)
 AbstractCastCollection.register(CastCollection)
-
