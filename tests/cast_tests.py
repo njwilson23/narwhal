@@ -128,7 +128,7 @@ class CastTests(unittest.TestCase):
         drhodz = -np.r_[rho[1]-rho[0], rho[2:]-rho[:-2], rho[-1]-rho[-2]] / \
                   np.r_[z[1]-z[0], z[2:]-z[:-2], z[-1]-z[-2]]
         N2_direct = -9.81 / rho * drhodz
-        self.assertTrue(np.mean(np.abs(cast["N2"] - N2_direct)) < 0.0003)
+        self.assertTrue(np.mean(np.abs(cast["N2"][1:] - N2_direct[1:])) < 0.0004)
         return
 
     def test_LADCP_shear(self):
@@ -322,4 +322,3 @@ class MiscTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-
