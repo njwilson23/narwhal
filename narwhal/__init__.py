@@ -8,6 +8,7 @@ from . import gsw
 from . import util
 from . import analysis
 from . import plotting
+from . import geo
 
 from . import iojson
 
@@ -17,4 +18,3 @@ except ImportError:
     pass
 
 __all__ = ["cast", "bathymetry", "gsw", "util", "analysis"]
-

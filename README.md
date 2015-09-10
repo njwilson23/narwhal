@@ -44,19 +44,20 @@ in the `narwhal.gsw` submodule, making things like the following possible:
 
 ## Dependencies
 
-- Python 2.7+ or Python 3.2+
+- Python 2.7+ or Python 3.3+
 - pandas
 - numpy
 - matplotlib
 - scipy
-- [karta](https://github.com/njwilson23/karta)
 - h5py
 - requests
 - dateutil
 - six
 - C-compiler (for GSW)
 
+[karta >= 0.4.6](https://github.com/njwilson23/karta) is recommended, and
+required for some geographical analysis.
+
 Narwhal is experimental. See also
 [python-oceans](https://github.com/ocefpaf/python-oceans) and
 [oce](https://github.com/dankelley/oce) (R).
-

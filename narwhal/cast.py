@@ -38,8 +38,11 @@ import scipy.ndimage
 import scipy.io
 import scipy.interpolate
 
-from karta import Point, Multipoint
-from karta.crs import LonLatWGS84
+try:
+    from karta import Point, Multipoint
+    from karta.crs import LonLatWGS84
+except ImportError:
+    from .geo import Point, Multipoint, LonLatWGS84
 
 from . import gsw
 from . import util
