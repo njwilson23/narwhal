@@ -5,8 +5,8 @@ If karta is not available, this module will be loaded instead and provides some
 bare-bones geometrical and geodetic capabilities.
 """
 
+from __future__ import print_function, division
 from math import sqrt, sin, cos, tan, atan, atan2, pi
-
 
 class CoordinateSystem(object):
     pass
@@ -45,7 +45,6 @@ class LonLat(CoordinateSystem):
         alpha0 = atan2(sin(alpha1)*cos(beta1), _i)
         sigma1 = atan2(sin(beta1), cos(alpha1)*cos(beta1))
         omega1 = atan2(sin(alpha0)*sin(sigma1), cos(sigma1))
-        # printd(beta1, alpha0, sigma1, omega1)
 
         # Determine sigma2
         eps2 = (f*(2-f))
