@@ -146,57 +146,12 @@ class LonLat(CoordinateSystem):
         Algorithm due to Karney, C.F.F. "Algorithms for geodesics", J. Geod (2013)
         """
 
-        if y1 == y2 == 0.0:
-            # Equatorial case
-            raise NotImplementedError()
-        elif x1 == x2:
-            # Meridional case
-            raise NotImplementedError()
-
         # Canonical configuration
-        yflop, xflip, signswap = False, False, False
-
-        if (y1 > 0) and (y2 > 0):
-            if y1 < y2:
-                y1, y2 = y2, y1
-                yflip = True
-
-            y1, y2 = -y1, -y2
-            signswap = True
-
-        elif (y1 > 0) and (y2 <= 0):
-            if y1 > -y2:
-                y1, y2 = -y1, -y2
-                signswap = True
-            else:
-                y1, y2 = y2, y1
-                yflip = True
-
-        elif (y1 <= 0) and (y2 > 0):
-            if -y1 < y2:
-                y1, y2 = y2, y1
-                flip = True
-                y1, y2 = -y1, -y2
-                signswap = True
-
-        else: # y1 <= 0 and y2 <= 0
-            if y1 > y2:
-                y1, y2 = y2, y1
-                yflip = True
-
-        x1n = x1 % 360.0
-        x2n = x2 % 360.0
-        lambda12 = (x2n-x1n)*pi/180.0
-        if lambda12 < 0:
-            lambda12 = -lambda12
-            xflip = True
-
-        assert y1 <= 0
-        assert y1 <= y2 <= -y1
-        assert 0 <= x2-x1 <= 180.0
+        tr, x1, y1, x2, y2 = _canonical_configuration(x1, y1, x2, y2)
 
         phi1 = y1*pi/180.0
         phi2 = y2*pi/180.0
+        lambda12 = (x2-x1)*pi/180.0
         f = (self.a-self.b) / self.a
 
         # Guess the azimuth
@@ -212,85 +167,113 @@ class LonLat(CoordinateSystem):
         beta1 = atan((1-f)*tan(phi1))
         beta2 = atan((1-f)*tan(phi2))
 
-        # Newton iteration
-        niter = 0
-        maxiter = 20
-        tol = 1/self.a*2*pi
-        dlambda12 = tol + 1
+        eccn2 = f*(2-f)
+        second_eccn2 = eccn2 / (1-eccn2)
 
-        while (abs(dlambda12) > tol) and (niter != maxiter):
-
-            # Solve triangles
+        if y1 == y2 == 0.0:
+            # Equatorial case
+            alpha1 = pi/2
             _i = sqrt(cos(alpha1)**2 + (sin(alpha1)*sin(beta1))**2)
             alpha0 = atan2(sin(alpha1)*cos(beta1), _i)
             sigma1, omega1 = _solve_NEA(alpha0, alpha1, beta1)
             alpha2, sigma2, omega2 = _solve_NEB(alpha0, alpha1, beta1, beta2)
 
-            # Determine lambda12
-            eccn2 = f*(2-f)
-            second_eccn2 = eccn2 / (1-eccn2)
+        elif x1 == x2:
+            # Meridional case
+            alpha1 = 0.0
+            _i = sqrt(cos(alpha1)**2 + (sin(alpha1)*sin(beta1))**2)
+            alpha0 = atan2(sin(alpha1)*cos(beta1), _i)
+            sigma1, omega1 = _solve_NEA(alpha0, alpha1, beta1)
+            alpha2, sigma2, omega2 = _solve_NEB(alpha0, alpha1, beta1, beta2)
+
             k2 = second_eccn2 * cos(alpha0)**2
             _rad = sqrt(1+k2)
             eps = (_rad - 1) / (_rad + 1)
 
-            n = f/(2-f)
-            n2 = n*n
-            A3 = 1 + (1.0/2 - 1.0/2*n)*eps - (1.0/3 + 1.0/8*n - 3.0/8*n**2)*eps**2 \
-                - (1.0/16 + 3.0/16*n + 1.0/16*n**2)*eps**3 - (3.0/64 + 1.0/32*n)*eps**4 \
-                - 3.0/128*eps**5
+        else:
+            # Newton iteration
+            niter = 0
+            maxiter = 20
+            tol = 1/self.a*2*pi
+            dlambda12 = tol + 1
 
-            C3 = [(1.0/4 - n/4)*eps + (1.0/8 - n2/8)*eps**2 + (3.0/64 + 3.0*n/64 - n2/64)*eps**3 \
-                    + (5.0/128 + n/64)*eps**4 + 3.0/128*eps**5,
-                  (1.0/16 - 3.0*n/32 + n2/32)*eps**2 + (3.0/64 - n/32 - 3*n2/64)*eps**3 \
-                    + (3.0/128 + n/128)*eps**4 + 5.0/256*eps**5,
-                  (5.0/192 - 3.0*n/64 + 5.0*n2/192)*eps**3 + (3.0/128 - 5.0*n/192)*eps**4 \
-                    + 7.0/512*eps**5,
-                  (7.0/512 - 7.0*n/256)*eps**4 + 7.0*eps**5/512,
-                  21.0*eps**5/2560]
+            while (abs(dlambda12) > tol) and (niter != maxiter):
 
-            I3s1 = A3 * (sigma1 + sum(c*sin(2*(i+1)*sigma1) for i,c in enumerate(C3)))
-            I3s2 = A3 * (sigma2 + sum(c*sin(2*(i+1)*sigma2) for i,c in enumerate(C3)))
+                # Solve triangles
+                _i = sqrt(cos(alpha1)**2 + (sin(alpha1)*sin(beta1))**2)
+                alpha0 = atan2(sin(alpha1)*cos(beta1), _i)
+                sigma1, omega1 = _solve_NEA(alpha0, alpha1, beta1)
+                alpha2, sigma2, omega2 = _solve_NEB(alpha0, alpha1, beta1, beta2)
 
-            lambda1 = omega1 - f*sin(alpha0)*I3s1
-            lambda2 = omega2 - f*sin(alpha0)*I3s2
-            lambda12_next = lambda2 - lambda1
-            dlambda12 = lambda12_next - lambda12
+                # Determine lambda12
+                k2 = second_eccn2 * cos(alpha0)**2
+                _rad = sqrt(1+k2)
+                eps = (_rad - 1) / (_rad + 1)
 
-            if abs(dlambda12) > tol:
-                # Refine alpha1
-                A1 = 1.0/(1-eps) * (1 + eps**2/4 + eps**4/64 + eps**6/256)
-                C1 = [-1.0/2*eps + 3.0/16*eps**3 - 1.0/32*eps**5,
-                      -1.0/16*eps**2 + 1.0/32*eps**4 - 9.0/2048*eps**6,
-                      -1.0/48*eps**3 + 3.0/256*eps**5,
-                      -5.0/512*eps**4 + 3.0/512*eps**6,
-                      -7.0/1280*eps**5,
-                      -7.0/2048*eps**6]
+                n = f/(2-f)
+                n2 = n*n
+                A3 = 1 + (1.0/2 - 1.0/2*n)*eps - (1.0/3 + 1.0/8*n - 3.0/8*n**2)*eps**2 \
+                    - (1.0/16 + 3.0/16*n + 1.0/16*n**2)*eps**3 - (3.0/64 + 1.0/32*n)*eps**4 \
+                    - 3.0/128*eps**5
 
-                I1s1 = A1 * (sigma1 + sum(c*sin(2*(i+1)*sigma1) for i,c in enumerate(C1)))
-                I1s2 = A1 * (sigma2 + sum(c*sin(2*(i+1)*sigma2) for i,c in enumerate(C1)))
+                C3 = [(1.0/4 - n/4)*eps + (1.0/8 - n2/8)*eps**2 + (3.0/64 + 3.0*n/64 - n2/64)*eps**3 \
+                        + (5.0/128 + n/64)*eps**4 + 3.0/128*eps**5,
+                      (1.0/16 - 3.0*n/32 + n2/32)*eps**2 + (3.0/64 - n/32 - 3*n2/64)*eps**3 \
+                        + (3.0/128 + n/128)*eps**4 + 5.0/256*eps**5,
+                      (5.0/192 - 3.0*n/64 + 5.0*n2/192)*eps**3 + (3.0/128 - 5.0*n/192)*eps**4 \
+                        + 7.0/512*eps**5,
+                      (7.0/512 - 7.0*n/256)*eps**4 + 7.0*eps**5/512,
+                      21.0*eps**5/2560]
 
-                A2 = (1-eps) * (1 + 1.0/4*eps**2 + 9.0/64*eps**4 + 25.0/256*eps**6)
-                C2 = [1.0/2*eps + 1.0/16*eps**3 + 1.0/32*eps**5,
-                      3.0/16*eps**2 + 1.0/32*eps**4 + 35.0/2048*eps**6,
-                      5.0/48*eps**3 + 5.0/256*eps**5,
-                      35.0/512*eps**4 + 7.0/512*eps**6,
-                      63.0/1280*eps**5,
-                      77.0/2048*eps**6]
+                I3s1 = A3 * (sigma1 + sum(c*sin(2*(i+1)*sigma1) for i,c in enumerate(C3)))
+                I3s2 = A3 * (sigma2 + sum(c*sin(2*(i+1)*sigma2) for i,c in enumerate(C3)))
 
-                I2s1 = A2 * (sigma1 + sum(c*sin(2*(i+1)*sigma1) for i,c in enumerate(C2)))
-                I2s2 = A2 * (sigma2 + sum(c*sin(2*(i+1)*sigma2) for i,c in enumerate(C2)))
+                lambda1 = omega1 - f*sin(alpha0)*I3s1
+                lambda2 = omega2 - f*sin(alpha0)*I3s2
+                lambda12_next = lambda2 - lambda1
+                dlambda12 = lambda12_next - lambda12
 
-                Js1 = I1s1 - I2s1
-                Js2 = I1s2 - I2s2
+                if abs(dlambda12) > tol:
+                    # Refine alpha1
+                    A1 = 1.0/(1-eps) * (1 + eps**2/4 + eps**4/64 + eps**6/256)
+                    C1 = [-1.0/2*eps + 3.0/16*eps**3 - 1.0/32*eps**5,
+                          -1.0/16*eps**2 + 1.0/32*eps**4 - 9.0/2048*eps**6,
+                          -1.0/48*eps**3 + 3.0/256*eps**5,
+                          -5.0/512*eps**4 + 3.0/512*eps**6,
+                          -7.0/1280*eps**5,
+                          -7.0/2048*eps**6]
 
-                m12 = self.b * (sqrt(1 + k2*sin(sigma2)**2) * cos(sigma1)*sin(sigma2) \
-                              - sqrt(1 + k2*sin(sigma1)**2) * sin(sigma1)*cos(sigma2) \
-                              - cos(sigma1) * cos(sigma2) * (Js2-Js1))
-                dlambda12_dalpha1 = m12/(self.a * cos(alpha2)*cos(beta2))
-                dalpha1 = -dlambda12 / (dlambda12_dalpha1)
+                    I1s1 = A1 * (sigma1 + sum(c*sin(2*(i+1)*sigma1) for i,c in enumerate(C1)))
+                    I1s2 = A1 * (sigma2 + sum(c*sin(2*(i+1)*sigma2) for i,c in enumerate(C1)))
 
-                alpha1 += dalpha1
-            niter += 1
+                    A2 = (1-eps) * (1 + 1.0/4*eps**2 + 9.0/64*eps**4 + 25.0/256*eps**6)
+                    C2 = [1.0/2*eps + 1.0/16*eps**3 + 1.0/32*eps**5,
+                          3.0/16*eps**2 + 1.0/32*eps**4 + 35.0/2048*eps**6,
+                          5.0/48*eps**3 + 5.0/256*eps**5,
+                          35.0/512*eps**4 + 7.0/512*eps**6,
+                          63.0/1280*eps**5,
+                          77.0/2048*eps**6]
+
+                    I2s1 = A2 * (sigma1 + sum(c*sin(2*(i+1)*sigma1) for i,c in enumerate(C2)))
+                    I2s2 = A2 * (sigma2 + sum(c*sin(2*(i+1)*sigma2) for i,c in enumerate(C2)))
+
+                    Js1 = I1s1 - I2s1
+                    Js2 = I1s2 - I2s2
+
+                    m12 = self.b * (sqrt(1 + k2*sin(sigma2)**2) * cos(sigma1)*sin(sigma2) \
+                                  - sqrt(1 + k2*sin(sigma1)**2) * sin(sigma1)*cos(sigma2) \
+                                  - cos(sigma1) * cos(sigma2) * (Js2-Js1))
+                    dlambda12_dalpha1 = m12/(self.a * cos(alpha2)*cos(beta2))
+
+                    if dlambda12_dalpha1 != 0:
+                        dalpha1 = -dlambda12 / (dlambda12_dalpha1)
+
+                    alpha1 += dalpha1
+                niter += 1
+
+        k2 = second_eccn2 * cos(alpha0)**2
+        _rad = sqrt(1+k2)
+        eps = (_rad - 1) / (_rad + 1)
 
         # Determine s12
         A1 = 1.0/(1-eps) * (1 + eps**2/4 + eps**4/64 + eps**6/256)
@@ -308,9 +291,49 @@ class LonLat(CoordinateSystem):
         s2 = I1s2*self.b
         s12 = s2-s1
 
-        az = (alpha1 % (2*pi))*180/pi
+        if tr["xflip"]:
+            alpha1 = -alpha1
+            alpha2 = -alpha2
+        if tr["yflip"]:
+            alpha1 = -(alpha1 - pi/2) + pi/2
+            alpha2 = -(alpha2 - pi/2) + pi/2
+
+        if tr["ysignswap"]:
+            alpha1 = -(alpha1 - pi/2) + pi/2
+            alpha2 = -(alpha2 - pi/2) + pi/2
+
+        az = alpha1*180/pi
         backaz = (alpha2+pi)*180/pi
-        return az, backaz, s12
+        return az % (360), backaz % (360), s12
+
+def _normalize_longitude(x):
+    """ Return longitude in the range [-180, 180). """
+    return (x+180) % 360 - 180
+
+def _canonical_configuration(x1, y1, x2, y2):
+    """ Put coordinates into a configuration where (Karney, eqn 44)
+        y1 <= 0
+        y1 <= y2 <= -y1
+        0 <= x2-x1 <= 180
+    """
+    transformation = dict(yflip=False, xflip=False, ysignswap=False)
+
+    if abs(y1) < abs(y2):
+        y1, y2 = y2, y1
+        transformation["yflip"] = True
+
+    if y1 > 0:
+        y1, y2 = -y1, -y2
+        transformation["ysignswap"] = True
+
+    x2 = _normalize_longitude(x2-x1)
+    x1 = 0.0
+
+    if (x2 < 0) or (x2 > 180):
+        x2 = -x2
+        transformation["xflip"] = True
+
+    return transformation, x1, y1, x2, y2
 
 def _solve_NEA(alpha0, alpha1, beta1):
     sigma1 = atan2(sin(beta1), cos(alpha1)*cos(beta1))
@@ -400,18 +423,39 @@ LonLatWGS84 = LonLat(6378137.0, 6356752.314245)
 class Point(object):
     _geotype = "Point"
 
-    def __init__(vertex, crs=LonLatWGS84):
+    def __init__(self, vertex, crs=LonLatWGS84):
         self.vertex = vertex
         self.crs = crs
 
+    @property
+    def x(self):
+        return self.vertex[0]
+
+    @property
+    def y(self):
+        return self.vertex[1]
+
+    def distance(self, other):
+        _, _, distance = self.crs.inverse(self.x, self.y, other.x, other.y)
+        return distance
+
 class MultipointBase(object):
 
-    def __init__(vertices, crs=LonLatWGS84):
+    def __init__(self, vertices, crs=LonLatWGS84):
         self.vertices = vertices
         self.crs = crs
 
     def __len__(self):
         return len(self.vertices)
+
+    def __getitem__(self, key):
+        if isinstance(key, slice):
+            return type(self)(self.vertices[key], crs=self.crs)
+        else:
+            return Point(self.vertices[key], crs=self.crs)
+
+    def __iter__(self):
+        return (self[i] for i in range(len(self)))
 
     @property
     def coordinates(self):
@@ -425,34 +469,35 @@ class Line(MultipointBase):
 
 if __name__ == "__main__":
     # Karney's Table 2 example for the forward problem
-    # print("Forward problem")
-    # x1, y1, baz = LonLatWGS84.forward(0.0, 40.0, 30.0, 10e6)
-    # print("solution:", 137.84490004377, 41.79331020506, 149.09016931807)
-    # print("computed:", x1, y1, baz-180)
+    print("Forward problem")
+    x1, y1, baz = LonLatWGS84.forward(0.0, 40.0, 30.0, 10e6)
+    print("solution:", 137.84490004377, 41.79331020506, 149.09016931807)
+    print("computed:", x1, y1, baz-180)
 
     # vicenty problem, Table 3
-    # print("\nVicenty")
-    # a = 6378137.0
-    # f = 1/298.257223563
-    # phi1 = -30.12345*pi/180
-    # phi2 = -30.12344*pi/180
-    # lambda12 = 0.00005*pi/180
-    # alpha1, alpha2, distance = solve_vicenty(a, f, lambda12, phi1, phi2)
-    # print("solution", 77.043533, 77.043508, 4.944208)
-    # print("computed", alpha1*180/pi, alpha2*180/pi, distance)
+    print("\nVicenty")
+    a = 6378137.0
+    f = 1/298.257223563
+    phi1 = -30.12345*pi/180
+    phi2 = -30.12344*pi/180
+    lambda12 = 0.00005*pi/180
+    alpha1, alpha2, distance = solve_vicenty(a, f, lambda12, phi1, phi2)
+    print("solution", 77.043533, 77.043508, 4.944208)
+    print("computed", alpha1*180/pi, alpha2*180/pi, distance)
 
     # astroid problem, Table 4
-    # print("\nAstroid")
-    # a = 6378137.0
-    # f = 1/298.257223563
-    # phi1 = -30*pi/180
-    # phi2 = 29.9*pi/180
-    # lambda12 = 179.8*pi/180
-    # alpha1 = solve_astroid(a, f, lambda12, phi1, phi2)
-    # print("solution:", 161.914)
-    # print("computed:", alpha1*180/pi)
+    print("\nAstroid")
+    a = 6378137.0
+    f = 1/298.257223563
+    phi1 = -30*pi/180
+    phi2 = 29.9*pi/180
+    lambda12 = 179.8*pi/180
+    alpha1 = solve_astroid(a, f, lambda12, phi1, phi2)
+    print("solution:", 161.914)
+    print("computed:", alpha1*180/pi)
 
     # full inverse problem, Table 5
+    print("\nInverse problem")
     phi1 = -30
     phi2 = 29.9
     lambda12 = 179.8
