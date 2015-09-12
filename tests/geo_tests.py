@@ -113,21 +113,21 @@ class TestGeometry(unittest.TestCase):
         pt = Point((-140.0, 41.0))
         pt_northwest = Point((-142.0, 42.0))
         d = pt.distance(pt_northwest)
-        self.assertLess(abs(d - 200481.673), 1.0)   # solution from geod 4.8.0
+        self.assertLess(abs(d - 200544.120615), 0.1)    # from geographiclib
         return
 
     def test_distance_meridional(self):
         pt = Point((-140.0, 41.0))
         pt_north = Point((-140.0, 41.5))
         d = pt.distance(pt_north)
-        self.assertLess(abs(d - 55659.745), 1.0)    # solution from geod 4.8.0
+        self.assertLess(abs(d - 55529.372145), 0.1)     # from geographicslib
         return
 
     def test_distance_equatorial(self):
         pt = Point((-140.0, 0.0))
         pt_west = Point((-144.0, 0.0))
         d = pt.distance(pt_west)
-        self.assertLess(abs(d - 445277.963), 1.0)   # solution from geod 4.8.0
+        self.assertLess(abs(d - 445277.963), 1.0)       # from geod 4.8.0
         return
 
 
@@ -184,6 +184,16 @@ class TestGeodesy(unittest.TestCase):
         lambda12 = 179.8*pi/180
         alpha1 = narwhal.geo.solve_astroid(a, f, lambda12, phi1, phi2)
         self.assertAlmostEqual(alpha1, 161.914*pi/180.0, places=4)
+
+    def test_inverse(self):
+        phi1 = -30
+        phi2 = 29.9
+        lambda12 = 179.8
+
+        az, backaz, dist = LonLatWGS84.inverse(0.0, phi1, lambda12, phi2)
+        self.assertAlmostEqual(az, 161.890524, places=5)
+        self.assertAlmostEqual(dist, 19989832.827610, places=3)  # accurate to mm
+        return
 
 if __name__ == "__main__":
     unittest.main()
