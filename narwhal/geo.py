@@ -127,6 +127,16 @@ class LonLat(CoordinateSystem):
         backaz = (alpha2+pi)*180/pi
         return x2, y2, backaz
 
+    def _inverse_equatorial(self, x1, x2):
+        if x1 - x2 > 0:
+            az = 90.0
+            baz = 270.0
+        else:
+            ax = 270.0
+            baz = 90.0
+        s12 = 2 * pi * self.a * abs(x1-x2)/360.0
+        return az, baz, s12
+
     def inverse(self, x1, y1, x2, y2):
         """ Compute the shortest path (geodesic) between two points.
 
@@ -145,6 +155,9 @@ class LonLat(CoordinateSystem):
 
         Algorithm due to Karney, C.F.F. "Algorithms for geodesics", J. Geod (2013)
         """
+        if y1 == y2 == 0:
+            # Equatorial case
+            return self._inverse_equatorial(x1, x2)
 
         # Canonical configuration
         tr, x1, y1, x2, y2 = _canonical_configuration(x1, y1, x2, y2)
@@ -161,32 +174,22 @@ class LonLat(CoordinateSystem):
         else:
             alpha1 = solve_astroid(self.a, f, lambda12, phi1, phi2)
 
-        # alpha1 = 161.914*pi/180     # DEBUG
-        alpha1 += 1
-
         beta1 = atan((1-f)*tan(phi1))
         beta2 = atan((1-f)*tan(phi2))
 
         eccn2 = f*(2-f)
         second_eccn2 = eccn2 / (1-eccn2)
 
-        if y1 == y2 == 0.0:
-            # Equatorial case
-            alpha1 = pi/2
-            _i = sqrt(cos(alpha1)**2 + (sin(alpha1)*sin(beta1))**2)
-            alpha0 = atan2(sin(alpha1)*cos(beta1), _i)
-            sigma1, omega1 = _solve_NEA(alpha0, alpha1, beta1)
-            alpha2, sigma2, omega2 = _solve_NEB(alpha0, alpha1, beta1, beta2)
-
-        elif x1 == x2:
+        if x1 == x2:
             # Meridional case
-            alpha1 = 0.0
+            alpha0 = alpha1 = alpha2 = omega1 = omega2 = 0.0
+
             _i = sqrt(cos(alpha1)**2 + (sin(alpha1)*sin(beta1))**2)
             alpha0 = atan2(sin(alpha1)*cos(beta1), _i)
-            sigma1, omega1 = _solve_NEA(alpha0, alpha1, beta1)
-            alpha2, sigma2, omega2 = _solve_NEB(alpha0, alpha1, beta1, beta2)
+            sigma1, _ = _solve_NEA(alpha0, alpha1, beta1)
+            _, sigma2, _ = _solve_NEB(alpha0, alpha1, beta1, beta2)
 
-            k2 = second_eccn2 * cos(alpha0)**2
+            k2 = second_eccn2
             _rad = sqrt(1+k2)
             eps = (_rad - 1) / (_rad + 1)
 
@@ -212,8 +215,8 @@ class LonLat(CoordinateSystem):
 
                 n = f/(2-f)
                 n2 = n*n
-                A3 = 1 + (1.0/2 - 1.0/2*n)*eps - (1.0/3 + 1.0/8*n - 3.0/8*n**2)*eps**2 \
-                    - (1.0/16 + 3.0/16*n + 1.0/16*n**2)*eps**3 - (3.0/64 + 1.0/32*n)*eps**4 \
+                A3 = 1.0 - (1.0/2 - 1.0/2*n)*eps - (1.0/4 + 1.0/8*n - 3.0/8*n2)*eps**2 \
+                    - (1.0/16 + 3.0/16*n + 1.0/16*n2)*eps**3 - (3.0/64 + 1.0/32*n)*eps**4 \
                     - 3.0/128*eps**5
 
                 C3 = [(1.0/4 - n/4)*eps + (1.0/8 - n2/8)*eps**2 + (3.0/64 + 3.0*n/64 - n2/64)*eps**3 \
@@ -265,8 +268,7 @@ class LonLat(CoordinateSystem):
                                   - cos(sigma1) * cos(sigma2) * (Js2-Js1))
                     dlambda12_dalpha1 = m12/(self.a * cos(alpha2)*cos(beta2))
 
-                    if dlambda12_dalpha1 != 0:
-                        dalpha1 = -dlambda12 / (dlambda12_dalpha1)
+                    dalpha1 = -dlambda12 / (dlambda12_dalpha1)
 
                     alpha1 += dalpha1
                 niter += 1
@@ -291,16 +293,21 @@ class LonLat(CoordinateSystem):
         s2 = I1s2*self.b
         s12 = s2-s1
 
+        # Normalize to range [-pi, pi) before reversing earlier transformations
+        alpha1 = (alpha1 + pi) % (2*pi) - pi
+        alpha2 = (alpha2 + pi) % (2*pi) - pi
+
         if tr["xflip"]:
             alpha1 = -alpha1
             alpha2 = -alpha2
+
         if tr["yflip"]:
-            alpha1 = -(alpha1 - pi/2) + pi/2
-            alpha2 = -(alpha2 - pi/2) + pi/2
+            alpha1 = pi - alpha1
+            alpha2 = pi - alpha2
 
         if tr["ysignswap"]:
-            alpha1 = -(alpha1 - pi/2) + pi/2
-            alpha2 = -(alpha2 - pi/2) + pi/2
+            alpha1 = pi - alpha1
+            alpha2 = pi - alpha2
 
         az = alpha1*180/pi
         backaz = (alpha2+pi)*180/pi
