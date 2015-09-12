@@ -7,6 +7,7 @@ bare-bones geometrical and geodetic capabilities.
 
 from __future__ import print_function, division
 from math import sqrt, sin, cos, tan, atan, atan2, pi
+from scipy.optimize import brentq
 
 class CoordinateSystem(object):
     pass
@@ -112,11 +113,129 @@ class LonLat(CoordinateSystem):
         y2 = phi2*180.0/pi
         return x2, y2
 
-    def inverse(self, x0, y0, x1, y1):
+    def inverse(self, x1, y1, x2, y2):
         """ Compute the shortest path (geodesic) between two points """
+
+        if y1 == y2 == 0.0:
+            # Equatorial case
+            raise NotImplementedError()
+        elif x1 == x2:
+            # Meridional case
+            raise NotImplementedError()
+
+        # Canonical configuration
+        yflop, xflip, signswap = False, False, False
+
+        if (y1 > 0) and (y2 > 0):
+            if y1 < y2:
+                y1, y2 = y2, y1
+                yflip = True
+
+            y1, y2 = -y1, -y2
+            signswap = True
+
+        elif (y1 > 0) and (y2 <= 0):
+            if y1 > -y2:
+                y1, y2 = -y1, -y2
+                signswap = True
+            else:
+                y1, y2 = y2, y1
+                yflip = True
+
+        elif (y1 <= 0) and (y2 > 0):
+            if -y1 < y2:
+                y1, y2 = y2, y1
+                flip = True
+                y1, y2 = -y1, -y2
+                signswap = True
+
+        else: # y1 <= 0 and y2 <= 0
+            if y1 > y2:
+                y1, y2 = y2, y1
+                yflip = True
+
+        x1n = x1 % 360.0
+        x2n = x2 % 360.0
+        lambda12 = (x2n-x1n)*pi/180.0
+        if lambda12 < 0:
+            lambda12 = -lambda12
+            xflip = True
+
+        assert y1 <= 0
+        assert y1 <= y2 <= -y1
+        assert 0 <= x2-x1 <= 180.0
+
+
+
+
 
         backaz = az + pi
         return az, backaz, distance
+
+def solve_astroid(a, f, lambda12, phi1, phi2):
+    """ Used to provide an initial guess to the inverse problem by solving the
+    corresponding problem on a sphere.
+
+    Parameters
+    ----------
+    a:          equatorial radius
+    f:          flattening
+    lambda12:   difference in longitudes (radians)
+    phi1:       first latitude (radians)
+    phi2:       second latitude (radians)
+
+    Returns
+    -------
+    alpha1:     estimated forward azimuth at first point
+
+    see Karney (2011) for details
+    """
+    beta1 = atan((1-f) * tan(phi1))
+    beta2 = atan((1-f) * tan(phi2))
+    delta = f*a*pi*cos(beta1)**2
+    x = (lambda12-pi) * (a*cos(beta1)) / delta
+    y = (beta2 + beta1) * a / delta
+    mu = brentq(lambda mu: mu**4 + 2*mu**3 + (1-x**2-y**2)*mu**2 - 2*y**2*mu - y**2, 1e-3, pi*a)
+    alpha1 = atan2(-x / (1+mu), y/mu)
+    return alpha1
+
+def solve_vicenty(a, f, lambda12, phi1, phi2):
+    """ Used to provide an initial guess in the case of nearly antipodal points.
+
+    Parameters
+    ----------
+    a:          equatorial radius
+    f:          flattening
+    lambda12:   difference in longitudes (radians)
+    phi1:       first latitude (radians)
+    phi2:       second latitude (radians)
+
+    Returns
+    -------
+    alpha1:     forward azimuth at first point
+    alpha2:     forward azimuth at second point
+    s12:        distance between points
+
+    see Karney (2011) for details
+    """
+    eccn2 = f*(2-f)
+    beta1 = atan((1-f) * tan(phi1))
+    beta2 = atan((1-f) * tan(phi2))
+    printd(beta1, beta2)
+    w = sqrt(1 - eccn2 * (0.5 * (cos(beta1) + cos(beta2)))**2)
+    omega12 = lambda12 / w
+
+    z1_r = cos(beta1)*sin(beta2) - sin(beta1)*cos(beta2)*cos(omega12)
+    z1_i = cos(beta2)*sin(omega12)
+    z1 = sqrt(z1_r**2 + z1_i**2)
+    sigma12 = atan2(z1, sin(beta1)*sin(beta2) + cos(beta1)*cos(beta2)*cos(omega12))
+    z2_r = -sin(beta1)*cos(beta2) + cos(beta1)*sin(beta2)*cos(omega12)
+    z2_i = cos(beta1)*sin(omega12)
+
+    alpha1 = atan2(z1_i, z1_r)
+    alpha2 = atan2(z2_i, z2_r)
+    s12 = a*w*sigma12
+    return alpha1, alpha2, s12
 
 def _flattening(a, b):
     return (a-b)/a
@@ -143,6 +262,9 @@ class MultipointBase(object):
         self.vertices = vertices
         self.crs = crs
 
+    def __len__(self):
+        return len(self.vertices)
+
     @property
     def coordinates(self):
         return list(*zip(*self.vertices))
@@ -155,6 +277,29 @@ class Line(MultipointBase):
 
 if __name__ == "__main__":
     # Karney's Table 2 example for the forward problem
-    x1, y1 = LonLatWGS84.forward(0.0, 40.0, 30.0, 10e6)
-    print("Solution:", 137.844, 41.793)
-    print(x1, y1)
+    # print("Forward problem")
+    # x1, y1 = LonLatWGS84.forward(0.0, 40.0, 30.0, 10e6)
+    # print("Solution:", 137.844, 41.793)
+    # print(x1, y1)
+
+    # vicenty problem
+    # print("\nVicenty")
+    # a = 6378137.0
+    # f = 1/298.257223563
+    # phi1 = -30.12345*pi/180
+    # phi2 = -30.12344*pi/180
+    # lambda12 = 0.00005*pi/180
+    # alpha1, alpha2, distance = solve_vicenty(a, f, lambda12, phi1, phi2)
+    # print("solution", 77.043533, 77.043508, 4.944208)
+    # print("computed", alpha1*180/pi, alpha2*180/pi, distance)
+
+    # astroid problem
+    print("\nAstroid")
+    a = 6378137.0
+    f = 1/298.257223563
+    phi1 = -30*pi/180
+    phi2 = 29.9*pi/180
+    lambda12 = 179.8*pi/180
+    alpha1 = solve_astroid(a, f, lambda12, phi1, phi2)
+    print("solution:", 161.914)
+    print("computed:", alpha1*180/pi)
