@@ -174,6 +174,15 @@ class TestGeometry(unittest.TestCase):
         self.assertLess(abs(d - 445277.963), 1.0)       # from geod 4.8.0
         return
 
+    def test_line_length(self):
+        line = Line([(70.205, 40.283166666666666),
+                     (70.00516666666667, 40.011),
+                     (69.89966666666666, 39.86),
+                     (69.80066666666667, 39.6955),
+                     (69.33383333333333, 39.0145),
+                     (69.18316666666666, 38.79)], crs=LonLatWGS84)
+        self.assertAlmostEqual(line.length, 187650.3233, places=2)
+        return
 
 class TestGeodesy(unittest.TestCase):
 

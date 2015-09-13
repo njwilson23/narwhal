@@ -374,8 +374,8 @@ def _solve_NEB(alpha0, alpha1, beta1, beta2):
     return alpha2, sigma2, omega2
 
 def solve_astroid(a, f, lambda12, phi1, phi2):
-    """ Used to provide an initial guess to the inverse problem by solving the
-    corresponding problem on a sphere.
+    """ Used to provide an initial guess to the inverse problem in the case of
+    nearly antipodal points.
 
     Parameters
     ----------
@@ -401,7 +401,8 @@ def solve_astroid(a, f, lambda12, phi1, phi2):
     return alpha1
 
 def solve_vicenty(a, f, lambda12, phi1, phi2):
-    """ Used to provide an initial guess in the case of nearly antipodal points.
+    """ Used to provide an initial guess to the inverse problem by solving the
+    corresponding problem on a sphere.
 
     Parameters
     ----------
@@ -495,6 +496,10 @@ class Multipoint(MultipointBase):
 
 class Line(MultipointBase):
     _geotype = "Line"
+
+    @property
+    def length(self):
+        return sum(self[i].distance(self[i+1]) for i in range(len(self)-1))
 
 if __name__ == "__main__":
     # Karney's Table 2 example for the forward problem
