@@ -6,12 +6,12 @@ bare-bones geometrical and geodetic capabilities.
 """
 
 from __future__ import print_function, division
-from math import sqrt, sin, cos, acos, tan, atan, atan2, pi
+import warnings
+from math import sqrt, sin, cos, tan, asin, acos, atan, atan2, pi
 from scipy.optimize import brentq
 
 class CoordinateSystem(object):
     pass
-
 
 class LonLat(CoordinateSystem):
 
@@ -186,6 +186,7 @@ class LonLat(CoordinateSystem):
         second_eccn2 = eccn2 / (1-eccn2)
 
         if x1 == x2:
+            print("meridional1")
             # Meridional case 1
             alpha0 = alpha1 = alpha2 = omega1 = omega2 = 0.0
 
@@ -199,6 +200,7 @@ class LonLat(CoordinateSystem):
             eps = (_rad - 1) / (_rad + 1)
 
         elif abs(lambda12 % (2*pi) - pi) < 1e-12:
+            print("meridional2", x1, x2)
             # Meridional case 2
             if y1 + y2 > 0:
                 alpha0 = alpha1 = 0.0
@@ -287,9 +289,11 @@ class LonLat(CoordinateSystem):
                     dlambda12_dalpha1 = m12/(self.a * cos(alpha2)*cos(beta2))
                     dalpha1 = -dlambda12 / dlambda12_dalpha1
                     alpha1 = (alpha1 + dalpha1) % (2*pi)
-                    # printd(alpha1)
 
                 niter += 1
+
+        if niter == maxiter:
+            warnings.warn("Convergence failure", warnings.RuntimeWarning)
 
         k2 = second_eccn2 * cos(alpha0)**2
         _rad = sqrt(1+k2)
@@ -361,8 +365,10 @@ def _solve_NEA(alpha0, alpha1, beta1):
     return sigma1, omega1
 
 def _solve_NEB(alpha0, alpha1, beta1, beta2):
-    # alpha2 = sin(alpha0) / cos(beta2)     # Less accurate?
-    alpha2 = acos(sqrt(cos(alpha1)**2*cos(beta1)**2 + (cos(beta2)**2 - cos(beta1)**2)) / cos(beta2))
+    try:
+        alpha2 = acos(sqrt(cos(alpha1)**2*cos(beta1)**2 + (cos(beta2)**2 - cos(beta1)**2)) / cos(beta2))
+    except ValueError:
+        alpha2 = asin(sin(alpha0) / cos(beta2))     # Less accurate?
     sigma2 = atan2(sin(beta2), cos(alpha2)*cos(beta2))
     omega2 = atan2(sin(alpha0)*sin(sigma2), cos(sigma2))
     return alpha2, sigma2, omega2
