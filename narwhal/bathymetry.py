@@ -1,16 +1,46 @@
 """
-Bathymetry class that can be referenced to a CastCollection and automatically
-plotted.
+Bathymetry class that can be referenced to a CastCollection.
+
+Purposes of the Bathymetry type:
+    - plotting sections
+    - storing point bathymetric data (a shapefile may be a better solution)
 """
 import numpy as np
 
 try:
-    import karta
     from karta import Point, Line
     from karta.crs import LonLatWGS84
 except ImportError:
     # Frankly, this is unlikely to work right now
     from .geo import Point, Line, LonLatWGS84
+
+class BathymetryExperimental(object):
+    """ Experimental improvement on the Bathymetry type. Not a subclass of Line,
+    but take a "geo" parameter which may be a Line or a Multipoint.
+    """
+
+    def __init__(self, depth, geo):
+        if len(geo) != len(depth):
+            raise ValueError("length of depth array and geometry must match")
+        self.geo = geo
+        self.depth = depth
+        return
+
+    def atpoint(self, point):
+        raise NotImplementedError()
+        return
+
+    def projdist(self):
+        """ Return the cumulative distance along a linear Bathymetry. """
+        idx = range(1, len(self.geo))
+        d = [0.0]
+        for i in idx:
+            d.append(d[-1] + self.geo[i].distance(self.geo[i-1]))
+        return d
+
+    def project_along_cruise(self, cruiseline):
+        raise NotImplementedError()
+        return
 
 class Bathymetry2d(Line):
     """ Bathymetric line
@@ -48,7 +78,7 @@ class Bathymetry2d(Line):
         return (bdepth-adepth) * (a.distance(ptonseg)/a.distance(b)) + adepth
 
     def projdist(self, reverse=False):
-        distances = [seg[0].greatcircle(seg[1]) for seg in self.segments()]
+        distances = [seg[0].distance(seg[1]) for seg in self.segments()]
         cumulative = [0]
         for val in distances:
             cumulative.append(cumulative[-1] + val)
@@ -65,7 +95,7 @@ class Bathymetry2d(Line):
         q       a vector of distances from the cruise line
         """
         if self.crs != cruiseline.crs:
-            raise karta.CRSError("CRS mismatch")
+            raise TypeError("CRS mismatch")
 
         P, Q = [], []
         for pt in self:
