@@ -468,7 +468,10 @@ class Point(object):
 class MultipointBase(object):
 
     def __init__(self, vertices, crs=LonLatWGS84):
-        self.vertices = vertices
+        if getattr(vertices[0], "_geotype", None) == "Point":
+            self.vertices = [pt.vertex for pt in vertices]
+        else:
+            self.vertices = vertices
         self.crs = crs
 
     def __len__(self):
