@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """ Analysis functions for casts and collections of casts """
 
 from functools import reduce
@@ -106,7 +107,7 @@ def baroclinic_modes(cast, nmodes, ztop=10, N2key="N2", depthkey="depth"):
 
 
 def thermal_wind(castcoll, tempkey="temperature", salkey="salinity",
-                 rhokey=None, depthkey="depth", dudzkey="dudz", ukey="u", 
+                 rhokey=None, depthkey="depth", dudzkey="dudz", ukey="u",
                  overwrite=False):
     """ Compute profile-orthagonal velocity shear using hydrostatic thermal
     wind. In-situ density is computed from temperature and salinity unless
@@ -171,7 +172,7 @@ def thermal_wind(castcoll, tempkey="temperature", salkey="salinity",
     return
 
 def thermal_wind_inner(castcoll, tempkey="temperature", salkey="salinity",
-                       rhokey=None, depthkey="depth", dudzkey="dudz", ukey="u", 
+                       rhokey=None, depthkey="depth", dudzkey="dudz", ukey="u",
                        bottomkey="bottom", overwrite=False):
     """ Alternative implementation that creates a new cast collection
     consistng of points between the observation casts.
@@ -263,7 +264,7 @@ def eofs(castcoll, key="temperature", zkey="depth", n_eofs=None):
     of eigenvalues.
 
     Requires all casts to have the same depth-gridding.
-    
+
     Arguments
     ---------
 
@@ -295,4 +296,3 @@ def eofs(castcoll, key="temperature", zkey="depth", n_eofs=None):
     for i in range(n_eofs):
         cast._addkeydata("_eof".join([key, str(i+1)]), eofts[:,i])
     return cast, lamb[:n_eofs], V[:,:n_eofs]
-
