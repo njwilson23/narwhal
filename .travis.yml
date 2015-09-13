@@ -5,8 +5,8 @@ python:
   - "3.4"
 
 env:
-  - WITHKARTA=true
-  - WITHKARTA=false
+  - WITHKARTA=1
+  - WITHKARTA=0
 
 before_install:
   - wget http://repo.continuum.io/miniconda/Miniconda-latest-Linux-x86_64.sh -O miniconda.sh
