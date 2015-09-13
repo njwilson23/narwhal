@@ -19,7 +19,7 @@ class BathymetryTests(unittest.TestCase):
              80.12928333,  80.1431    ,  80.1534    ,  80.16636667,  80.16741667]
         depth = [102.0,  95.0,  90.0, 100.0, 110.0, 120.0, 130.0, 140.0, 150.0,
                  170.0, 160.0, 140.0, 130.0]
-        self.bathymetry = Bathymetry(depth, Line(list(zip(x, y))))
+        self.bathymetry = Bathymetry(depth, Line(list(zip(x, y)), crs=LonLatWGS84))
         return
 
     def test_add_to_castcollection(self):

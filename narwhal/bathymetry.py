@@ -35,7 +35,7 @@ class Bathymetry(object):
             y1 = xy1[1].ravel()
             x2 = xy2[0].ravel()
             y2 = xy2[1].ravel()
-            return np.array([LonLatWGS84.inverse(x1_, y1_, x2_, y2_)[2]
+            return np.array([geo.crs.inverse(x1_, y1_, x2_, y2_)[2]
                              for x1_, y1_ in zip(x1.ravel(), y1.ravel())
                              for x2_, y2_ in zip(x2.ravel(), y2.ravel())]).reshape([len(x1), len(x2)])
         self.interpolator = scipy.interpolate.Rbf([pt.x for pt in geo],
@@ -46,7 +46,11 @@ class Bathymetry(object):
 
     def atpoint(self, point):
         """ Return the depth interpolated at Point *point* using `self.interpolator` """
-        return float(self.interpolator(point.x, point.y))
+        if point.crs != self.geo.crs:
+            x, y = self.geo.crs.project(*point.crs.project(point.x, point.y, inverse=True))
+        else:
+            x, y = point.x, point.y
+        return float(self.interpolator(x, y))
 
     def projdist(self):
         """ Return the cumulative distance along a linear Bathymetry. """
