@@ -1,8 +1,12 @@
 import unittest
 from narwhal import Bathymetry, Cast, CastCollection
 import numpy as np
-import karta
-from karta.crs import LonLatWGS84
+
+try:
+    from karta import Line
+    from karta.crs import LonLatWGS84
+except ImportError:
+    from narwhal.geo import Line, LonLatWGS84
 
 class BathymetryTests(unittest.TestCase):
 
@@ -33,7 +37,7 @@ class BathymetryTests(unittest.TestCase):
         return
 
     def test_project_along_cruise(self):
-        cruiseline = karta.Line([(0,0), (4,3), (6,2), (6,5)], crs=LonLatWGS84)
+        cruiseline = Line([(0,0), (4,3), (6,2), (6,5)], crs=LonLatWGS84)
         bath = Bathymetry([(0,0), (2,1), (3,3), (5,3), (7,3), (5,4), (7,4.5)],
                           depth=[100, 120, 130, 135, 115, 127, 119])
 
@@ -47,4 +51,3 @@ class BathymetryTests(unittest.TestCase):
             self.assertAlmostEqual(pa, p, 4)
             self.assertAlmostEqual(qa, q, 4)
         return
-

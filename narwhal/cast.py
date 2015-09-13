@@ -310,8 +310,8 @@ class Cast(NarwhalBase):
         """
         if salkey in self.fields and tempkey in self.fields and preskey in self.fields:
             SA = gsw.sa_from_sp(self[salkey], self[preskey],
-                                [self.coordinates[0] for _ in self[salkey]],
-                                [self.coordinates[1] for _ in self[salkey]])
+                                [self.coordinates.x for _ in self[salkey]],
+                                [self.coordinates.y for _ in self[salkey]])
             CT = gsw.ct_from_t(SA, self[tempkey], self[preskey])
             rho = gsw.rho(SA, CT, self[preskey])
             return self._addkeydata(rhokey, np.asarray(rho))
@@ -575,7 +575,7 @@ class CastCollection(NarwhalBase, collections.Sequence):
 
     def nearest_to_point(self, point):
         """ Return the cast nearest to a karta Point, as well as the distance """
-        distances = self.coordinates.distances_to(point)
+        distances = [point.distance(pt) for pt in self.coordinates]
         idx_min = np.argmin(distances)
         return self[idx_min], distances[idx_min]
 

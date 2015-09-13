@@ -3,8 +3,11 @@ import unittest
 import os
 import numpy as np
 
-from karta import Point
-from karta.crs import LonLatWGS84
+try:
+    from karta import Point
+    from karta.crs import LonLatWGS84
+except ImportError:
+    from narwhal.geo import Point, LonLatWGS84
 
 import narwhal
 from narwhal import gsw
@@ -231,7 +234,7 @@ class CastCollectionTests(unittest.TestCase):
         pt = Point((-26.2, 2.1), crs=LonLatWGS84)
         nearest, dist = cc.nearest_to_point(pt)
         self.assertEqual(nearest.coordinates.vertex, (-26.0, 2.0))
-        self.assertAlmostEqual(dist, 24845.942236224932)
+        self.assertAlmostEqual(dist, 24845.9422, places=4)
         return
 
     def test_defray(self):

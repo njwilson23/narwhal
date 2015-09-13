@@ -4,9 +4,14 @@ import matplotlib.pyplot as plt
 # import matplotlib.tri as mtri
 from scipy.interpolate import griddata, CloughTocher2DInterpolator
 from scipy import ndimage
-from karta import Line
-from karta.crs import LonLatWGS84
-from narwhal import AbstractCastCollection
+
+try:
+    from karta import Line
+    from karta.crs import LonLatWGS84
+except ImportError:
+    from ..geo import Line, LonLatWGS84
+
+from ..cast import AbstractCastCollection
 
 class BaseSectionAxes(plt.Axes):
 
@@ -268,12 +273,12 @@ class SectionAxes(BaseSectionAxes):
                 else:
                     castrigh = cc[i+1]
                     xrigh = distances[i+1]
-                    
+
                 # add the measured values
                 X.extend(x * np.ones(cast.nvalid(prop)))
                 Y.extend(cast[self.ykey][~cast.nanmask(prop)])
                 Z.extend(cast[prop][~cast.nanmask(prop)])
-                    
+
                 # for each non-NaN level in *cast*, check castleft and castrigh
                 # to see if they're NaN
                 # if so, add a dummy value half way between
@@ -285,7 +290,7 @@ class SectionAxes(BaseSectionAxes):
                         X.append(0.5 * (xleft+x))
                         Y.append(lvl)
                         Z.append(v)
-                
+
                     if castrigh and \
                             np.isnan(castrigh.interpolate(prop, self.ykey, lvl)):
                         X.append(0.5 * (xrigh+x))
@@ -357,4 +362,3 @@ class SectionAxes(BaseSectionAxes):
         return Xi, Yi, Zi
 
 matplotlib.projections.register_projection(SectionAxes)
-
