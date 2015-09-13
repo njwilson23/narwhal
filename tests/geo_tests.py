@@ -1,6 +1,8 @@
 import unittest
-from math import pi
+import os
 import random
+from math import pi
+import numpy as np
 import narwhal.geo
 from narwhal.geo import Point, Multipoint, Line, LonLatWGS84
 
@@ -160,7 +162,7 @@ class TestGeodesy(unittest.TestCase):
         x1, y1, baz = LonLatWGS84.forward(0.0, 40.0, 30.0, 10e6)
         self.assertAlmostEqual(x1, 137.84490004377)
         self.assertAlmostEqual(y1, 41.79331020506)
-        self.assertAlmostEqual(baz-180, 149.09016931807)
+        self.assertAlmostEqual(baz+180, 149.09016931807)
         return
 
     def test_vicenty(self):
@@ -195,72 +197,35 @@ class TestGeodesy(unittest.TestCase):
         self.assertAlmostEqual(dist, 19989832.827610, places=3)  # accurate to mm
         return
 
-    def test_forward_azimuths(self):
-        random.seed(84)
+    def test_forward_fuzz(self):
+        def nl(x):
+            return (round(x, 8)+180) % 360 - 180
+        curpath = os.path.split(os.path.realpath(__file__))[0]
+        datapath = os.path.join(curpath, "data", "geodetic_data.dat")
+        data = np.fromfile(datapath).reshape([10000, 7])
 
-        baz_ans = [92.91388243367805,
-                   -4.201720861613779,
-                   52.80485809364322,
-                   -142.7524103634052,
-                   141.85941358467724,
-                   -24.07561143948638,
-                   -160.49527235357542,
-                   -34.199026159594894,
-                   -175.03051252479207,
-                   -177.03930317086468,
-                   -152.6533676960886,
-                   -116.65718663523]
+        for i in range(data.shape[0]):
+            x1, x2, y1, y2, azd, bazd, dd = data[i,:]
+            x, y, baz = LonLatWGS84.forward(x1, y1, azd, dd)
+            self.assertAlmostEqual(nl(x), nl(x2))
+            self.assertAlmostEqual(nl(y), nl(y2))
+            self.assertAlmostEqual(nl(baz), nl(bazd))
+        return
 
-        for i in range(12):
-            x1 = random.randint(-180, 179)
-            y1 = random.randint(-90, 90)
-            az = random.randint(0, 359)
-            dist = random.randint(1e5, 5e7)
+    def test_inverse_fuzz(self):
+        def nl(x):
+            return (round(x, 8)+180) % 360 - 180
+        curpath = os.path.split(os.path.realpath(__file__))[0]
+        datapath = os.path.join(curpath, "data", "geodetic_data.dat")
+        data = np.fromfile(datapath).reshape([10000, 7])
 
-            _, _, baz = LonLatWGS84.forward(x1, y1, az, dist)
-            self.assertAlmostEqual(narwhal.geo._normalize_longitude(baz), baz_ans[i])
-            return
-
-    def test_inverse_azimuths(self):
-        random.seed(84)
-
-        az_ans = [-177.96558522172995,
-                  128.55935150957538,
-                  153.79051165122308,
-                  78.28417585048585,
-                  -119.08597433579152,
-                  6.878393066563715,
-                  167.83620023616692,
-                  -60.883596473778525,
-                  146.80260470446478,
-                  90.72563989100766,
-                  91.52463811247357,
-                  -176.57683616878396]
-
-        baz_ans = [124.80226823425508,
-                   -84.35400639349773,
-                   -15.851049504289108,
-                   -43.21579038193292,
-                   58.745278161362435,
-                   -22.04237984144868,
-                   -131.24922341012208,
-                   82.12804031596862,
-                   -128.75928938927842,
-                   -123.47642579406025,
-                   -148.877863894165,
-                   6.763244985451507]
-
-        normalize = lambda x: (x+180) % 360 - 180
-
-        for i in range(12):
-            x1 = random.randint(-180, 179)
-            x2 = random.randint(-180, 179)
-            y1 = random.randint(-89, 89)
-            y2 = random.randint(-89, 89)
-
+        for i in range(data.shape[0]):
+            x1, x2, y1, y2, azd, bazd, dd = data[i,:]
             az, baz, d = LonLatWGS84.inverse(x1, y1, x2, y2)
-            self.assertAlmostEqual(normalize(az), normalize(az_ans[i]))
-            self.assertAlmostEqual(normalize(baz), normalize(baz_ans[i]))
+            self.assertAlmostEqual(nl(az), nl(azd))
+            self.assertAlmostEqual(nl(baz), nl(bazd))
+            self.assertAlmostEqual(d, dd, places=2)  # expects cm accuracy
+        return
 
     def test_inverse_meridional_case2(self):
         # Test a few difficult cases that arose during development
