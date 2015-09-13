@@ -521,8 +521,8 @@ class CastCollection(NarwhalBase, collections.Sequence):
             if hasattr(cast, "coordinates"):
                 cast.properties["depth"] = bathymetry.atpoint(cast.coordinates)
             else:
-                cast.properties["tdepth"] = np.nan
-                sys.stderr.write("Warning: cast has no coordinates")
+                cast.properties["depth"] = np.nan
+                sys.stderr.write("bathymetry not added because cast location unknown\n")
         return
 
     def castwhere(self, key, value):
