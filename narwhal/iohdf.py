@@ -1,6 +1,11 @@
 #import datetime
 import numpy as np
-import h5py
+
+try:
+    import h5py
+    HAS_HDF = True
+except ImportError:
+    HAS_HDF = False
 
 def debug_showtypes(d, indent=0):
     """ Graph a narwhal serialization dictionary. """
@@ -24,6 +29,8 @@ def debug_showtypes(d, indent=0):
             print(sp, k, "->", type(v))
 
 def write(fnm, d):
+    if not HAS_HDF:
+        raise IOError("HDF I/O requires h5py to be installed")
     f = h5py.File(fnm, "w")
     f.attrs["hdf_driver_version"] = "0.4.0"
     dicttogroup(d, f)
@@ -54,6 +61,8 @@ def dicttogroup(d, h5group):
     return
 
 def read(fnm):
+    if not HAS_HDF:
+        raise IOError("HDF I/O requires h5py to be installed")
     f = h5py.File(fnm, "r")
     return grouptodict(f, dict())
 
