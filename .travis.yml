@@ -4,6 +4,10 @@ python:
   - "3.3"
   - "3.4"
 
+env:
+  - WITHKARTA=true
+  - WITHKARTA=false
+
 before_install:
   - wget http://repo.continuum.io/miniconda/Miniconda-latest-Linux-x86_64.sh -O miniconda.sh
   - chmod +x miniconda.sh
@@ -17,7 +21,7 @@ install:
   - source activate test-environment
     #- pip install -U setuptools
   - pip install requests python-dateutil six brewer2mpl
-  - pip install karta
+  - if [[ $WITHKARTA == 1 ]]; then pip install karta; fi
   - pip install . -v
 
 script:
