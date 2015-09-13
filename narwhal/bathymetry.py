@@ -27,13 +27,21 @@ class Bathymetry(object):
             raise ValueError("length of depth array and geometry must match")
         self.geo = geo
         self.depth = depth
-        # This is not correct because projected coordinates should be used.
-        # This shouldn't be too much of a problem unles bathymetry data are very
-        # sparse, in which case a custom interpolator should probably be used
-        # anyway.
+
+        # Naive implementation of a function that return a distance matrix based
+        # on a geographical distance norm
+        def geo_norm(xy1, xy2):
+            x1 = xy1[0].ravel()
+            y1 = xy1[1].ravel()
+            x2 = xy2[0].ravel()
+            y2 = xy2[1].ravel()
+            return np.array([LonLatWGS84.inverse(x1_, y1_, x2_, y2_)[2]
+                             for x1_, y1_ in zip(x1.ravel(), y1.ravel())
+                             for x2_, y2_ in zip(x2.ravel(), y2.ravel())]).reshape([len(x1), len(x2)])
         self.interpolator = scipy.interpolate.Rbf([pt.x for pt in geo],
                                                   [pt.y for pt in geo],
-                                                  depth)
+                                                  depth,
+                                                  norm=geo_norm)
         return
 
     def atpoint(self, point):
