@@ -6,6 +6,7 @@ Purposes of the Bathymetry type:
     - storing point bathymetric data (a shapefile may be a better solution)
 """
 import numpy as np
+import scipy.interpolate
 
 try:
     from karta import Point, Line
@@ -14,9 +15,11 @@ except ImportError:
     # Frankly, this is unlikely to work right now
     from .geo import Point, Line, LonLatWGS84
 
-class BathymetryExperimental(object):
-    """ Experimental improvement on the Bathymetry type. Not a subclass of Line,
-    but take a "geo" parameter which may be a Line or a Multipoint.
+class Bathymetry(object):
+    """ Class to represent bathymetric observations, either along a line or at
+    a scattering of points. The observation geometry is given by a geometry
+    object, which is expected to be an instance of Line or Multipoint from
+    either `karta.vector.geometry` or `narwhal.geo`
     """
 
     def __init__(self, depth, geo):
@@ -24,11 +27,18 @@ class BathymetryExperimental(object):
             raise ValueError("length of depth array and geometry must match")
         self.geo = geo
         self.depth = depth
+        # This is not correct because projected coordinates should be used.
+        # This shouldn't be too much of a problem unles bathymetry data are very
+        # sparse, in which case a custom interpolator should probably be used
+        # anyway.
+        self.interpolator = scipy.interpolate.Rbf([pt.x for pt in geo],
+                                                  [pt.y for pt in geo],
+                                                  depth)
         return
 
     def atpoint(self, point):
-        raise NotImplementedError()
-        return
+        """ Return the depth interpolated at Point *point* using `self.interpolator` """
+        return float(self.interpolator(point.x, point.y))
 
     def projdist(self):
         """ Return the cumulative distance along a linear Bathymetry. """
@@ -40,11 +50,12 @@ class BathymetryExperimental(object):
 
     def project_along_cruise(self, cruiseline):
         raise NotImplementedError()
-        return
 
 class Bathymetry2d(Line):
     """ Bathymetric line
     Bathymetry2d(lon, lat, depth)
+
+    WARNING: this class is DEPRECATED in favor of narwhal.bathymetry.Bathymetry
     """
 
     def __init__(self, vertices, depth=None, crs=LonLatWGS84, **kw):
@@ -67,7 +78,10 @@ class Bathymetry2d(Line):
         return subset
 
     def atpoint(self, pt):
-        """ Interpolate bottom depth at a point. """
+        """ Return bottom depth at a point by finding the point on the
+        cruiseline nearest to *pt* and interpolating linearly between the depth
+        measurements on either side.
+        """
         segments = tuple(self.segments)
         distances = [seg.shortest_distance_to(pt) for seg in segments]
         ii = distances.index(min(distances))
@@ -111,5 +125,3 @@ class Bathymetry2d(Line):
             P.append(p)
             Q.append(q)
         return np.asarray(P), np.asarray(Q)
-
-Bathymetry = Bathymetry2d
