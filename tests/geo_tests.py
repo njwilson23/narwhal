@@ -195,5 +195,86 @@ class TestGeodesy(unittest.TestCase):
         self.assertAlmostEqual(dist, 19989832.827610, places=3)  # accurate to mm
         return
 
+    def test_forward_azimuths(self):
+        random.seed(84)
+
+        baz_ans = [92.91388243367805,
+                   -4.201720861613779,
+                   52.80485809364322,
+                   -142.7524103634052,
+                   141.85941358467724,
+                   -24.07561143948638,
+                   -160.49527235357542,
+                   -34.199026159594894,
+                   -175.03051252479207,
+                   -177.03930317086468,
+                   -152.6533676960886,
+                   -116.65718663523]
+
+        for i in range(12):
+            x1 = random.randint(-180, 179)
+            y1 = random.randint(-90, 90)
+            az = random.randint(0, 359)
+            dist = random.randint(1e5, 5e7)
+
+            _, _, baz = LonLatWGS84.forward(x1, y1, az, dist)
+            self.assertAlmostEqual(narwhal.geo._normalize_longitude(baz), baz_ans[i])
+            return
+
+    def test_inverse_azimuths(self):
+        random.seed(84)
+
+        az_ans = [-177.96558522172995,
+                  128.55935150957538,
+                  153.79051165122308,
+                  78.28417585048585,
+                  -119.08597433579152,
+                  6.878393066563715,
+                  167.83620023616692,
+                  -60.883596473778525,
+                  146.80260470446478,
+                  90.72563989100766,
+                  91.52463811247357,
+                  -176.57683616878396]
+
+        baz_ans = [124.80226823425508,
+                   -84.35400639349773,
+                   -15.851049504289108,
+                   -43.21579038193292,
+                   58.745278161362435,
+                   -22.04237984144868,
+                   -131.24922341012208,
+                   82.12804031596862,
+                   -128.75928938927842,
+                   -123.47642579406025,
+                   -148.877863894165,
+                   6.763244985451507]
+
+        normalize = lambda x: (x+180) % 360 - 180
+
+        for i in range(12):
+            x1 = random.randint(-180, 179)
+            x2 = random.randint(-180, 179)
+            y1 = random.randint(-89, 89)
+            y2 = random.randint(-89, 89)
+
+            az, baz, d = LonLatWGS84.inverse(x1, y1, x2, y2)
+            self.assertAlmostEqual(normalize(az), normalize(az_ans[i]))
+            self.assertAlmostEqual(normalize(baz), normalize(baz_ans[i]))
+
+    def test_inverse_meridional_case2(self):
+        # Test a few difficult cases that arose during development
+        az, baz, _ = LonLatWGS84.inverse(100, 8, -80, 8)
+        self.assertAlmostEqual(az, 0.0)
+        self.assertAlmostEqual(baz, 0.0)
+
+        az, baz, _ = LonLatWGS84.inverse(-15, 86, 165, 86)
+        self.assertAlmostEqual(az, 0.0)
+        self.assertAlmostEqual(baz, 0.0)
+
+        az, baz, _ = LonLatWGS84.inverse(-139, -23, 41, -23)
+        self.assertAlmostEqual(az, 180.0)
+        self.assertAlmostEqual(baz, 180.0)
+
 if __name__ == "__main__":
     unittest.main()

@@ -137,7 +137,7 @@ class LonLat(CoordinateSystem):
         s12 = 2 * pi * self.a * abs(x1-x2)/360.0
         return az, baz, s12
 
-    def inverse(self, x1, y1, x2, y2):
+    def inverse(self, x1, y1, x2, y2, tol=None):
         """ Compute the shortest path (geodesic) between two points.
 
         Parameters
@@ -155,6 +155,11 @@ class LonLat(CoordinateSystem):
 
         Algorithm due to Karney, C.F.F. "Algorithms for geodesics", J. Geod (2013)
         """
+        niter = 0
+        maxiter = 100
+        if tol is None:
+            tol = 1e-10
+
         if y1 == y2 == 0:
             # Equatorial case
             return self._inverse_equatorial(x1, x2)
@@ -181,7 +186,7 @@ class LonLat(CoordinateSystem):
         second_eccn2 = eccn2 / (1-eccn2)
 
         if x1 == x2:
-            # Meridional case
+            # Meridional case 1
             alpha0 = alpha1 = alpha2 = omega1 = omega2 = 0.0
 
             _i = sqrt(cos(alpha1)**2 + (sin(alpha1)*sin(beta1))**2)
@@ -193,11 +198,24 @@ class LonLat(CoordinateSystem):
             _rad = sqrt(1+k2)
             eps = (_rad - 1) / (_rad + 1)
 
+        elif abs(lambda12 % (2*pi) - pi) < 1e-12:
+            # Meridional case 2
+            if y1 + y2 > 0:
+                alpha0 = alpha1 = 0.0
+                alpha2 = omega1 = omega2 = pi
+            else:
+                alpha0 = alpha1 = omega1 = omega2 = pi
+                alpha2 = 0.0
+
+            sigma1, _ = _solve_NEA(alpha0, alpha1, beta1)
+            _, sigma2, _ = _solve_NEB(alpha0, alpha1, beta1, beta2)
+
+            k2 = second_eccn2
+            _rad = sqrt(1+k2)
+            eps = (_rad - 1) / (_rad + 1)
+
         else:
             # Newton iteration
-            niter = 0
-            maxiter = 20
-            tol = 1/self.a*2*pi
             dlambda12 = tol + 1
 
             while (abs(dlambda12) > tol) and (niter != maxiter):
@@ -267,10 +285,10 @@ class LonLat(CoordinateSystem):
                                   - sqrt(1 + k2*sin(sigma1)**2) * sin(sigma1)*cos(sigma2) \
                                   - cos(sigma1) * cos(sigma2) * (Js2-Js1))
                     dlambda12_dalpha1 = m12/(self.a * cos(alpha2)*cos(beta2))
+                    dalpha1 = -dlambda12 / dlambda12_dalpha1
+                    alpha1 = (alpha1 + dalpha1) % (2*pi)
+                    # printd(alpha1)
 
-                    dalpha1 = -dlambda12 / (dlambda12_dalpha1)
-
-                    alpha1 += dalpha1
                 niter += 1
 
         k2 = second_eccn2 * cos(alpha0)**2
@@ -293,17 +311,12 @@ class LonLat(CoordinateSystem):
         s2 = I1s2*self.b
         s12 = s2-s1
 
-        # Normalize to range [-pi, pi) before reversing earlier transformations
-        alpha1 = (alpha1 + pi) % (2*pi) - pi
-        alpha2 = (alpha2 + pi) % (2*pi) - pi
-
         if tr["xflip"]:
             alpha1 = -alpha1
             alpha2 = -alpha2
 
         if tr["yflip"]:
-            alpha1 = pi - alpha1
-            alpha2 = pi - alpha2
+            alpha1, alpha2 = pi-alpha2, pi-alpha1
 
         if tr["ysignswap"]:
             alpha1 = pi - alpha1
@@ -512,3 +525,9 @@ if __name__ == "__main__":
     az, backaz, dist = LonLatWGS84.inverse(0.0, phi1, lambda12, phi2)
     print("solution:", 161.890524, 19989832.827610)
     print("computed:", az, dist)
+
+    # full inverse problem with meridional points
+    print("\nstress test")
+    az, baz, d = LonLatWGS84.inverse(80.0, 8.0, -100.0, 8.0)
+    print("solution:", 0.0, 0.0)
+    print("computed:", az, baz)
