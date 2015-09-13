@@ -125,6 +125,8 @@ class LonLat(CoordinateSystem):
             x2 -= 360.0
         y2 = phi2*180.0/pi
         backaz = (alpha2+pi)*180/pi
+        x2 = (x2+180) % 360 - 180
+        backaz = (backaz+180) % 360 - 180
         return x2, y2, backaz
 
     def _inverse_equatorial(self, x1, x2):
@@ -186,7 +188,6 @@ class LonLat(CoordinateSystem):
         second_eccn2 = eccn2 / (1-eccn2)
 
         if x1 == x2:
-            print("meridional1")
             # Meridional case 1
             alpha0 = alpha1 = alpha2 = omega1 = omega2 = 0.0
 
@@ -200,7 +201,6 @@ class LonLat(CoordinateSystem):
             eps = (_rad - 1) / (_rad + 1)
 
         elif abs(lambda12 % (2*pi) - pi) < 1e-12:
-            print("meridional2", x1, x2)
             # Meridional case 2
             if y1 + y2 > 0:
                 alpha0 = alpha1 = 0.0
