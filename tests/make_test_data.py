@@ -1,5 +1,6 @@
 """ Generate reference data for automated tests """
 
+from os.path import realpath, split, join
 from narwhal import Cast, CTDCast, XBTCast, CastCollection
 import datetime
 import numpy as np
@@ -14,29 +15,29 @@ class TestData():
         self.temp = temp
         self.sal = sal
         dt = datetime.datetime(1993, 8, 18, 14, 42, 36)
-        self.cast = Cast(self.p, temp=self.temp, sal=self.sal, date=dt)
-        self.ctd = CTDCast(self.p, temp=self.temp, sal=self.sal, date=dt)
-        self.ctdz = CTDCast(self.p, temp=self.temp, sal=self.sal, date=dt)
-        self.xbt = XBTCast(self.p, temp=self.temp, sal=self.sal, date=dt)
-        self.collection = CastCollection(self.ctd, self.xbt, self.ctd)
+        self.cast = Cast(pres=self.p, temp=self.temp, sal=self.sal, date=dt)
+        self.collection = CastCollection(self.cast, self.cast, self.cast)
+
+        self.path = join(split(realpath(__file__))[0], "data")
         return
 
     def save_nwl(self):
-        self.cast.save("data/reference_cast_test.nwl", binary=False)
-        self.ctd.save("data/reference_ctd_test.nwl", binary=False)
-        self.ctdz.save("data/reference_ctdz_test.nwl", binary=False)
-        self.xbt.save("data/reference_xbt_test.nwl", binary=False)
-        self.collection.save("data/reference_coll_test.nwl", binary=False)
+        self.cast.save_json(join(self.path, "reference_cast_test.nwl"), binary=False)
+        self.collection.save_json(join(self.path, "reference_coll_test.nwl"), binary=False)
 
     def save_nwz(self):
-        self.cast.save("data/reference_cast_test.nwz")
-        self.ctd.save("data/reference_ctd_test.nwz")
-        self.ctdz.save("data/reference_ctdz_test.nwz")
-        self.xbt.save("data/reference_xbt_test.nwz")
-        self.collection.save("data/reference_coll_test.nwz")
+        self.cast.save_json(join(self.path, "reference_cast_test.nwz"))
+        self.collection.save_json(join(self.path, "reference_coll_test.nwz"))
+
+    def save_hdf(self):
+        self.cast.save_hdf(join(self.path, "reference_cast_test.h5"))
+        self.collection.save_hdf(join(self.path, "reference_coll_test.h5"))
 
 if __name__ == "__main__":
     data = TestData()
     data.save_nwl()
     data.save_nwz()
-
+    try:
+        data.save_hdf()
+    except IOError:
+        print("HDF data not saved because h5py not installed")
