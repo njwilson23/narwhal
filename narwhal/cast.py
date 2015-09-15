@@ -75,7 +75,7 @@ class Cast(NarwhalBase):
 
         Vector water properties and scalar metadata are provided as keyword
         arguments.
-        
+
         There is one are several reserved keywords:
 
         coordinates (Optional[tuple]): Length 2 tuple providing the
@@ -661,7 +661,12 @@ def fromdict(d):
         properties = d["properties"]
         for k,v in properties.items():
             if k.lower() in ("time", "timestamp", "date", "datetime"):
-                properties[k] = dateutil.parser.parse(v)
+                try:
+                    properties[k] = dateutil.parser.parse(v)
+                except AttributeError:
+                    # just read it as is
+                    # this happens when value is a float
+                    properties[k] = v
 
         data.update(properties)
         return Cast(**data)
