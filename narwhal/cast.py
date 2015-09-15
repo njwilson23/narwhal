@@ -69,13 +69,21 @@ class NarwhalBase(object):
 
 class Cast(NarwhalBase):
     """ A Cast is a set of referenced measurements associated with a single
-    coordinate.
+    location.
 
-    Vector water properties and scalar metadata are provided as keyword
-    arguments. There are several reserved keywords:
+    Args:
 
-    coords::iterable[2]
-        the geographic coordinates of the observation
+        Vector water properties and scalar metadata are provided as keyword
+        arguments.
+        
+        There is one are several reserved keywords:
+
+        coordinates (Optional[tuple]): Length 2 tuple providing the
+            geographical location of a cast. If not provided, defaults to NaN.
+
+        length (Optional[int]): Specifies the length of vector fields, which is
+            used as a runtime check. If not provided, length is inferred from
+            the other arguments.
     """
 
     _type = "cast"
@@ -215,7 +223,7 @@ class Cast(NarwhalBase):
         return nv
 
     def extend(self, n):
-        """ Add `n::int` NaN depth levels to cast. """
+        """ Add *n* (int) NaN depth levels to cast. """
         if n > 0:
             d = dict((k, np.nan*np.empty(n)) for k in self.fields)
             self.data = pandas.concat([self.data, pandas.DataFrame(d)],
@@ -228,17 +236,12 @@ class Cast(NarwhalBase):
         """ Interpolate property y as a function of property x at values given
         by vector x=v.
 
-        y::string
-            name of property to interpolate
+        Args:
 
-        x::string
-            name of reference property
-
-        v::iterable
-            vector of values for x
-
-        force::bool
-            whether to coerce x to be monotonic (default False)
+            y (str): name of property to interpolate
+            x (str): name of reference property
+            v (iterable): vector of values for x
+            force (bool): whether to coerce x to be monotonic (default False)
 
         Note: it's difficult to interpolate when x is not monotonic, because
         this makes y not a true function. However, it's resonable to want to
@@ -296,17 +299,12 @@ class Cast(NarwhalBase):
         """ Add in-situ density computed from salinity, temperature, and
         pressure to fields. Return the field name.
 
-        salkey::string
-            data key to use for salinity
+        Args:
 
-        tempkey::string
-            data key to use for in-situ temperature
-
-        preskey::string
-            data key to use for pressure
-
-        rhokey::string
-            data key to use for in-situ density
+            salkey (str): data key to use for salinity
+            tempkey (str): data key to use for in-situ temperature
+            preskey (str): data key to use for pressure
+            rhokey (str): data key to use for in-situ density
         """
         if salkey in self.fields and tempkey in self.fields and preskey in self.fields:
             SA = gsw.sa_from_sp(self[salkey], self[preskey],
@@ -321,14 +319,11 @@ class Cast(NarwhalBase):
     def add_depth(self, preskey="pressure", rhokey="density", depthkey="depth"):
         """ Use density and pressure to calculate depth.
 
-        preskey::string
-            data key to use for pressure
+        Args:
 
-        rhokey::string
-            data key to use for in-situ density
-
-        depthkey::string
-            data key to use for depth
+            preskey (str): data key to use for pressure
+            rhokey (str): data key to use for in-situ density
+            depthkey (str): data key to use for depth
         """
         if preskey not in self.fields:
             raise FieldError("add_depth requires a pressure field")
@@ -351,17 +346,12 @@ class Cast(NarwhalBase):
         """ Calculate the squared buoyancy frequency, based on in-situ density.
         Uses a smoothing spline to compute derivatives.
 
-        rhokey::string
-            data key to use for in-situ density
+        Args:
 
-        depthkey::string
-            data key to use for depth
-
-        N2key::string
-            data key to use for N^2
-
-        s::float
-            spline smoothing factor (smaller values give a noisier result)
+            rhokey (str): data key to use for in-situ density
+            depthkey (str): data key to use for depth
+            N2key (str): data key to use for N^2
+            s (float): spline smoothing factor (smaller values give a noisier result)
         """
         if rhokey not in self.fields:
             raise FieldError("in-situ density required")
@@ -380,14 +370,12 @@ class Cast(NarwhalBase):
         """ Compute the velocity shear for *u* and *v*. If *s* is not None,
         smooth the data with a gaussian filter before computing the derivative.
 
-        depthkey::string
-            data key to use for depth in meters
+        Args:
 
-        vkey,ukey::string
-            data key to use for u,v velocity
-
-        dudzkey,dvdzkey::string
-            data key to use for u,v velocity shears
+            depthkey (str): data key to use for depth in meters
+            vkey,ukey (str): data key to use for u,v velocity
+            dudzkey (str): data key to use for u velocity shears
+            dvdzkey (str): data key to use for v velocity shears
         """
         if ukey not in self.fields or vkey not in self.fields:
             raise FieldError("u and v velocity required")
@@ -427,13 +415,15 @@ def LADCP(depth, uvel, vvel, **kw):
 class CastCollection(NarwhalBase, collections.Sequence):
     """ A CastCollection is an indexable collection of Cast instances.
 
-    Create from casts or an iterable ordered sequence of casts:
+    Example:
 
-        CastCollection(cast1, cast2, cast3...)
+        Create from casts or an iterable ordered sequence of casts::
 
-    or
+            CastCollection(cast1, cast2, cast3...)
 
-        CastCollection([cast1, cast2, cast3...])
+        or::
+
+            CastCollection([cast1, cast2, cast3...])
     """
     _type = "castcollection"
 
@@ -514,8 +504,10 @@ class CastCollection(NarwhalBase, collections.Sequence):
     def add_bathymetry(self, bathymetry):
         """ Reference Bathymetry instance `bathymetry` to CastCollection.
 
-        bathymetry::Bathymetry2d
-            bathymetry instance
+        Args:
+
+            bathymetry (Bathymetry): bathymetric dataset to associate with
+                casts
         """
         for cast in self.casts:
             if hasattr(cast, "coordinates"):
@@ -536,16 +528,15 @@ class CastCollection(NarwhalBase, collections.Sequence):
         """ Return all casts satisfying criteria. Criteria are specified using
         one of the following patterns:
 
-        - f::function, in which case all casts satisfying `f(cast) == True` are
-          returned
+        Args:
 
-        - k::string and f::function, in which case all casts for which
-          `f(cast[key]) == True` are returned
+            f (function): all casts satisfying `f(cast) == True` are returned
 
-        - k::string and L::Container, in which case all casts for which
-          `cast[key] is in L == True` are returned
+            k (str) and f (function): all casts for which `f(cast[key]) == True` are returned
 
-        with a property key that is in `values::Container`
+            k (str) and L (iterable): all casts for which `cast[key] is in L ==
+                True` are returned with a property key that is in
+                `values` (iterable)
         """
         casts = []
         if values is None:
@@ -601,8 +592,9 @@ class CastCollection(NarwhalBase, collections.Sequence):
         """ Naively return values as an array, assuming that all casts are
         indexed with the same pressure levels.
 
-        key::string
-            property to return
+        Args:
+
+            key (str): property to return
         """
         nrows = max(len(cast) for cast in self.casts)
         arr = np.nan * np.empty((nrows, len(self.casts)), dtype=np.float64)
