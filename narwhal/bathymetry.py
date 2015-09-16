@@ -23,6 +23,7 @@ class Bathymetry(object):
     """
 
     def __init__(self, depth, geo):
+        depth = list(depth)
         if len(geo) != len(depth):
             raise ValueError("length of depth array and geometry must match")
         self.geo = geo
