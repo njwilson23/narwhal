@@ -676,29 +676,24 @@ def fromdict(d):
 
 def read_woce_netcdf(fnm):
     """ Read a CTD cast from a WOCE NetCDF file. """
-
     def getvariable(nc, key):
-        return nc.variables[key].data.copy()
+        d = nc.variables[key].data.copy()
+        if len(d) == 1:
+            d = d[0]
+        return d
 
     nc = scipy.io.netcdf_file(fnm)
-    coords = (getvariable(nc, "longitude")[0], getvariable(nc, "latitude")[0])
+    if ("longitude" in nc.variables) and ("latitude" in nc.variables):
+        coordinates = (getvariable(nc, "longitude"),
+                       getvariable(nc, "latitude"))
+    else:
+        coordinates = (np.nan, np.nan)
 
-    pres = getvariable(nc, "pressure")
-    sal = getvariable(nc, "salinity")
-    salqc = getvariable(nc, "salinity_QC")
-    sal[salqc!=2] = np.nan
-    temp = getvariable(nc, "temperature")
-    # tempqc = getvariable(nc, "temperature_QC")
-    # temp[tempqc!=2] = np.nan
-    oxy = getvariable(nc, "oxygen")
-    oxyqc = getvariable(nc, "oxygen_QC")
-    oxy[oxyqc!=2] = np.nan
+    kw = dict()
+    for key in nc.variables:
+        kw[key] = getvariable(nc, key)
 
-    date = getvariable(nc, "woce_date")
-    time = getvariable(nc, "woce_time")
-    return CTDCast(pres, sal, temp, oxygen=oxy,
-                   coordinates=coords,
-                   properties={"woce_time":time, "woce_date":date})
+    return Cast(coordinates=coordinates, **kw)
 
 class AbstractCast(six.with_metaclass(abc.ABCMeta)):
     pass
