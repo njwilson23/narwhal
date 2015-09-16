@@ -107,8 +107,8 @@ def baroclinic_modes(cast, nmodes, ztop=10, N2key="N2", depthkey="depth"):
 
 
 def thermal_wind(castcoll, tempkey="temperature", salkey="salinity",
-                 rhokey=None, depthkey="depth", dudzkey="dudz", ukey="u",
-                 overwrite=False):
+                 rhokey=None, depthkey="depth", preskey="pressure",
+                 dudzkey="dudz", ukey="u", overwrite=False):
     """ Compute profile-orthagonal velocity shear using hydrostatic thermal
     wind. In-situ density is computed from temperature and salinity unless
     *rhokey* is provided.
@@ -148,7 +148,8 @@ def thermal_wind(castcoll, tempkey="temperature", salkey="salinity",
     if rhokey is None:
         rhokeys = []
         for cast in castcoll.casts:
-            rhokeys.append(cast.add_density())
+            rhokeys.append(cast.add_density(salkey=salkey, tempkey=tempkey,
+                                            preskey=preskey, rhokey="density"))
         if any(r != rhokeys[0] for r in rhokeys[1:]):
             raise NarwhalError("Tried to add density field, but got inconsistent keys")
         else:
@@ -159,7 +160,7 @@ def thermal_wind(castcoll, tempkey="temperature", salkey="salinity",
 
     for cast in castcoll:
         if depthkey not in cast.data.keys():
-            cast.add_depth()
+            cast.add_depth(preskey=preskey, rhokey=rhokey, depthkey=depthkey)
 
     drho = util.diff2_dinterp(rho, castcoll.projdist())
     sinphi = np.sin([c.coordinates.y*np.pi/180.0 for c in castcoll.casts])
