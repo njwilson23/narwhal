@@ -116,10 +116,10 @@ def thermal_wind(castcoll, rhokey="density", depthkey="depth"):
     CastCollection containing casts with shear and velocity fields
     """
     if not all(rhokey in c.fields for c in castcoll):
-        raise FieldError("Not all casts have a "{0}" field".format(rhokey))
+        raise FieldError("Not all casts have a `{0}` field".format(rhokey))
 
     if not all(depthkey in c.fields for c in castcoll):
-        raise FieldError("Not all casts have a "{0}" field".format(depthkey))
+        raise FieldError("Not all casts have a `{0}` field".format(depthkey))
 
     rho = castcoll.asarray(rhokey)
     (m, n) = rho.shape
@@ -155,10 +155,10 @@ def thermal_wind_inner(castcoll, tempkey="temperature", salkey="salinity",
     CastCollection containing casts with shear and velocity fields
     """
     if not all(rhokey in c.fields for c in castcoll):
-        raise FieldError("Not all casts have a "{0}" field".format(rhokey))
+        raise FieldError("Not all casts have a `{0}` field".format(rhokey))
 
     if not all(depthkey in c.fields for c in castcoll):
-        raise FieldError("Not all casts have a "{0}" field".format(depthkey))
+        raise FieldError("Not all casts have a `{0}` field".format(depthkey))
 
     rho = castcoll.asarray(rhokey)
     (m, n) = rho.shape
@@ -172,7 +172,7 @@ def thermal_wind_inner(castcoll, tempkey="temperature", salkey="salinity",
     for i in range(len(castcoll)-1):
         c1 = castcoll[i].coordinates
         c2 = castcoll[i+1].coordinates
-        az, _ d = c1.crs.inverse(c1.x, c1.y, c2.x, c2.y)
+        az, _, d = c1.crs.inverse(c1.x, c1.y, c2.x, c2.y)
         x, y, _ = c1.crs.forward(c1.x, c1.y, az, 0.5*d)
         midcoords.append((x, y))
 
