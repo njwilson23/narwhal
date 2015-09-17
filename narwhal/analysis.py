@@ -59,24 +59,19 @@ def water_fractions(cast, sources, tracers=("salinity", "temperature")):
 def baroclinic_modes(cast, nmodes, ztop=10, N2key="N2", depthkey="depth"):
     """ Calculate the baroclinic normal modes based on linear
     quasigeostrophy and the vertical stratification. Return the first
-    `nmodes::int` deformation radii and their associated eigenfunctions.
+    *nmodes* deformation radii and their associated eigenfunctions.
 
-    Arguments
-    ---------
+    Currently requires regular vertical gridding in depth.
 
-    ztop (float)
-
-        the depth at which to cut off the profile, to avoid surface effects
-
-    N2key (string)
-
-        data key to use for N^2
-
-    depthkey (string)
-
-        data key to use for depth
+    Args
+    ----
+    cast (Cast): profile to base normal modes on
+    nmodes (int): number of modes to compute
+    ztop (float): depth to cut off the profile, to avoid surface effects
+    N2key (str): data key to use for buoyancy frequency N^2
+    depthkey (str): data key to use for depth
     """
-    if N2key not in cast.fields or depthkey not in cast.fields:
+    if (N2key not in cast.fields) or (depthkey not in cast.fields):
         raise FieldError("buoyancy frequency and depth required")
 
     igood = ~cast.nanmask((N2key, depthkey))
@@ -88,7 +83,7 @@ def baroclinic_modes(cast, nmodes, ztop=10, N2key="N2", depthkey="depth"):
     dep = dep[itop:].values
 
     h = np.diff(dep)
-    assert all(h[0] == h_ for h_ in h[1:])     # requires uniform gridding for now
+    assert all(h[0] == h_ for h_ in h[1:])      # requires uniform gridding
 
     f = 2*OMEGA * np.sin(cast.coordinates.y)
     F = f**2/N2
@@ -106,71 +101,40 @@ def baroclinic_modes(cast, nmodes, ztop=10, N2key="N2", depthkey="depth"):
     return Ld, V[:,1:]
 
 
-def thermal_wind(castcoll, tempkey="temperature", salkey="salinity",
-                 rhokey=None, depthkey="depth", preskey="pressure",
-                 dudzkey="dudz", ukey="u", overwrite=False):
+def thermal_wind(castcoll, rhokey="density", depthkey="depth"):
     """ Compute profile-orthagonal velocity shear using hydrostatic thermal
-    wind. In-situ density is computed from temperature and salinity unless
-    *rhokey* is provided.
+    wind.
 
-    Adds a U field and a ∂U/∂z field to each cast in the collection. As a
-    side-effect, if casts have no "depth" field, one is added and populated
-    from temperature and salinity fields.
+    Args
+    ----
+    rhokey (str): key to use for density
 
-    Arguments
-    ---------
+    depthkey (str): key to use for depth from the surface
 
-    tempkey (string)
-
-        key to use for temperature if *rhokey* is None
-
-    salkey (string)
-
-        key to use for salinity if *rhokey* is None
-
-    rhokey (string)
-
-        key to use for density, or None [default: None]
-
-    dudzkey (string)
-
-        key to use for ∂U/∂z, subject to *overwrite*
-
-    ukey (string)
-
-        key to use for U, subject to *overwrite*
-
-    overwrite (bool)
-
-        whether to allow cast fields to be overwritten if False, then
-        *ukey* and *dudzkey* are incremented until there is no clash
+    Returns
+    -------
+    CastCollection containing casts with shear and velocity fields
     """
-    if rhokey is None:
-        rhokeys = []
-        for cast in castcoll.casts:
-            rhokeys.append(cast.add_density(salkey=salkey, tempkey=tempkey,
-                                            preskey=preskey, rhokey="density"))
-        if any(r != rhokeys[0] for r in rhokeys[1:]):
-            raise NarwhalError("Tried to add density field, but got inconsistent keys")
-        else:
-            rhokey = rhokeys[0]
+    if not all(rhokey in c.fields for c in castcoll):
+        raise FieldError("Not all casts have a "{0}" field".format(rhokey))
+
+    if not all(depthkey in c.fields for c in castcoll):
+        raise FieldError("Not all casts have a "{0}" field".format(depthkey))
 
     rho = castcoll.asarray(rhokey)
     (m, n) = rho.shape
-
-    for cast in castcoll:
-        if depthkey not in cast.data.keys():
-            cast.add_depth(preskey=preskey, rhokey=rhokey, depthkey=depthkey)
 
     drho = util.diff2_dinterp(rho, castcoll.projdist())
     sinphi = np.sin([c.coordinates.y*np.pi/180.0 for c in castcoll.casts])
     dudz = (G / rho * drho) / (2*OMEGA*sinphi)
     u = util.uintegrate(dudz, castcoll.asarray(depthkey))
 
-    for (ic,cast) in enumerate(castcoll.casts):
-        cast._addkeydata(dudzkey, dudz[:,ic], overwrite=overwrite)
-        cast._addkeydata(ukey, u[:,ic], overwrite=overwrite)
-    return
+    outcasts = []
+    for i in range(len(castcoll)):
+        outcasts.append(Cast(dudz=dudz[:,i],
+                             uvel=u[:,i],
+                             coordinates=castcoll[i].coordinates.vertex))
+    return CastCollection(outcasts)
 
 def thermal_wind_inner(castcoll, tempkey="temperature", salkey="salinity",
                        rhokey=None, depthkey="depth", dudzkey="dudz", ukey="u",
@@ -178,50 +142,23 @@ def thermal_wind_inner(castcoll, tempkey="temperature", salkey="salinity",
     """ Alternative implementation that creates a new cast collection
     consistng of points between the observation casts.
 
-    Compute profile-orthagonal velocity shear using hydrostatic thermal
-    wind. In-situ density is computed from temperature and salinity unless
-    *rhokey* is provided.
+    Compute profile-orthagonal velocity shear using hydrostatic thermal wind.
 
-    Adds a U field and a ∂U/∂z field to each cast in the collection. As a
-    side-effect, if casts have no "depth" field, one is added and populated
-    from temperature and salinity fields.
+    Args
+    ----
+    rhokey (str): key to use for density
 
-    Arguments
-    ---------
+    depthkey (str): key to use for depth from the surface
 
-    tempkey (string)
-
-        key to use for temperature if *rhokey* is None
-
-    salkey (string)
-
-        key to use for salinity if *rhokey* is None
-
-    rhokey (string)
-
-        key to use for density, or None [default: None]
-
-    dudzkey (string)
-
-        key to use for ∂U/∂z, subject to *overwrite*
-
-    ukey (string)
-
-        key to use for U, subject to *overwrite*
-
-    overwrite (bool)
-
-        whether to allow cast fields to be overwritten if False, then
-        *ukey* and *dudzkey* are incremented until there is no clash
+    Returns
+    -------
+    CastCollection containing casts with shear and velocity fields
     """
-    if rhokey is None:
-        rhokeys = []
-        for cast in castcoll.casts:
-            rhokeys.append(cast.add_density())
-        if any(r != rhokeys[0] for r in rhokeys[1:]):
-            raise NarwhalError("Tried to add density field, but found inconsistent keys")
-        else:
-            rhokey = rhokeys[0]
+    if not all(rhokey in c.fields for c in castcoll):
+        raise FieldError("Not all casts have a "{0}" field".format(rhokey))
+
+    if not all(depthkey in c.fields for c in castcoll):
+        raise FieldError("Not all casts have a "{0}" field".format(depthkey))
 
     rho = castcoll.asarray(rhokey)
     (m, n) = rho.shape
@@ -230,52 +167,42 @@ def thermal_wind_inner(castcoll, tempkey="temperature", salkey="salinity",
         avg = a if len(a[~np.isnan(a)]) > len(b[~np.isnan(b)]) else b
         return avg
 
-    # Add casts in intermediate positions
-    midcasts = []
+    # compute mid locations
+    midcoords = []
     for i in range(len(castcoll)-1):
         c1 = castcoll[i].coordinates
         c2 = castcoll[i+1].coordinates
-        cmid = c1.walk(0.5*c1.distance(c2), c1.azimuth(c2))
-        p = avgcolumns(castcoll[i]["pressure"], castcoll[i+1]["pressure"])
-        t = avgcolumns(castcoll[i]["temperature"], castcoll[i+1]["temperature"])
-        s = avgcolumns(castcoll[i]["salinity"], castcoll[i+1]["salinity"])
-        cast = CTDCast(p, s, t, coordinates=cmid.vertex)
-        if "depth" not in cast.fields:
-            cast.add_density()
-        cast.add_depth()
-        cast.properties[bottomkey] = 0.5 * (castcoll[i].properties[bottomkey] +
-                                            castcoll[i+1].properties[bottomkey])
-        midcasts.append(cast)
+        az, _ d = c1.crs.inverse(c1.x, c1.y, c2.x, c2.y)
+        x, y, _ = c1.crs.forward(c1.x, c1.y, az, 0.5*d)
+        midcoords.append((x, y))
 
-    coll = CastCollection(midcasts)
     drho = util.diff2_inner(rho, castcoll.projdist())
     sinphi = np.sin([c.coordinates.y*np.pi/180.0 for c in midcasts])
     rhoavg = 0.5 * (rho[:,:-1] + rho[:,1:])
     dudz = (G / rhoavg * drho) / (2*OMEGA*sinphi)
     u = util.uintegrate(dudz, coll.asarray(depthkey))
 
-    for (ic,cast) in enumerate(coll):
-        cast._addkeydata(dudzkey, dudz[:,ic], overwrite=overwrite)
-        cast._addkeydata(ukey, u[:,ic], overwrite=overwrite)
-    return coll
+    outcasts = []
+    for i, (x, y) in enumerate(midcoords):
+        outcasts.append(Cast(dudz=dudz[:,i], uvel=u[:,i],
+                             coordinates=(x, y)))
+    return CastCollection(outcasts)
 
 def eofs(castcoll, key="temperature", zkey="depth", n_eofs=None):
-    """ Compute the EOFs and EOF structures for *key*. Returns a cast with
-    the structure functions, an array of eigenvectors (EOFs), and an array
-    of eigenvalues.
+    """ Compute the EOFs and EOF structures for *key*.
 
     Requires all casts to have the same depth-gridding.
 
-    Arguments
-    ---------
+    Args
+    ----
+    key (str): key to use for computing EOFs
+    n_eofs (int): number of EOFs to return
 
-    key (string)
-
-        key to use for computing EOFs
-
-    n_eofs (int)
-
-        number of EOFs to return
+    Returns
+    -------
+    Cast containing the structure functions as fields
+    ndarray containing eigenvectors
+    ndarray containing eigenvalues
     """
     assert all(zkey in c.fields for c in castcoll)
     assert all(all(castcoll[0].data.index == c.data.index) for c in castcoll[1:])
@@ -288,7 +215,7 @@ def eofs(castcoll, key="temperature", zkey="depth", n_eofs=None):
     arr = arr[~msk,:]
     arr -= arr.mean()
 
-    _,sigma,V = np.linalg.svd(arr)
+    _, sigma, V = np.linalg.svd(arr)
     lamb = sigma**2/(len(castcoll)-1)
     eofts = util.eof_timeseries(arr, V)
 
