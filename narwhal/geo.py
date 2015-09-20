@@ -130,12 +130,13 @@ class LonLat(CoordinateSystem):
         return x2, y2, backaz
 
     def _inverse_equatorial(self, x1, x2):
-        if x1 - x2 > 0:
+        diff = (x2-x1 + 180) % 360 - 180
+        if diff < 0:
+            az = 270.0
+            baz = 90.0
+        else:
             az = 90.0
             baz = 270.0
-        else:
-            ax = 270.0
-            baz = 90.0
         s12 = 2 * pi * self.a * abs(x1-x2)/360.0
         return az, baz, s12
 
