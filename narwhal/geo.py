@@ -175,13 +175,6 @@ class LonLat(CoordinateSystem):
         lambda12 = (x2-x1)*pi/180.0
         f = (self.a-self.b) / self.a
 
-        # Guess the azimuth
-        if (abs(lambda12-pi) > 0.0087) or (abs(phi1+phi2) > 0.0087):
-            # not nearly antipodal
-            alpha1, _, _ = solve_vicenty(self.a, f, lambda12, phi1, phi2)
-        else:
-            alpha1 = solve_astroid(self.a, f, lambda12, phi1, phi2)
-
         beta1 = atan((1-f)*tan(phi1))
         beta2 = atan((1-f)*tan(phi2))
 
@@ -219,6 +212,14 @@ class LonLat(CoordinateSystem):
 
         else:
             # Newton iteration
+
+            # Guess the azimuth
+            if (abs(lambda12-pi) > 0.0087) and (abs(phi1+phi2) > 0.0087):
+                # not nearly antipodal
+                alpha1, _, _ = solve_vicenty(self.a, f, lambda12, phi1, phi2)
+            else:
+                alpha1 = solve_astroid(self.a, f, lambda12, phi1, phi2)
+
             dlambda12 = tol + 1
 
             while (abs(dlambda12) > tol) and (niter != maxiter):
