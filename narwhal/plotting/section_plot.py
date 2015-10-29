@@ -1,9 +1,10 @@
 import numpy as np
 import matplotlib
 import matplotlib.pyplot as plt
-# import matplotlib.tri as mtri
+
 from scipy.interpolate import griddata, CloughTocher2DInterpolator
 from scipy import ndimage
+from . import interp
 
 try:
     from karta import Line
@@ -43,15 +44,11 @@ class BaseSectionAxes(plt.Axes):
         return d_
 
     def _computemask(self, cc, Xi, Yi, Zi, bottomkey):
-        if bottomkey is not None:
-            depth = [cast.properties[bottomkey] for cast in cc]
-        else:
-            def _last(arr):
-                msk = ~np.isnan(arr)
-                return arr[np.max(np.argwhere(msk))]
-            depth = [_last(cast[self.ykey].values) for cast in cc]
-        cx = cc.projdist()
-        base = np.interp(Xi[0,:], cx, depth)
+        def _last(arr):
+            msk = ~np.isnan(arr)
+            return arr[np.max(np.argwhere(msk))]
+        depth = [_last(cast[self.ykey].values) for cast in cc]
+        base = np.interp(Xi[0,:], cc.projdist(), depth)
         zmask = Yi > np.tile(base, (Xi.shape[0], 1))
         return zmask
 
@@ -93,53 +90,53 @@ class BaseSectionAxes(plt.Axes):
         return bg
 
     def contour(self, cc, prop, ninterp=30, sk=None, mask=True,
-                bottomkey="depth", interp_scheme="horizontal_corr", **kwargs):
+                scheme="rbf_sill", **kwargs):
 
         if not isinstance(cc, AbstractCastCollection):
             raise TypeError("first argument must be a CastCollection type")
 
-        (Xi, Yi, Zi) = self._interpolate_section(cc, prop, ninterp, interp_scheme)
+        (Xi, Yi, Zi) = self._interpolate_section(cc, prop, ninterp, scheme)
 
         if sk is not None:
             Zi = self._smooth_field(Zi, sk)
 
         if mask:
-            msk = self._computemask(cc, Xi, Yi, Zi, bottomkey)
+            msk = self._computemask(cc, Xi, Yi, Zi)
             Zi[msk] = np.nan
 
         self._set_section_bounds(self.ykey, cc, prop)
         return super(BaseSectionAxes, self).contour(Xi, Yi, Zi, **kwargs)
 
     def contourf(self, cc, prop, ninterp=30, sk=None, mask=True,
-                 bottomkey="depth", interp_scheme="horizontal_corr", **kwargs):
+                 scheme="rbf_sill", **kwargs):
 
         if not isinstance(cc, AbstractCastCollection):
             raise TypeError("first argument must be a CastCollection type")
 
-        (Xi, Yi, Zi) = self._interpolate_section(cc, prop, ninterp, interp_scheme)
+        (Xi, Yi, Zi) = self._interpolate_section(cc, prop, ninterp, scheme)
 
         if sk is not None:
             Zi = self._smooth_field(Zi, sk)
 
         if mask:
-            msk = self._computemask(cc, Xi, Yi, Zi, bottomkey)
+            msk = self._computemask(cc, Xi, Yi, Zi)
             Zi[msk] = np.nan
 
         self._set_section_bounds(self.ykey, cc, prop)
         return super(BaseSectionAxes, self).contourf(Xi, Yi, Zi, **kwargs)
 
     def pcolormesh(self, cc, prop, ninterp=30, sk=None, mask=True,
-                   bottomkey="depth", interp_scheme="horizontal_corr", **kwargs):
+                   scheme="rbf_sill", **kwargs):
         if not isinstance(cc, AbstractCastCollection):
             raise TypeError("first argument must be a CastCollection type")
 
-        (Xi, Yi, Zi) = self._interpolate_section(cc, prop, ninterp, interp_scheme)
+        (Xi, Yi, Zi) = self._interpolate_section(cc, prop, ninterp, scheme)
 
         if sk is not None:
             Zi = self._smooth_field(Zi, sk)
 
         if mask:
-            msk = self._computemask(cc, Xi, Yi, Zi, bottomkey)
+            msk = self._computemask(cc, Xi, Yi, Zi)
             Zi[msk] = np.nan
 
         self._set_section_bounds(self.ykey, cc, prop)
@@ -241,7 +238,12 @@ class SectionAxes(BaseSectionAxes):
                 if max_y in cast[self.ykey]:
                     return cast
 
-        if scheme == "cubic":
+        if scheme == "rbf_sill":
+            xi, yi, Zi = interp.interp_over_sills(cc, prop, self.ykey,
+                    xscale=10e3, zscale=10, nz=50, nx=ninterp//len(cc))
+            Xi, Yi = np.meshgrid(xi, yi)
+
+        elif scheme == "cubic":
             Yo = np.vstack([cast[self.ykey] for cast in cc]).T
             Xo = np.tile(cc.projdist(), (len(Yo), 1))
             Zo = cc.asarray(prop)
@@ -349,11 +351,6 @@ class SectionAxes(BaseSectionAxes):
             alpha = 1e4
             Zi = griddata(np.c_[Xo_bc, alpha*Yo_bc], Zo_bc,
                           np.c_[Xi.ravel(), alpha*Yi.ravel()], method="cubic")
-
-            # alpha = 1e2
-            # rbfi = interpolate.Rbf(Xo_bc, alpha*Yo_bc, Zo_bc, function="thin_plate")
-            # Zi = rbfi(Xi.ravel(), alpha*Yi.ravel())
-            # Zi_check = rbfi(Xo.ravel(), alpha*Yo.ravel())
 
             Zi = Zi.reshape(Xi.shape)
 
