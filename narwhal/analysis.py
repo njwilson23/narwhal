@@ -6,7 +6,6 @@ from functools import reduce
 import numpy as np
 
 from .cast import Cast, CastCollection
-from .cast import CTDCast
 from .cast import NarwhalError, FieldError
 
 from . import util
@@ -177,10 +176,10 @@ def thermal_wind_inner(castcoll, tempkey="temperature", salkey="salinity",
         midcoords.append((x, y))
 
     drho = util.diff2_inner(rho, castcoll.projdist())
-    sinphi = np.sin([c.coordinates.y*np.pi/180.0 for c in midcasts])
+    sinphi = np.sin([c[1]*np.pi/180.0 for c in midcoords])
     rhoavg = 0.5 * (rho[:,:-1] + rho[:,1:])
     dudz = (G / rhoavg * drho) / (2*OMEGA*sinphi)
-    u = util.uintegrate(dudz, coll.asarray(depthkey))
+    u = util.uintegrate(dudz, castcoll.asarray(depthkey))
 
     outcasts = []
     for i, (x, y) in enumerate(midcoords):

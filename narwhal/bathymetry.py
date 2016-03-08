@@ -9,11 +9,11 @@ import numpy as np
 import scipy.interpolate
 
 try:
-    from karta import Point, Line
+    from karta import Line
     from karta.crs import LonLatWGS84
 except ImportError:
     # Frankly, this is unlikely to work right now
-    from .geo import Point, Line, LonLatWGS84
+    from .geo import Line, LonLatWGS84
 
 class Bathymetry(object):
     """ Class to represent bathymetric observations, either along a line or at
