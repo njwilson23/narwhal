@@ -128,7 +128,7 @@ class Cast(NarwhalBase):
     def __getitem__(self, key):
         if isinstance(key, (int, np.int32, np.int64)):
             if 0 <= key < len(self):
-                return self.data.irow(key)
+                return self.data.iloc[key]
             else:
                 raise IndexError("{0} not within cast length ({1})".format(key, len(self)))
         elif key in self.data:
