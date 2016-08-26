@@ -1,5 +1,5 @@
 """ Define some geometrical classes with an interface similar to karta
-(http://ironicmtn.com/karta.html)
+(https://github.com/fortyninemaps/karta)
 
 If karta is not available, this module will be loaded instead and provides some
 bare-bones geometrical and geodetic capabilities.
