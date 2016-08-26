@@ -5,21 +5,29 @@ import json
 import gzip
 import dateutil
 import six
+from numpy import ndarray
 
-# This class coerces numpy values into Python types for JSON serialization. 
+def _pytype(dtype):
+    """ return a python type for a numpy object """
+    if dtype in ("int8", "int16", "int32", "int64", "uint8", "uint16", "uint32", "uint64"):
+        return int
+    elif dtype in ("float16", "float32", "float64", "float128"):
+        return float
+    elif dtype in ("complex64", "complex128", "complex256"):
+        return complex
+    else:
+        raise TypeError("not a recognized dtype: {0}".format(dtype))
+
+# This class coerces numpy values into Python types for JSON serialization.
 class NumpyJSONEncoder(json.JSONEncoder):
     def default(self, o):
-        try:
-            if o.dtype in ("int8", "int16", "int32", "int64", "uint8", "uint16", "uint32", "uint64"):
-                return int(o)
-            elif o.dtype in ("float16", "float32", "float64", "float128"):
-                return float(o)
-            elif o.dtype in ("complex64", "complex128", "complex256"):
-                return complex(o)
-            else:
-                raise TypeError("not a recognized type: {0}".format(o.dtype))
-        except (AttributeError, TypeError):
-            return json.JSONEncoder.default(self, o)
+        if isinstance(o, ndarray):
+            t = _pytype(o.dtype)
+            return [t(a) for a in o]
+        if hasattr(o, "dtype"):
+            t = _pytype(o.dtype)
+            return t(o)
+        return json.JSONEncoder.default(self, o)
 
 def write_text(fnm, d):
 
