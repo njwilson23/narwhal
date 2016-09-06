@@ -17,7 +17,7 @@ before_install:
   - conda info -a
 
 install:
-  - conda create --yes -n test-environment python=$TRAVIS_PYTHON_VERSION numpy scipy pandas pip matplotlib h5py
+  - conda create --yes -n test-environment python=$TRAVIS_PYTHON_VERSION numpy scipy pandas pip matplotlib h5py gdal
   - source activate test-environment
     #- pip install -U setuptools
   - pip install requests python-dateutil six brewer2mpl
