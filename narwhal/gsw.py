@@ -5,6 +5,7 @@ from os import listdir
 from os.path import dirname, realpath, splitext, join
 import itertools
 import numpy
+from numpy import vectorize
 
 install_dir = dirname(realpath(__file__))
 
@@ -284,28 +285,6 @@ importnames = ["gsw_adiabatic_lapse_rate_from_ct",
 
 lines = header.split("\n")
 lines = filter(lambda s: s.startswith("extern double") and s.endswith(";"), lines)
-
-def vectorize(fn, docstring=None):
-    """ Given a function, return a function that maps result over values in
-    argument lists. """
-    def wrapper(*args):
-        # if all(hasattr(a, "__iter__") for a in args):
-        #     return list(map(fn, *args))
-        if any(hasattr(a, "__iter__") for a in args):
-            n = max(len(a) for a in args if hasattr(a, "__len__"))
-            vargs = []
-            for arg in args:
-                if not hasattr(arg, "__iter__") or len(arg) == 1:
-                    vargs.append(itertools.repeat(arg, n))
-                elif len(arg) == n:
-                    vargs.append(arg)
-                else:
-                    raise ValueError("Variable length arguments illegal")
-            return numpy.array(list(map(fn, *vargs)))
-        else:
-            return fn(*args)
-    wrapper.__doc__ = fn.__doc__
-    return wrapper
 
 def cname(line):
     return line.split(" ", 2)[2].split("(", 1)[0]

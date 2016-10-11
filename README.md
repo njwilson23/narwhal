@@ -9,7 +9,7 @@ Narwhal is a Python module built on [pandas](http://pandas.pydata.org/) and
 visualizing oceanographic data.
 
 Data are organized into self-describing `Cast` and `CastCollection` data
-structures. Analysis functions are included for
+structures. Convenience methods and functions are included for:
 
 - interpolation
 - density and depth calculation
@@ -36,13 +36,13 @@ in the `narwhal.gsw` submodule, making things like the following possible:
 
     density = narwhal.gsw.rho(cast["sa"], cast["ct"], cast["p"])
 
-Currently, GSW 3.05 is included.
+Currently, GSW 3.05 is packaged with Narwhal.
 
 ### Data should not be tied to software
 
 For storage, data is serialized to JSON or HDF files. These common formats are
 open and easily imported into other analysis packages (such as MATLAB), or
-browser-based visualization libraries (such as D3).
+visualization libraries (such as D3).
 
 Parsers are also included for WOCE CTD casts in NetCDF format and Arctic
 Switchyard CTD casts in ASCII table format.
@@ -55,18 +55,18 @@ Switchyard CTD casts in ASCII table format.
 
 ### Dependencies
 
-- Python 2.7+ or Python 3.3+
+- Python 2.7+ or Python 3.4+
 - pandas
 - matplotlib
 - scipy
-- h5py (optional, required for HDF read/write)
 - requests
 - dateutil
 - six
 - C-compiler (for GSW)
+- h5py (optional, required for HDF read/write)
 
-If [karta](https://github.com/njwilson23/karta) is installed, it will be used to
-provide the geographical back-end.
+If [Karta](https://github.com/fortyninemaps/karta) is installed, it will be used
+for fast and accurate geographical calculations.
 
 Narwhal is experimental. See also
 [python-oceans](https://github.com/ocefpaf/python-oceans) and
