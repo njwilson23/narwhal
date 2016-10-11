@@ -44,9 +44,6 @@ For storage, data is serialized to JSON or HDF files. These common formats are
 open and easily imported into other analysis packages (such as MATLAB), or
 visualization libraries (such as D3).
 
-Parsers are also included for WOCE CTD casts in NetCDF format and Arctic
-Switchyard CTD casts in ASCII table format.
-
 ## Installation
 
     git clone https://github.com/njwilson23/narwhal.git
