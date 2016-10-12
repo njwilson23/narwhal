@@ -20,13 +20,12 @@ structures. Convenience methods and functions are included for:
 ### Quickly visualize results
 
 The `narwhal.plotting` submodule contains convenience methods for creating T-S
-diagrams, cast plots, and section plots. Here's some data from the [WOCE P17N
-line](http://cchdo.ucsd.edu/cruise/325021_1), collected on a cruise by the
-Thomas G. Thomson.
+diagrams, cast plots, and section plots. Here's some data from off the coast of
+northeastern Greenland:
 
-![P17N T-S diagram](https://rawgit.com/njwilson23/narwhal/gh-pages/ts-demo.png)
+![T-S diagram](https://github.com/njwilson23/narwhal/raw/gh-pages/images/ts-plot2_v7.png)
 
-![P17N section diagram](https://rawgit.com/njwilson23/narwhal/gh-pages/section-demo.png)
+![Section diagram](https://github.com/njwilson23/narwhal/raw/gh-pages/images/sill_velocity.png)
 
 ### Python wrapper for the thermodynamic equation of state
 
