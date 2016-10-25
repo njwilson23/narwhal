@@ -1,0 +1,8 @@
+body {
+  height: 100%;
+  background-color: #333;
+  background-image: url("../images/narwhal_background50.jpg");
+  background-size: cover;
+  background-attachment: fixed;
+}
+
