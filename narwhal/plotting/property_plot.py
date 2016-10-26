@@ -101,8 +101,7 @@ class PropertyPropertyAxes(plt.Axes):
         tl = self.get_ylim()
         SA = np.linspace(sl[0], sl[1])
         CT = np.linspace(tl[0], tl[1])
-        SIGMA = np.reshape([gsw.rho(sa, ct, pres)-1000 for ct in CT for sa in SA],
-                           (50, 50))
+        SIGMA = gsw.rho(SA, CT[:,np.newaxis], pres)-1000
 
         sm = SIGMA.min()
         lev0 = sm/abs(sm) * ((abs(sm)//interval)+1) * interval
