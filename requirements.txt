@@ -7,3 +7,4 @@ h5py>=2.2
 six>=1.7
 requests>=2.2
 dateutil>=2.0
+cmocean>=1.0
