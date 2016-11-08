@@ -4,8 +4,7 @@ import ctypes
 from os import listdir
 from os.path import dirname, realpath, splitext, join
 import itertools
-import numpy
-from numpy import vectorize
+from numpy import vectorize, isnan, nan
 
 install_dir = dirname(realpath(__file__))
 
@@ -315,11 +314,19 @@ def restype(line):
     if s == "double":
         return ctypes.c_double
 
+def handle_nan(f):
+    def wrapper(*args):
+        if any(isnan(a) for a in args):
+            return nan
+        else:
+            return f(*args)
+    return wrapper
+
 def addname(line):
     """ Pull a function from the cgsw namespace into the gsw namespace """
     name = line.split(" ", 2)[2].split("(", 1)[0]
     if name[:4] == "gsw_":
-        exec("{0} = vectorize(cgsw.{1})".format(name[4:], name), addname.__globals__)
+        exec("{0} = vectorize(handle_nan(cgsw.{1}))".format(name[4:], name), addname.__globals__)
     return
 
 for line in lines:
