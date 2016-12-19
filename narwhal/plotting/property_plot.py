@@ -142,15 +142,13 @@ class PropertyPropertyAxes(plt.Axes):
         cp = 4.18e3
         ci = 2.11e3
         ice_eff_theta = 0.0 - L/cp - ci/cp * (0.0 - icetheta)
-        self.add_mixing_line(origin, (0.0, ice_eff_theta), **kw)
-        return
+        return self.add_mixing_line(origin, (0.0, ice_eff_theta), **kw)
 
     def add_runoff_line(self, origin, **kw):
         """ Draw mixing line from `origin::(sal0, theta0)` to glacier runoff,
         assumed to be fresh and at the pressure-melting point.
         """
-        self.add_mixing_line(origin, (0.0, 0.0), **kw)
-        return
+        return self.add_mixing_line(origin, (0.0, 0.0), **kw)
 
     def add_freezing_line(self, p=0.0, air_sat_fraction=0.1, **kw):
         kw.setdefault("linestyle", "--")
