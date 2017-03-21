@@ -322,11 +322,11 @@ def handle_nan(f):
             return f(*args)
     return wrapper
 
-def addname(line):
+def addname(line, doc=None):
     """ Pull a function from the cgsw namespace into the gsw namespace """
     name = line.split(" ", 2)[2].split("(", 1)[0]
     if name[:4] == "gsw_":
-        exec("{0} = vectorize(handle_nan(cgsw.{1}))".format(name[4:], name), addname.__globals__)
+        exec("{0} = vectorize(handle_nan(cgsw.{1}), doc=\"{2}\")".format(name[4:], name, doc), addname.__globals__)
     return
 
 for line in lines:
@@ -335,5 +335,5 @@ for line in lines:
         func = getfuncpointer(name)
         func.argtypes = argtypes(line)
         func.restype = restype(line)
-        func.__doc__ = name + str(argnames(line))
-        addname(line)
+        doc = name + str(argnames(line))
+        addname(line, doc=doc)
