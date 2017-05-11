@@ -664,7 +664,7 @@ def fromdict(d):
             if k.lower() in ("time", "timestamp", "date", "datetime"):
                 try:
                     properties[k] = dateutil.parser.parse(v)
-                except AttributeError:
+                except (AttributeError, TypeError):
                     # just read it as is
                     # this happens when value is a float
                     properties[k] = v
