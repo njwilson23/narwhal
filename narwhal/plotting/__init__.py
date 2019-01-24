@@ -1,3 +1,5 @@
+import matplotlib as _mpl
+_mpl.use("agg")
 from . import section_plot
 from . import property_plot
 from .plotting import plot_profiles, plot_map, plot_section

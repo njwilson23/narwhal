@@ -8,7 +8,7 @@ ext_gsw = Extension("narwhal.cgsw",
 
 setup(
     name = "narwhal",
-    version = "0.4.0b2",
+    version = "0.4.0b3",
     author = "Nat Wilson",
     packages = ["narwhal", "narwhal.plotting"],
     ext_modules = [ext_gsw],
